@@ -37,8 +37,10 @@ def summary_header(name):
     """
     Returns a summary table page down to the first row of data.
     """
+    # Warn editors that the page was generated
+    text = u'<!-- This page was generated/modified by software -->\n'
     # Sortable table with borders
-    text = u'{| border="1" class="sortable"\n'
+    text += u'{| border="1" class="sortable"\n'
     # Name row
     text += u'!span="col" | Name\n'
     # Attack row
@@ -99,14 +101,15 @@ class XrefBot:
             # Finish with a footer
             new_text += summary_footer(name)
 
-            wikipedia.output(new_text + u'\n')
             # Read the original content
             try:
                 old_text = old_page.get()
+                wikipedia.showDiff(old_text, new_text)
                 prompt = u'Modify this summary page ?'
             except wikipedia.NoPage:
                 old_text = u''
                 wikipedia.output("Page %s does not exist" % old_page.title())
+                wikipedia.output(new_text)
                 prompt = u'Create this summary page ?'
             # Did anything change ?
             if old_text == new_text:

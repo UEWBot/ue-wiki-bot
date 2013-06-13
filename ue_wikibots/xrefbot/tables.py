@@ -30,10 +30,14 @@ msg_append = {
     'en': u'; create/update item summary tables',
 }
 
-# Categories we're interested in
-cat_list = [u'Rifles', u'Handguns', u'Melee Weapons', u'Heavy Weapons', u'Vehicles', u'Gear']
+# Categories we're interested in and row template to use for each category
+cat_to_templ = { u'Rifles': 'Item Row', u'Handguns': 'Item Row', u'Melee Weapons': 'Item Row', u'Heavy Weapons': 'Item Row', u'Vehicles': 'Item Row', u'Gear': 'Item Row', u'Lieutenants': 'Lieutenant Row'}
 
-def summary_header(name):
+# Handy regular expressions
+item_templates = re.compile(u'.* Item')
+lieutenant_templates = re.compile(u'Lieutenant (.*)')
+
+def summary_header(row_template):
     """
     Returns a summary table page down to the first row of data.
     """
@@ -41,36 +45,63 @@ def summary_header(name):
     text = u'<!-- This page was generated/modified by software -->\n'
     # Sortable table with borders
     text += u'{| border="1" class="sortable"\n'
-    # Name row
-    text += u'!span="col" | Name\n'
-    # Attack row
-    text += u'!span="col" | Attack\n'
-    # Defense row
-    text += u'!span="col" | Defense\n'
-    # Cost row, sorted as currency
-    text += u'!span="col" data-sort-type="currency" | Cost\n'
-    # Rarity row
-    text += u'!span="col" | Rarity\n'
+    if row_template == u'Item Row':
+        # Name column
+        text += u'!span="col" | Name\n'
+        # Attack column
+        text += u'!span="col" | Attack\n'
+        # Defense column
+        text += u'!span="col" | Defense\n'
+        # Cost column, sorted as currency
+        text += u'!span="col" data-sort-type="currency" | Cost\n'
+        # Rarity column
+        text += u'!span="col" | Rarity\n'
+    else:
+        # Name column
+        text += u'!span="col" rowspan="2" | Name\n'
+        # Faction column
+        text += u'!span="col" rowspan="2" | Faction\n'
+        # Rarity column
+        text += u'!span="col" rowspan="2" | Rarity\n'
+        # Atk & Def for each number of stars
+        for stars in range(1,10):
+            text += u'!colspan="3" class="unsortable" | %d Star\n' % stars
+        text += u'|-\n'
+        for stars in range(1,10):
+            text += u'!span="col" | Atk\n'
+            text += u'!span="col" | Def\n'
+            text += u'!span="col" class="unsortable" | Power\n'
 
     return text
 
-def summary_footer(name):
+def summary_footer(row_template):
     """
     Returns the rest of a summary table, after the last row of data.
     """
     return u'|}'
 
-def page_to_row(page):
+def page_to_row(page, row_template):
     """
     Creates a table row for the item described in page.
     """
     templatesWithParams = page.templatesWithParams()
-    row = u'{{Item Row|name=%s' % page.title()
+    row = u'{{%s|name=%s' % (row_template, page.title())
     for (template, params) in templatesWithParams:
-        # Ignore the template for now - hopefully there's just the one!
-        for param in params:
-            # TODO maybe filter out some parameters (description, type, for example)
-            row += u'|%s' % param
+        wikipedia.output(u'template is "%s"' % template)
+        wikipedia.output(u'params is "%s"' % params)
+        # We're only interested in certain templates
+        if item_templates.search(template):
+            # Use all the item template parameters for now
+            for param in params:
+                row += u'|%s' % param
+        else:
+            match = lieutenant_templates.search(template)
+            if match:
+                # Construct a rarity parameter from the template name
+                row += u'|rarity=%s' % match.group(1)
+                # Use all the item template parameters for now
+                for param in params:
+                    row += u'|%s' % param
     row += u'}}'
     # wikipedia.output(u'Row is "%s"' % row)
     return row
@@ -84,7 +115,7 @@ class XrefBot:
 
     def run(self):
         # Go through cat_list, and create/update summary page for each one
-        for name in cat_list:
+        for name, template in cat_to_templ.iteritems():
             # The current summary table page for this category
             old_page = wikipedia.Page(wikipedia.getSite(), u'%s Table' % name)
             # The category of interest
@@ -92,14 +123,14 @@ class XrefBot:
             # Create one row for each page in the category
             rows = {}
             for page in cat.articlesList():
-                rows[page.title()] = page_to_row(page)
+                rows[page.title()] = page_to_row(page, template)
             # Start the new page text
-            new_text = summary_header(name)
+            new_text = summary_header(template)
             # Sort rows by item (page) name, and append each one
             for key in sorted(rows.keys()):
                 new_text += rows[key] + u'\n'
             # Finish with a footer
-            new_text += summary_footer(name)
+            new_text += summary_footer(template)
 
             # Read the original content
             try:

@@ -34,8 +34,8 @@ msg_append = {
 cat_to_templ = { u'Rifles': 'Item Row', u'Handguns': 'Item Row', u'Melee Weapons': 'Item Row', u'Heavy Weapons': 'Item Row', u'Vehicles': 'Item Row', u'Gear': 'Item Row', u'Lieutenants': 'Lieutenant Row'}
 
 # Handy regular expressions
-item_templates = re.compile(u'.* Item')
-lieutenant_templates = re.compile(u'Lieutenant (.*)')
+item_templates = re.compile(u'.*\WItem')
+lieutenant_templates = re.compile(u'Lieutenant\W(.*)')
 
 def summary_header(row_template):
     """
@@ -87,8 +87,6 @@ def page_to_row(page, row_template):
     templatesWithParams = page.templatesWithParams()
     row = u'{{%s|name=%s' % (row_template, page.title())
     for (template, params) in templatesWithParams:
-        wikipedia.output(u'template is "%s"' % template)
-        wikipedia.output(u'params is "%s"' % params)
         # We're only interested in certain templates
         if item_templates.search(template):
             # Use all the item template parameters for now

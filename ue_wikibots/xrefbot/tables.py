@@ -30,11 +30,9 @@ msg_append = {
     'en': u'; create/update item summary tables',
 }
 
-# Categories we're interested in and row template to use for each category
-cat_to_templ = { u'Rifles': 'Item Row', u'Handguns': 'Item Row', u'Melee Weapons': 'Item Row', u'Heavy Weapons': 'Item Row', u'Vehicles': 'Item Row', u'Gear': 'Item Row', u'Lieutenants': 'Lieutenant Row'}
-
 # Handy regular expressions
 item_templates = re.compile(u'.*\WItem')
+property_templates = re.compile(u'.*\WProperty')
 lieutenant_templates = re.compile(u'Lieutenant\W(.*)')
 
 def summary_header(row_template):
@@ -56,7 +54,18 @@ def summary_header(row_template):
         text += u'!span="col" data-sort-type="currency" | Cost\n'
         # Rarity column
         text += u'!span="col" | Rarity\n'
-    else:
+    elif row_template == u'Property Rows':
+        # Number column
+        text += u'!span="col" | #\n'
+        # Name column
+        text += u'!span="col" | Name\n'
+        # Cost column, sorted as currency
+        text += u'!span="col" data-sort-type="currency" | Cost\n'
+        # Income column, sorted as currency
+        text += u'!span="col" data-sort-type="currency" | Income\n'
+        # Time to recoup cost column
+        text += u'!span="col" | Hrs to recoup\n'
+    else: # Lieutenant Row
         # Name column
         text += u'!span="col" rowspan="2" | Name\n'
         # Faction column
@@ -88,8 +97,8 @@ def page_to_row(page, row_template):
     row = u'{{%s|name=%s' % (row_template, page.title())
     for (template, params) in templatesWithParams:
         # We're only interested in certain templates
-        if item_templates.search(template):
-            # Use all the item template parameters for now
+        if item_templates.search(template) or property_templates.search(template):
+            # Use all the item and property template parameters for now
             for param in params:
                 row += u'|%s' % param
         else:
@@ -111,13 +120,81 @@ class XrefBot:
         # Load default summary message.
         wikipedia.setAction(wikipedia.translate(wikipedia.getSite(), msg_standalone))
 
-    def run(self):
-        # Go through cat_list, and create/update summary page for each one
+    def update_or_create_page(self, old_page, new_text):
+        """
+        Reads the current text of page old_page,
+        compare it with new_text, prompts the user,
+        and uploads the page
+        """
+        # Read the original content
+        try:
+            old_text = old_page.get()
+            wikipedia.showDiff(old_text, new_text)
+            prompt = u'Modify this summary page ?'
+        except wikipedia.NoPage:
+            old_text = u''
+            wikipedia.output("Page %s does not exist" % old_page.title())
+            wikipedia.output(new_text)
+            prompt = u'Create this summary page ?'
+        # Did anything change ?
+        if old_text == new_text:
+            wikipedia.output(u'No changes necessary to %s' % old_page.title());
+        else:
+            if not self.acceptall:
+                choice = wikipedia.inputChoice(prompt, ['Yes', 'No', 'All'], ['y', 'N', 'a'], 'N')
+                if choice == 'a':
+                    self.acceptall = True
+            if self.acceptall or choice == 'y':
+                # Write out the new version
+                old_page.put(new_text)
+
+    def update_properties_table(self):
+        """
+        Creates or updates page Properties Table from the
+        content of the Income Properties and Upgrade Properties
+        categories.
+        """
+        # Categories we're interested in
+        cats = {u'Income Properties', u'Upgrade Properties'}
+        row_template = u'Property Rows'
+
+        old_page = wikipedia.Page(wikipedia.getSite(), u'Properties Table')
+        rows = []
+        for name in cats:
+            cat = catlib.Category(wikipedia.getSite(), u'Category:%s' % name)
+            # One row per page in category
+            for page in cat.articlesList():
+                rows.append(page_to_row(page, row_template))
+        # Start the new page text
+        new_text = summary_header(row_template)
+        # TODO: Sort rows into some sensible order
+        for row in rows:
+            new_text += row + u'\n'
+        # Finish with a footer
+        new_text += summary_footer(row_template)
+        # Upload it
+        self.update_or_create_page(old_page, new_text);
+
+    def update_most_tables(self):
+        """
+        Creates or updates these pages from the corresponding categories:
+        Rifles Table
+        Handguns Table
+        Melee Wepaons Tale
+        Heavy Weapons Table
+        Vehicles Table
+        Gear Table
+        Lieutenants Table
+        """
+        # Categories we're interested in and row template to use for each category
+        cat_to_templ = { u'Rifles': 'Item Row', u'Handguns': 'Item Row', u'Melee Weapons': 'Item Row', u'Heavy Weapons': 'Item Row', u'Vehicles': 'Item Row', u'Gear': 'Item Row', u'Lieutenants': 'Lieutenant Row'}
+
+        # Go through cat_to_templ, and create/update summary page for each one
         for name, template in cat_to_templ.iteritems():
             # The current summary table page for this category
             old_page = wikipedia.Page(wikipedia.getSite(), u'%s Table' % name)
             # The category of interest
-            cat = catlib.Category(wikipedia.getSite(), 'Category:%s' % name)
+            cat = catlib.Category(wikipedia.getSite(), u'Category:%s' % name)
             # Create one row for each page in the category
             rows = {}
             for page in cat.articlesList():
@@ -129,28 +206,12 @@ class XrefBot:
                 new_text += rows[key] + u'\n'
             # Finish with a footer
             new_text += summary_footer(template)
+            # Upload it
+            self.update_or_create_page(old_page, new_text);
 
-            # Read the original content
-            try:
-                old_text = old_page.get()
-                wikipedia.showDiff(old_text, new_text)
-                prompt = u'Modify this summary page ?'
-            except wikipedia.NoPage:
-                old_text = u''
-                wikipedia.output("Page %s does not exist" % old_page.title())
-                wikipedia.output(new_text)
-                prompt = u'Create this summary page ?'
-            # Did anything change ?
-            if old_text == new_text:
-                wikipedia.output(u'No changes necessary to %s' % old_page.title());
-            else:
-                if not self.acceptall:
-                    choice = wikipedia.inputChoice(prompt, ['Yes', 'No', 'All'], ['y', 'N', 'a'], 'N')
-                    if choice == 'a':
-                        self.acceptall = True
-                if self.acceptall or choice == 'y':
-                    # Write out the new version
-                    old_page.put(new_text)
+    def run(self):
+        self.update_most_tables()
+        self.update_properties_table()
 
 def main():
     #logging.basicConfig()

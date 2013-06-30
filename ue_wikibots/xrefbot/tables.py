@@ -33,6 +33,7 @@ msg_append = {
 # Handy regular expressions
 item_templates = re.compile(u'.*\WItem')
 property_templates = re.compile(u'.*\WProperty')
+job_templates = re.compile(u'.*Job')
 lieutenant_templates = re.compile(u'Lieutenant\W(.*)')
 
 def summary_header(row_template):
@@ -41,6 +42,8 @@ def summary_header(row_template):
     """
     # Warn editors that the page was generated
     text = u'<!-- This page was generated/modified by software -->\n'
+    # No WYSIWYG editor
+    text += u'__NOWYSIWYG__\n'
     # Sortable table with borders
     text += u'{| border="1" class="sortable"\n'
     if row_template == u'Item Row':
@@ -65,6 +68,32 @@ def summary_header(row_template):
         text += u'!span="col" data-sort-type="currency" | Income\n'
         # Time to recoup cost column
         text += u'!span="col" | Hrs to recoup\n'
+    elif row_template == u'Job Row':
+        # District column
+        text += u'!span="col" rowspan="2" | District\n'
+        # Job name column
+        text += u'!span="col" rowspan="2" | Job\n'
+        # Faction column
+        text += u'!span="col" rowspan="2" | Faction\n'
+        # Energy column
+        text += u'!span="col" rowspan="2" | Energy\n'
+        # Cash columns
+        text += u'!colspan="2" class="unsortable" | Cash\n'
+        # XP columns
+        text += u'!colspan="2" class="unsortable" | XP\n'
+        # Cash/energy column
+        text += u'!span="col" rowspan="2" data-sort-type="currency" | Cash/energy\n'
+        # XP/energy Column
+        text += u'!span="col" rowspan="2" | XP/energy\n'
+        text += u'|-\n'
+        # Min Cash column
+        text += u'!span="col" data-sort-type="currency" | Min\n'
+        # Max Cash column
+        text += u'!span="col" data-sort-type="currency" | Max\n'
+        # Min XP column
+        text += u'!span="col" | Min\n'
+        # Max XP column
+        text += u'!span="col" | Max\n'
     else: # Lieutenant Row
         # Name column
         text += u'!span="col" rowspan="2" | Name\n'
@@ -112,6 +141,28 @@ def page_to_row(page, row_template):
     row += u'}}'
     # wikipedia.output(u'Row is "%s"' % row)
     return row
+
+def page_to_rows(page, row_template):
+    # TODO Look at combining this function and page_to_row().
+    """
+    Creates a table row for each job described in page.
+    """
+    row_stub = u'{{%s|district=%s' % (row_template, page.title())
+    templatesWithParams = page.templatesWithParams()
+    rows = []
+    for (template, params) in templatesWithParams:
+        # We're only interested in certain templates
+        if job_templates.search(template):
+            # Create a new row
+            row = row_stub
+            # Use all the item, property, and job template parameters for now
+            for param in params:
+                row += u'|%s' % param
+            row += u'}}'
+            # wikipedia.output(u'Row is "%s"' % row)
+            # Add the new row to the list
+            rows.append(row)
+    return rows
 
 class XrefBot:
     def __init__(self, generator, acceptall = False):
@@ -175,6 +226,30 @@ class XrefBot:
         # Upload it
         self.update_or_create_page(old_page, new_text);
 
+    def update_jobs_table(self):
+        """
+        Creates or updates page Jobs Table from the
+        content of the Districts category.
+        """
+        # Categories we're interested in
+        row_template = u'Job Row'
+
+        old_page = wikipedia.Page(wikipedia.getSite(), u'Jobs Table')
+        rows = []
+        cat = catlib.Category(wikipedia.getSite(), u'Districts')
+        # One row per use of the template on a page in category
+        for page in cat.articlesList():
+            rows += page_to_rows(page, row_template)
+        # Start the new page text
+        new_text = summary_header(row_template)
+        # TODO: Sort rows into some sensible order
+        for row in rows:
+            new_text += row + u'\n'
+        # Finish with a footer
+        new_text += summary_footer(row_template)
+        # Upload it
+        self.update_or_create_page(old_page, new_text);
+
     def update_most_tables(self):
         """
         Creates or updates these pages from the corresponding categories:
@@ -212,6 +287,7 @@ class XrefBot:
     def run(self):
         self.update_most_tables()
         self.update_properties_table()
+        self.update_jobs_table()
 
 def main():
     #logging.basicConfig()

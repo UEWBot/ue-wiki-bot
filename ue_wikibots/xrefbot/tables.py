@@ -70,30 +70,23 @@ def summary_header(row_template):
         text += u'!span="col" | Hrs to recoup\n'
     elif row_template == u'Job Row':
         # District column
-        text += u'!span="col" rowspan="2" | District\n'
+        text += u'!span="col" | District\n'
         # Job name column
-        text += u'!span="col" rowspan="2" | Job\n'
+        text += u'!span="col" | Job\n'
         # Faction column
-        text += u'!span="col" rowspan="2" | Faction\n'
+        text += u'!span="col" | Faction\n'
         # Energy column
-        text += u'!span="col" rowspan="2" | Energy\n'
+        text += u'!span="col" | Energy\n'
         # Cash columns
-        text += u'!colspan="2" class="unsortable" | Cash\n'
+        text += u'!span="col" data-sort-type="currency" | Min Cash\n'
+        text += u'!span="col" data-sort-type="currency" | Max Cash\n'
         # XP columns
-        text += u'!colspan="2" class="unsortable" | XP\n'
+        text += u'!span="col" | Min XP\n'
+        text += u'!span="col" | Max XP\n'
         # Cash/energy column
-        text += u'!span="col" rowspan="2" data-sort-type="currency" | Cash/energy\n'
+        text += u'!span="col" data-sort-type="currency" | Cash/energy\n'
         # XP/energy Column
-        text += u'!span="col" rowspan="2" | XP/energy\n'
-        text += u'|-\n'
-        # Min Cash column
-        text += u'!span="col" data-sort-type="currency" | Min\n'
-        # Max Cash column
-        text += u'!span="col" data-sort-type="currency" | Max\n'
-        # Min XP column
-        text += u'!span="col" | Min\n'
-        # Max XP column
-        text += u'!span="col" | Max\n'
+        text += u'!span="col" | XP/energy\n'
     else: # Lieutenant Row
         # Name column
         text += u'!span="col" rowspan="2" | Name\n'

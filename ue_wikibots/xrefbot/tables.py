@@ -57,6 +57,10 @@ def summary_header(row_template):
         text += u'!span="col" data-sort-type="currency" | Cost\n'
         # Rarity column
         text += u'!span="col" | Rarity\n'
+        # Three summary stats columns
+        text += u'!span="col" | Atk+Def\n'
+        text += u'!span="col" | Atk+70% of Def\n'
+        text += u'!span="col" | 70% of Atk + Def\n'
     elif row_template == u'Property Rows':
         # Number column
         text += u'!span="col" | #\n'

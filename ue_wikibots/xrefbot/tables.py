@@ -36,6 +36,19 @@ property_templates = re.compile(u'.*\WProperty')
 job_templates = re.compile(u'.*Job')
 lieutenant_templates = re.compile(u'Lieutenant\W(.*)')
 
+def name_to_link(name):
+    """
+    Takes the ame of a page and returns wiki parkup for a link,
+    converting disambiguated pages.
+    e.g. "Dog (pet)" -> "[[Dog (pet)|Dog]]".
+    """
+    paren = name.find('(')
+    if paren == -1:
+        page = name
+    else:
+        page = name + '|' + name[0:paren-1]
+    return '[[' + page + ']]'
+ 
 def summary_header(row_template):
     """
     Returns a summary table page down to the first row of data.

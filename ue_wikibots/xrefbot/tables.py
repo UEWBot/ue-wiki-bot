@@ -84,9 +84,7 @@ def lt_faction_rarity_row(factions, rarity, lieutenants_by_faction):
     for faction in factions:
         text += u'|'
         if faction in lieutenants_by_faction:
-            text += u'[['
-            text += u']]<br/>[['.join(lieutenants_by_faction[faction])
-            text += u']]'
+            text += u'<br/>'.join(map(name_to_link,lieutenants_by_faction[faction]))
         else:
             text += u'None'
         text += u'\n'

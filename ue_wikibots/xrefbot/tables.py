@@ -38,7 +38,7 @@ lieutenant_templates = re.compile(u'Lieutenant\W(.*)')
 
 def name_to_link(name):
     """
-    Takes the ame of a page and returns wiki parkup for a link,
+    Takes the name of a page and returns wiki markup for a link,
     converting disambiguated pages.
     e.g. "Dog (pet)" -> "[[Dog (pet)|Dog]]".
     """
@@ -48,6 +48,49 @@ def name_to_link(name):
     else:
         page = name + '|' + name[0:paren-1]
     return '[[' + page + ']]'
+
+def oneParam(params, the_param):
+    """
+    Takes the list of parameters for a template, and returns
+    the value (if any) for the specified parameter.
+    Returns an empty string if the parameter is not present.
+    """
+    for one_param in params:
+        match = re.search(r'\s*%s\s*=([^\|]*)' % the_param, one_param, re.MULTILINE)
+        if match:
+            return match.expand(r'\1')
+    return u''
+
+def lt_faction_rarity_header(factions):
+    """
+    Returns a summary table down to the first row of data.
+    """
+    # Warn editors that the page was generated
+    text = u'<!-- This page was generated/modified by software -->\n'
+    # No WYSIWYG editor
+    text += u'__NOWYSIWYG__\n'
+    text += u'{| border="1" class="wikitable"\n'
+    text += u'!span="col" | \n'
+    for faction in factions:
+        text += u'!span="col" | [[%s]]\n' % faction
+    return text
+
+def lt_faction_rarity_row(factions, rarity, lieutenants_by_faction):
+    """
+    Returns a row for the specified rarity.
+    """
+    text = u'|-\n'
+    text += u'!scope=row | {{%s}}\n' % rarity
+    for faction in factions:
+        text += u'|'
+        if faction in lieutenants_by_faction:
+            text += u'[['
+            text += u']]<br/>[['.join(lieutenants_by_faction[faction])
+            text += u']]'
+        else:
+            text += u'None'
+        text += u'\n'
+    return text
  
 def summary_header(row_template):
     """
@@ -174,6 +217,15 @@ def page_to_rows(page, row_template):
             rows.append(row)
     return rows
 
+def rarities():
+    """
+    Returns an ordered list of rarities.
+    """
+    # TODO Dynamically create the list from the rarity page
+    rarities = []
+    page = wikipedia.Page(wikipedia.getSite(), u'Rarity')
+    return [u'Common', u'Uncommon', u'Rare', u'Epic', u'Legendary']
+
 class XrefBot:
     def __init__(self, generator, acceptall = False):
         self.generator = generator
@@ -260,6 +312,36 @@ class XrefBot:
         # Upload it
         self.update_or_create_page(old_page, new_text);
 
+    def update_lt_rarity_table(self):
+        """
+        Creates or updates page Lieutenants Faction Rarity Table
+        from the content of the Lieutenants category.
+        """
+        old_page = wikipedia.Page(wikipedia.getSite(), u'Lieutenants Faction Rarity Table')
+        factions = []
+        cat = catlib.Category(wikipedia.getSite(), u'Factions')
+        for faction in cat.articlesList():
+            factions.append(faction.title())
+        new_text = lt_faction_rarity_header(factions)
+        for rarity in rarities():
+            lieutenants = {}
+	    lt_cat = catlib.Category(wikipedia.getSite(), u'%s Lieutenants' % rarity)
+            for lt in lt_cat.articlesList():
+                name = lt.title()
+                templatesWithParams = lt.templatesWithParams()
+                for (template, params) in templatesWithParams:
+                    match = lieutenant_templates.search(template)
+                    if match:
+                        faction = oneParam(params, u'faction')
+                        if faction not in lieutenants:
+                            lieutenants[faction] = []
+                        lieutenants[faction].append(name)
+            if len(lieutenants) > 0:
+                new_text += lt_faction_rarity_row(factions, rarity, lieutenants)
+        new_text += summary_footer(None)
+        # Upload it
+        self.update_or_create_page(old_page, new_text);
+
     def update_most_tables(self):
         """
         Creates or updates these pages from the corresponding categories:
@@ -298,6 +380,7 @@ class XrefBot:
         self.update_most_tables()
         self.update_properties_table()
         self.update_jobs_table()
+        self.update_lt_rarity_table()
 
 def main():
     #logging.basicConfig()

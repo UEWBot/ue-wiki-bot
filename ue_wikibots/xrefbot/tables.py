@@ -46,8 +46,8 @@ def name_to_link(name):
     if paren == -1:
         page = name
     else:
-        page = name + '|' + name[0:paren-1]
-    return '[[' + page + ']]'
+        page = name + u'|' + name[0:paren-1]
+    return u'[[' + page + u']]'
 
 def oneParam(params, the_param):
     """

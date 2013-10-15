@@ -83,6 +83,26 @@ def listFromSection(text, section_name, whole_lines=False):
             list_text = list_text[match.end():]
     return (section_present, item_list, list_start, list_end)
 
+def dropParamsMatch(param1, param2):
+    """
+    Compares two drop parameters.
+    Ignores case of first character, and reports a match if one is a link
+    and the other isn't.
+    """
+    # Direct match first
+    if param1 == param2:
+        return True
+    # Match link with non-link equivalent
+    if param1[0:2] == u'[[':
+        return param1[2:-2] == param2
+    if param2[0:2] == u'[[':
+        return param1 == param2[2:-2]
+    # Match with mismatched case of first character
+    if param1[1:] == param2[1:]:
+        return param1[0].lower() == param2[0].lower()
+    # TODO Match link with nonlink with mismatched first character
+    return False
+
 class XrefToolkit:
     def __init__(self, site, debug = False):
         self.site = site
@@ -474,8 +494,8 @@ class XrefToolkit:
                         continue
                     elif (key == u'creator'):
                         continue
-                    elif (drop_params[key] != item_params[key]):
-                        wikipedia.output("Drop parameter mismatch for %s parameter of item %s" % (key, drop_params[u'name']))
+                    elif not dropParamsMatch(drop_params[key], item_params[key]):
+                        wikipedia.output("Drop parameter mismatch for %s parameter of item %s (%s vs %s)" % (key, drop_params[u'name'], item_params[key], drop_params[key]))
             elif template.find(u'Lieutenant') != -1:
                 item_params = {}
                 for param in params:
@@ -493,9 +513,9 @@ class XrefToolkit:
                         ip = item_params[u'def_1']
                     else:
                         ip = item_params[key]
-                    if dp != ip:
+                    if not dropParamsMatch(dp, ip):
                         wikipedia.output("Drop parameter mismatch for %s parameter of item %s (%s vs %s)" % (key, drop_params[u'name'], dp, ip))
-            else:
+            elif (template != u'Job Link') and (template != u'For') and (template != u'Sic'):
                 wikipedia.output("Ignoring template %s" % template)
 
     def fixBoss(self, text, categories, templatesWithParams):

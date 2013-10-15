@@ -1,0 +1,646 @@
+#! /usr//bin/python
+
+"""
+Script to fix up categories and cross-references between pages on UE Wiki.
+"""
+
+import sys, os, operator
+sys.path.append(os.environ['HOME'] + '/ue/ue_wikibots/pywikipedia')
+
+import wikipedia, pagegenerators, catlib
+import re, difflib
+
+# Stuff for the wikipedia help system
+parameterHelp = pagegenerators.parameterHelp + """\
+"""
+
+docuReplacements = {
+    '&params;': parameterHelp
+}
+
+# Summary message when using this module as a stand-alone script
+msg_standalone = {
+    'en': u'Robot: Fix cross-references and/or categories',
+}
+
+# Summary message  that will be appended to the normal message when
+# cosmetic changes are made on the fly
+msg_append = {
+    'en': u'; fix cross-references and/or categories',
+}
+
+# Copied from wikipedia.py
+Rtemplate = re.compile(ur'{{(msg:)?(?P<name>[^{\|]+?)(\|(?P<params>[^{]+?))?}}')
+# Modified from the above
+namedtemplate = (ur'{{(msg:)?(%s[^{\|]+?)(\|(?P<params>[^{]+?))?}}')
+
+# Separate the name and value for a template parameter
+Rparam = re.compile(ur'\s*(?P<name>\S+)\s*=\s*(?P<value>.*)')
+
+# Headers
+# This doesn't match level 1 headers, but they're rare...
+Rheader = re.compile(ur'(={2,})\s*(?P<title>[^=]+)\s*\1')
+
+# String used for category REs
+category_re = ur'\[\[\s*Category:\s*%s\s*\]\]'
+#TODO fix this so it doesn't coalesce multiple categories
+Rcategory = re.compile(ur'\[\[\s*Category:.*\]\]')
+
+def listFromSection(text, section_name, whole_lines=False):
+    """
+    Extract a list from a section of text.
+    section_name specifies the section to find.
+    Returns a tuple - (section found boolean, list of content, index where the section starts, index where the section ends)
+    where content is the first link on the line if whole_lines is False,
+    or everything after '[[' to the end of the line if whole_lines is True.
+    """
+    # Does the page have the specified section ?
+    section_present = False
+    item_list = []
+    list_start = list_end = -1
+    match = re.search(r'==\s*%s' % section_name.lower(), text.lower())
+    if match:
+        list_start = match.start()
+        section_present = True
+        # List ends at a template, header or category
+        # Skip the start of the header for the section of interest itself
+        match = re.search(r'{{|==.*==|\[\[Category', text[list_start+2:])
+        if match:
+            list_end = list_start+2+match.start()
+        else:
+            list_end = len(text)
+        # Shift list_end back to exactly the end of the list
+        while text[list_end-1] in u'\n\r':
+            list_end -= 1
+        list_text = text[list_start:list_end]
+        # If so, what items are listed ?
+        if whole_lines:
+            reItem = re.compile(r'\[\[\s*(.*)')
+        else:
+            reItem = re.compile(r'\[\[\s*([^|\]]*?)(\|.*)?\]\]')
+        for match in reItem.finditer(list_text):
+            item_list.append(match.expand(r'\1'))
+            list_text = list_text[match.end():]
+    return (section_present, item_list, list_start, list_end)
+
+class XrefToolkit:
+    def __init__(self, site, debug = False):
+        self.site = site
+        self.debug = debug
+
+    def change(self, text, page):
+        """
+        Given a wiki source code text, returns the cleaned up version.
+        """
+        titleWithoutNamespace = page.titleWithoutNamespace()
+        # Leave template pages alone
+        # TODO Better to match title or category ?
+        if titleWithoutNamespace.find(u'Template') != -1:
+            wikipedia.output("Not touching template page %s" % titleWithoutNamespace)
+            return text
+        categories = page.categories()
+        templatesWithParams = page.templatesWithParams()
+        oldText = text
+        #wikipedia.output("******\nIn text:\n%s" % text)
+        # TODO There's probably a sensible order for these...
+        text = self.fixBoss(text, categories, templatesWithParams)
+        #wikipedia.output("******\nOld text:\n%s" % oldText)
+        #wikipedia.output("******\nIn text:\n%s" % text)
+        # Just comparing oldText with text wasn't sufficient
+        changes = False
+        for diffline in difflib.ndiff(oldText.splitlines(), text.splitlines()):
+            if not diffline.startswith(u'  '):
+                changes = True
+                break
+        if changes:
+            print
+            wikipedia.output(text)
+        if self.debug:
+            print
+            wikipedia.showDiff(oldText, text)
+        return text
+
+    # Now a load of utility methods
+
+    def escapeParentheses(self, text):
+        """
+        Returns text with every ( and ) preceeded by a \.
+        """
+        retval = re.sub(r'\(', r'\(', text)
+        retval = re.sub(r'\)', r'\)', retval)
+        return retval
+
+    def prependNowysiwygIfNeeded(self, text):
+        """
+        Returns text with __NOWYSISYG prepended if it isn't already in the page.
+        """
+        keyword = u'__NOWYSIWYG__'
+        if keyword in text:
+            return text
+        return keyword + text
+
+    def appendCategory(self, text, category):
+        """
+        Returns text with the appropriate category string appended.
+        category should be the name of the category itself.
+        This function will do all the wiki markup and return the new text.
+        """
+        return text + u'\n[[Category:%s]]' % category
+
+    def templateParam(self, templatesWithParams, template, param):
+        """
+        If the specified template is present, and gives a value for
+        the specified param, return that value.
+        Otherwise, return an empty string.
+        """
+        for (the_template, got_params) in templatesWithParams:
+            if template == the_template:
+                for the_param in got_params:
+                    match = re.search(r'\s*%s\s*=([^\|]*)' % param, the_param, re.MULTILINE)
+                    if match:
+                        return match.expand(r'\1')
+        return u''
+
+    def templateParamMissing(self, templatesWithParams, template, params):
+        """
+        If the specified template is present, and doesn't give a value for any
+        of the specified params, return True.
+        """
+        for (the_template, got_params) in templatesWithParams:
+            if template == the_template:
+                params_present = []
+                for param in got_params:
+                    for match in re.finditer(r'([^=,]+)', param):
+                        params_present.append(match.expand(r'\1') .strip())
+                for param in params:
+                    if param not in params_present:
+                        print "Param %s missing from template %s" % (param, template)
+                        return True
+        return False
+
+    def listFromParam(self, params, param_name, whole_lines=False):
+        """
+        Extract a list from the parameter of a template
+        param_name specifies the param to find.
+        Returns a list of content,
+        where content is the first link on the line if whole_lines is False,
+        or everything after '[[' to the end of the line if whole_lines is True.
+        """
+        item_list = []
+        # Does the template have the specified param ?
+        for param in params:
+            if param_name in param:
+                # what items are listed ?
+                if whole_lines:
+                    reItem = re.compile(r'\[\[\s*(.*)')
+                else:
+                    reItem = re.compile(r'\[\[\s*([^|\]]*?)(\|.*)?\]\]')
+                for match in reItem.finditer(param):
+                    item_list.append(match.expand(r'\1'))
+        return item_list
+
+    def listFromParamOfTemplate(self, templatesWithParams, template_name, param_name, whole_lines=False):
+        """
+        Extract a list from the parameter of a template
+        template_name specifies the template to find.
+        param_name specifies the param to find.
+        Returns a tuple - (list of content, param found boolean),
+        where content is the first link on the line if whole_lines is False,
+        or everything after '[[' to the end of the line if whole_lines is True.
+        """
+        for (template, params) in templatesWithParams:
+            if template == template_name:
+                return (self.listFromParam(params, param_name, whole_lines), True)
+        return ([], False)
+
+    def findTemplate(self, text, name=None):
+        """
+        Find a template in text.
+        If name is specified, find the named template.
+        Returns a tuple - (template name (or None), index where the template starts, index where the template ends)
+        """
+        # Does the page use any templates ?
+        for match in Rtemplate.finditer(text):
+            found_name = match.expand(r'\g<name>')
+            if (name == None) or (found_name.find(name) != -1):
+                return (found_name, match.start(), match.end())
+        return (None, -1, -1)
+
+    def parametersFromTemplate(self, templateText):
+        """
+        Returns the list of parameters in templateText.
+        This is copied extensively from wikipedia's templateWithParams()
+        """
+        params = []
+        match = Rtemplate.search(templateText)
+        if match:
+            paramString = match.group('params')
+            if paramString:
+                Rlink = re.compile(ur'\[\[[^\]]+\]\]')
+                marker2 = wikipedia.findmarker(templateText,  u'##', u'#')
+                Rmarker2 = re.compile(ur'%s(\d+)%s' % (marker2, marker2))
+                # Replace links to markers
+                links = {}
+                count2 = 0
+                for m2 in Rlink.finditer(paramString):
+                    count2 += 1
+                    text = m2.group()
+                    paramString = paramString.replace(text,
+                                    '%s%d%s' % (marker2, count2, marker2))
+                    links[count2] = text
+                # Parse string
+                markedParams = paramString.split('|')
+                # Replace markers
+                for param in markedParams:
+                    for m2 in Rmarker2.finditer(param):
+                        param = param.replace(m2.group(),
+                                              links[int(m2.group(1))])
+                    params.append(param)
+        return params
+
+    def findTemplateParam(self, text, template, param):
+        """
+        Find the specified parameter of the specified template in text.
+        Returns a tuple - (index where the parameter starts, index where the parameter ends) such that
+        removing text[start:end] would result in no value specified for the specified template.
+        Returns (-1,-1) if the template or the param of the template isn't found.
+        """
+        # First, find the template
+        (name, start, end) = self.findTemplate(text, template)
+        if start != -1:
+            # Now find the parameter within that block
+            params = self.parametersFromTemplate(text[start:end])
+            for p in params:
+                match = re.search(r'(\s*%s\s*)=' % param, p)
+                if match:
+                    intro = match.group(1)
+                    length = len(p) - len(intro)
+            match = re.search(intro, text[start:end])
+            assert match, "Unable to find intro '%s' in template text" % intro
+            return (start + match.end(), start + match.end() + length)
+        return (-1,-1)
+
+    def addBlockAtEnd(self, text, block):
+        """
+        Adds the new block of text at the very end of text, but before any categories.
+        Returns the new text (text + block).
+        """
+        categoryR = re.compile(r'\[\[Category:.*', re.MULTILINE|re.DOTALL)
+        match = categoryR.search(text)
+        if match:
+            wikipedia.output("Adding block before categories")
+            # Page has categories, so add the Uses template before they start
+            text = text[:match.start()] + block + u'\n' + text[match.start():]
+        else:
+            wikipedia.output("Adding block at end of page")
+            # Page has no categories, so just add Uses template to the end
+            text += block
+        return text
+
+    def matchCatToTemplate(self, text, categories, templatesWithParams, template, category):
+        """
+        Check that pages in category category use template template and vice versa.
+        Adds or removes the category in the event of a mismatch.
+        Note that template is used as a re to match against each template used on the page.
+        """
+        Rcat = re.compile(category_re % category)
+        # Does the page use one of the recipe templates ?
+        template_matches = False
+        for (test_template, params) in templatesWithParams:
+            if re.match(template, test_template):
+                template_matches = True
+        # Is it in the specified category ?
+        cat_matches = self.catInCategories(category, categories)
+        # Do the two agree ?
+        if template_matches and (not cat_matches):
+            wikipedia.output("Page uses a %s template but isn't in category %s" % (template, category))
+            # This is easy - just append a category line
+            text = self.appendCategory(text, category)
+        elif (not template_matches) and cat_matches:
+            wikipedia.output("Page does not use a %s template but is in category %s" % (template, category))
+            # Remove the category
+            text = Rcat.sub('', text)
+        return text
+
+    def findSpecificSection(self, text, section):
+        """
+        Find the specified section in text, starting with a header,
+        and ending with a header, template, or category.
+        Returns a tuple - (index where the section starts, index where the section ends)
+        or (-1, -1) if the section isn't found.
+        """
+        # Does the page have a section header ?
+        header = re.search(ur'==\s*%s\W*==' % section, text)
+        if header:
+            list_start = header.start()
+            # List ends at a template, header or category
+            # Skip the header for the section of interest itself
+            match = re.search(r'{{|==.*==|\[\[Category', text[list_start+2:])
+            if match:
+                list_end = list_start+2+match.start()
+            else:
+                list_end = len(text)
+            # Shift list_end back to exactly the end of the list
+            while text[list_end-1] in u'\n\r':
+                list_end -= 1
+            return (list_start, list_end)
+        return (-1, -1)
+
+    def findSectionOld(self, text):
+        """
+        Find a section in text, starting with a header,
+        and ending with a header, template, or category.
+        Returns a tuple - (section name (or u''), index where the section starts, index where the section ends)
+        """
+        # Does the page have a section header ?
+        header = re.search(ur'==(.+)==', text)
+        if header:
+            section = header.expand(r'\1').strip()
+            list_start = header.start()
+            # List ends at a template, header or category
+            # Skip the header for the section of interest itself
+            match = re.search(r'{{|==.*==|\[\[Category', text[list_start+2:])
+            if match:
+                list_end = list_start+2+match.start()
+            else:
+                list_end = len(text)
+            # Shift list_end back to exactly the end of the list
+            while text[list_end-1] in u'\n\r':
+                list_end -= 1
+            return (section, list_start, list_end)
+        return (u'', -1, -1)
+
+    def findSection(self, text, title=u'',level=-1):
+        """
+        Find a section in text, starting with a header,
+        and ending with a header at the same level, a template, or category.
+        Returns a tuple - (section name (or u''), index where the section starts, index where the section ends, level)
+        If title is provided, only look for the specified section.
+        If level is -1 or not specified, match any level. Otherwise, only match the specified level.
+        """
+        headers = []
+        iterator = Rheader.finditer(text)
+        for m in iterator:
+            hdr_lvl = len(m.group(1))
+            headers.append({'level':hdr_lvl, 'title':m.group(u'title'), 'from':m.start(), 'to':m.end()})
+        section_name = u''
+        start = -1
+        end = -1
+        for hdr in headers:
+            if (level == -1) or (hdr['level'] == level):
+                if start == -1:
+                    if (title == u'') or (hdr['title'] == title):
+                        # This is our start point
+                        section_name = hdr['title']
+                        start = hdr['to'] + 1
+                        # The end will be the start of the next section at this level
+                        level = hdr['level']
+                else:
+                    # This is our end point
+                    end = hdr['from'] - 1
+                    break
+        if end == -1:
+            # Exclude any categories
+            m = Rcategory.search(text[start:end])
+            if m:
+                end = start + m.start() - 1
+        return (section_name, start, end, level)
+
+    def catInCategories(self, category, categories):
+        """
+        Checks whether the specified category is in the list of categories,
+        where category is a unicode string and categories is a list of category pages.
+        Returns True or False.
+        """
+        # Is it in the specified category ?
+        for this_category in categories:
+            if re.search(category_re % category, this_category.aslink()):
+                return True
+        return False
+
+    def imageForItem(self, itemName):
+        """
+        Finds the image for the specified item.
+        """
+        # Retrieve the item page
+        item = wikipedia.Page(wikipedia.getSite(), itemName)
+        templatesWithParams = item.templatesWithParams()
+        for (template, params) in templatesWithParams:
+            if template.find(u'Item') != -1:
+                for param in params:
+                    match = re.search(r'image\s*=\s*\[\[\s*(.*?)\s*\]\]', param)
+                    if match:
+                        return match.expand(r'\1')
+        return u''
+
+    def replaceImageInTemplate(self, text, template, param, new_image):
+        """
+        Find the specified template in text, and replace the image in the specified parameter.
+        Returns the new text
+        """
+        # TODO Can we use findTemplate() or findTemplateParam() ?
+        # First find the specified template
+        for match in Rtemplate.finditer(text):
+            if template in match.expand(r'\g<name>'):
+                # Then the specified parameter
+                start = match.start()
+                end = match.end()
+                match = re.search(r'%s\s*=\s*\[\[\s*(.*?)\s*\]\]' % param, text[start:end])
+                assert match, "Failed to find param %s in template %s" % (param, template)
+                # Do the substitution
+                end = start + match.end(1)
+                start += match.start(1)
+                text = text[:start] + new_image + text[end:]
+                return text
+        assert 0, "Failed to find template %s" % template
+
+    def checkItemParams(self, drop_params):
+        """
+        Checks that the parameters for a drop match the item page.
+        params is a dictionary of the drop's parameters.
+        """
+        item = wikipedia.Page(wikipedia.getSite(), drop_params[u'name'])
+        templatesWithParams = item.templatesWithParams()
+        for (template, params) in templatesWithParams:
+            #wikipedia.output("Template %s" % template)
+            # TODO Clean this code up
+            if (template.find(u'Item') != -1) or (template == u'Ingredient'):
+                item_params = {}
+                for param in params:
+                    m = Rparam.match(param)
+                    item_params[m.group('name')] = m.group('value')
+                for key in drop_params.keys():
+                    if (key == u'name'):
+                        continue
+                    elif (key == u'creator'):
+                        continue
+                    elif (drop_params[key] != item_params[key]):
+                        wikipedia.output("Drop parameter mismatch for %s parameter of item %s" % (key, drop_params[u'name']))
+            elif template.find(u'Lieutenant') != -1:
+                item_params = {}
+                for param in params:
+                    m = Rparam.match(param)
+                    item_params[m.group('name')] = m.group('value')
+                for key in drop_params.keys():
+                    dp = drop_params[key]
+                    if key == u'name':
+                        continue
+                    elif key == u'type':
+                        ip = u'Lieutenants'
+                    elif key == u'atk':
+                        ip = item_params[u'atk_1']
+                    elif key == u'def':
+                        ip = item_params[u'def_1']
+                    else:
+                        ip = item_params[key]
+                    if dp != ip:
+                        wikipedia.output("Drop parameter mismatch for %s parameter of item %s (%s vs %s)" % (key, drop_params[u'name'], dp, ip))
+            else:
+                wikipedia.output("Ignoring template %s" % template)
+
+    def fixBoss(self, text, categories, templatesWithParams):
+        """
+        Ensures that __NOWYSIWYG__ is present.
+        Checks that the page is in one of the Job Bosses or Tech Lab Bosses categories.
+        Checks each drop's image, type, attack, and defence.
+        Checks whether the categories Needs Completion Dialogue, Needs Rewards,
+        Needs Stages, and Needs Time Limit are used correctly.
+        """
+        job_boss = self.catInCategories(u'Job Bosses', categories)
+        tl_boss = self.catInCategories(u'Tech Lab Bosses', categories)
+        # Drop out early if not a boss page
+        # TODO Is there a better test ?
+        if not job_boss and not tl_boss:
+            return text
+
+        drop_params = [u'image', u'type', u'atk', u'def']
+
+        new_text = self.prependNowysiwygIfNeeded(text)
+
+        if job_boss == tl_boss:
+            wikipedia.output("Boss isn't in exactly one category of Job Bosses and Tech Lab Bosses")
+
+        for (template, params) in templatesWithParams:
+            if template == u'Drop':
+                drop_params = {}
+                for param in params:
+                    m = Rparam.match(param)
+                    drop_params[m.group('name')] = m.group('value')
+                self.checkItemParams(drop_params)
+
+        (dummy, start, end, level) = self.findSection(text, u'Completion Dialogue')
+        length = len(text[start:end])
+        if self.catInCategories(u'Needs Completion Dialogue', categories):
+            if tl_boss:
+                wikipedia.output("Tech Lab bosses should never be categorised Needs Completion Dialogue")
+            elif (start != -1) and (length > 0):
+                wikipedia.output("Non-empty completion dialogue section found despite Needs Completion Dialogue category")
+        elif (start == -1) or (length == 0):
+            # Section not present or empty
+            text = self.appendCategory(text, u'Needs Completion Dialogue')
+
+        (dummy, start, end, level) = self.findSection(text, u'Rewards')
+        if self.catInCategories(u'Needs Rewards', categories):
+            if start != -1:
+                # There is a Rewards section
+                # TODO Check for actual content - may just have sub-headers
+                wikipedia.output("Non-empty Rewards section found despite Needs Rewards category")
+        elif start == -1:
+            # Section not present
+            text = self.appendCategory(text, u'Needs Rewards')
+
+        (dummy, start, end, level) = self.findSection(text, u'Stages')
+        if self.catInCategories(u'Needs Stages', categories):
+            if start != -1:
+                # There is a Stages section
+                # TODO Check for actual content - may just have sub-headers
+                wikipedia.output("Non-empty Stages section found despite Needs Stages category")
+        elif start == -1:
+            # Section not present
+            text = self.appendCategory(text, u'Needs Stages')
+
+        (dummy, start, end, level) = self.findSection(text, u'Basic Information')
+        if self.catInCategories(u'Needs Time Limit', categories):
+            if start != -1:
+                # There is a Basic Information section
+                # TODO Check for the actual time limit line
+                wikipedia.output("Non-empty Basic Information section found despite Needs Time Limit category")
+        elif start == -1:
+            # Section not present
+            text = self.appendCategory(text, u'Needs Time Limit')
+
+        return new_text
+
+class XrefBot:
+    def __init__(self, generator, acceptall = False):
+        self.generator = generator
+        self.acceptall = acceptall
+        # Load default summary message.
+        wikipedia.setAction(wikipedia.translate(wikipedia.getSite(), msg_standalone))
+
+    def treat(self, page):
+        try:
+            # Show the title of the page we're working on.
+            # Highlight the title in purple.
+            wikipedia.output(u"\n\n>>> \03{lightpurple}%s\03{default} <<<" % page.title())
+            xrToolkit = XrefToolkit(page.site(), debug = True)
+            changedText = xrToolkit.change(page.get(), page)
+            # TODO Modify to treat just whitespace as unchanged
+            # Just comparing changedText with page.get() wasn't sufficient
+            changes = False
+            for diffline in difflib.ndiff(page.get().splitlines(), changedText.splitlines()):
+                if not diffline.startswith(u'  '):
+                    changes = True
+                    break
+            if changes:
+                if not self.acceptall:
+                    choice = wikipedia.inputChoice(u'Do you want to accept these changes?',  ['Yes', 'No', 'All'], ['y', 'N', 'a'], 'N')
+                    if choice == 'a':
+                        self.acceptall = True
+                if self.acceptall or choice == 'y':
+                    page.put(changedText)
+            else:
+                wikipedia.output('No changes were necessary in %s' % page.title())
+        except wikipedia.NoPage:
+            wikipedia.output("Page %s does not exist?!" % page.aslink())
+        except wikipedia.IsRedirectPage:
+            wikipedia.output("Page %s is a redirect; skipping." % page.aslink())
+        except wikipedia.LockedPage:
+            wikipedia.output("Page %s is locked?!" % page.aslink())
+
+    def run(self):
+        for page in self.generator:
+            self.treat(page)
+
+def main():
+    #page generator
+    gen = None
+    pageTitle = []
+    # This factory is responsible for processing command line arguments
+    # that are also used by other scripts and that determine on which pages
+    # to work on.
+    genFactory = pagegenerators.GeneratorFactory()
+
+    for arg in wikipedia.handleArgs():
+        generator = genFactory.handleArg(arg)
+        if generator:
+            gen = generator
+        else:
+            pageTitle.append(arg)
+
+    if pageTitle:
+        page = wikipedia.Page(wikipedia.getSite(), ' '.join(pageTitle))
+        gen = iter([page])
+    if not gen:
+        wikipedia.showHelp()
+    else:
+        preloadingGen = pagegenerators.PreloadingGenerator(gen)
+        bot = XrefBot(preloadingGen)
+        bot.run()
+
+if __name__ == "__main__":
+    try:
+        main()
+    finally:
+        wikipedia.stopme()
+

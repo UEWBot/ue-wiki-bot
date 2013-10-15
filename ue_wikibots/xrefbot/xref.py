@@ -35,7 +35,7 @@ Rtemplate = re.compile(ur'{{(msg:)?(?P<name>[^{\|]+?)(\|(?P<params>[^{]+?))?}}')
 namedtemplate = (ur'{{(msg:)?(%s[^{\|]+?)(\|(?P<params>[^{]+?))?}}')
 
 # Separate the name and value for a template parameter
-Rparam = re.compile(ur'\s*(?P<name>\S+)\s*=\s*(?P<value>.*)')
+Rparam = re.compile(ur'\s*(?P<name>\S+)\s*=\s*(?P<value>.*)', re.DOTALL)
 
 # Headers
 # This doesn't match level 1 headers, but they're rare...
@@ -123,7 +123,7 @@ class XrefToolkit:
         oldText = text
         #wikipedia.output("******\nIn text:\n%s" % text)
         # TODO There's probably a sensible order for these...
-        text = self.fixBoss(text, categories, templatesWithParams)
+        text = self.fixBoss(titleWithoutNamespace, text, categories, templatesWithParams)
         #wikipedia.output("******\nOld text:\n%s" % oldText)
         #wikipedia.output("******\nIn text:\n%s" % text)
         # Just comparing oldText with text wasn't sufficient
@@ -474,10 +474,11 @@ class XrefToolkit:
                 return text
         assert 0, "Failed to find template %s" % template
 
-    def checkItemParams(self, drop_params):
+    def checkItemParams(self, source, drop_params):
         """
         Checks that the parameters for a drop match the item page.
         params is a dictionary of the drop's parameters.
+        Also checks that the drop lists the source.
         """
         item = wikipedia.Page(wikipedia.getSite(), drop_params[u'name'])
         templatesWithParams = item.templatesWithParams()
@@ -496,6 +497,8 @@ class XrefToolkit:
                         continue
                     elif not dropParamsMatch(drop_params[key], item_params[key]):
                         wikipedia.output("Drop parameter mismatch for %s parameter of item %s (%s vs %s)" % (key, drop_params[u'name'], item_params[key], drop_params[key]))
+                if source not in item_params['from']:
+                    wikipedia.output("Boss claims to drop %s, but is not listed on that page" % drop_params['name'])
             elif template.find(u'Lieutenant') != -1:
                 item_params = {}
                 for param in params:
@@ -515,10 +518,12 @@ class XrefToolkit:
                         ip = item_params[key]
                     if not dropParamsMatch(dp, ip):
                         wikipedia.output("Drop parameter mismatch for %s parameter of item %s (%s vs %s)" % (key, drop_params[u'name'], dp, ip))
+                if source not in item_params['from']:
+                    wikipedia.output("Boss claims to drop %s, but is not listed on that page" % drop_params['name'])
             elif (template != u'Job Link') and (template != u'For') and (template != u'Sic'):
                 wikipedia.output("Ignoring template %s" % template)
 
-    def fixBoss(self, text, categories, templatesWithParams):
+    def fixBoss(self, name, text, categories, templatesWithParams):
         """
         Ensures that __NOWYSIWYG__ is present.
         Checks that the page is in one of the Job Bosses or Tech Lab Bosses categories.
@@ -546,7 +551,7 @@ class XrefToolkit:
                 for param in params:
                     m = Rparam.match(param)
                     drop_params[m.group('name')] = m.group('value')
-                self.checkItemParams(drop_params)
+                self.checkItemParams(name, drop_params)
 
         (dummy, start, end, level) = self.findSection(text, u'Completion Dialogue')
         length = len(text[start:end])

@@ -1,4 +1,4 @@
-#! /usr//bin/python
+#! /usr/bin/python
 
 """
 Script to fix up categories and cross-references between pages on UE Wiki.
@@ -118,12 +118,16 @@ class XrefToolkit:
         if titleWithoutNamespace.find(u'Template') != -1:
             wikipedia.output("Not touching template page %s" % titleWithoutNamespace)
             return text
+        # Note that this only gets explicit categories written into the page text,
+        # not those added by templates.
         categories = page.categories()
         templatesWithParams = page.templatesWithParams()
+        refs = page.getReferences()
         oldText = text
         #wikipedia.output("******\nIn text:\n%s" % text)
         # TODO There's probably a sensible order for these...
         text = self.fixBoss(titleWithoutNamespace, text, categories, templatesWithParams)
+        text = self.fixItem(text, categories, templatesWithParams, refs)
         #wikipedia.output("******\nOld text:\n%s" % oldText)
         #wikipedia.output("******\nIn text:\n%s" % text)
         # Just comparing oldText with text wasn't sufficient
@@ -152,12 +156,12 @@ class XrefToolkit:
 
     def prependNowysiwygIfNeeded(self, text):
         """
-        Returns text with __NOWYSISYG prepended if it isn't already in the page.
+        Returns text with __NOWYSISYG__ prepended if it isn't already in the page.
         """
         keyword = u'__NOWYSIWYG__'
         if keyword in text:
             return text
-        return keyword + text
+        return keyword + u'\n' + text
 
     def appendCategory(self, text, category):
         """
@@ -166,6 +170,15 @@ class XrefToolkit:
         This function will do all the wiki markup and return the new text.
         """
         return text + u'\n[[Category:%s]]' % category
+
+    def removeCategory(self, text, category):
+        """
+        Returns the text with the appropriate category removed.
+        category should be the name of the category itself.
+        """
+        Rcat = re.compile(category_re % category)
+        # Remove the category
+        return Rcat.sub('', text)
 
     def templateParam(self, templatesWithParams, template, param):
         """
@@ -523,8 +536,33 @@ class XrefToolkit:
             elif (template != u'Job Link') and (template != u'For') and (template != u'Sic'):
                 wikipedia.output("Ignoring template %s" % template)
 
+    def fixNeedsCategory(self, text, params, categories, cat, param):
+        """
+        Adds or removes a "Needs" category based on whether the paameter 'param'
+        is present in the text 'params' and whether the category 'cat' is
+        present in the list 'categories'.
+        """
+        present = False
+        for p in params:
+            m = Rparam.match(p)
+            if m.group('name') == param:
+                val = m.group('value')
+                # People sometimes provide the parameters, even though we don't know the value
+                if val != u'' and val != u'?':
+                    present = True
+        if self.catInCategories(cat, categories):
+            if present:
+                wikipedia.output("In %s category, but %s specified as %s." % (cat, param, val));
+                text = self.removeCategory(text, cat)
+        else:
+            if not present:
+                wikipedia.output("Not in %s category, but %s param not specified." % (cat, param));
+                text = self.appendCategory(text, cat)
+        return text
+
     def fixBoss(self, name, text, categories, templatesWithParams):
         """
+        If the page is in either the 'Job Bosses' or 'Tech Lab Bosses' categories:
         Ensures that __NOWYSIWYG__ is present.
         Checks that the page is in one of the Job Bosses or Tech Lab Bosses categories.
         Checks each drop's image, type, attack, and defence.
@@ -540,11 +578,14 @@ class XrefToolkit:
 
         drop_params = [u'image', u'type', u'atk', u'def']
 
-        new_text = self.prependNowysiwygIfNeeded(text)
+        # __NOWYSISYG__
+        text = self.prependNowysiwygIfNeeded(text)
 
+        # Check core category
         if job_boss == tl_boss:
             wikipedia.output("Boss isn't in exactly one category of Job Bosses and Tech Lab Bosses")
 
+        # Check each drop
         for (template, params) in templatesWithParams:
             if template == u'Drop':
                 drop_params = {}
@@ -553,16 +594,20 @@ class XrefToolkit:
                     drop_params[m.group('name')] = m.group('value')
                 self.checkItemParams(name, drop_params)
 
+        # Check Needs categories
         (dummy, start, end, level) = self.findSection(text, u'Completion Dialogue')
         length = len(text[start:end])
         if self.catInCategories(u'Needs Completion Dialogue', categories):
             if tl_boss:
                 wikipedia.output("Tech Lab bosses should never be categorised Needs Completion Dialogue")
+                text = self.removeCategory(text, u'Needs Completion Dialogue')
             elif (start != -1) and (length > 0):
                 wikipedia.output("Non-empty completion dialogue section found despite Needs Completion Dialogue category")
+                text = self.removeCategory(text, u'Needs Completion Dialogue')
         elif (start == -1) or (length == 0):
             # Section not present or empty
-            text = self.appendCategory(text, u'Needs Completion Dialogue')
+            if not tl_boss:
+                text = self.appendCategory(text, u'Needs Completion Dialogue')
 
         (dummy, start, end, level) = self.findSection(text, u'Rewards')
         if self.catInCategories(u'Needs Rewards', categories):
@@ -594,7 +639,204 @@ class XrefToolkit:
             # Section not present
             text = self.appendCategory(text, u'Needs Time Limit')
 
-        return new_text
+        return text
+
+    def fixItem(self, text, categories, templatesWithParams, refs):
+        """
+        If the page uses any of the templates 'Item', 'Gift Item', 'Mystery Gift Item', 
+        'Faction Item', 'Special Item', 'Basic Item', 'Battle Rank Item', or 'Ingredient':
+        Ensures that __NOWYSIWYG__ is present.
+        Checks that the page doesn't explictly list any categories that should be
+        assigned by the template.
+        Checks that the item is listed everywhere it says it can be obtained.
+        Checks whether the categories Needs Cost and Needs Type are used correctly.
+        Calls the appropriate fix function for the specific type of item.
+        """
+        # All these categories should be added by the template
+        implicit_categories = [u'Items',
+                               u'Common Items',
+                               u'Uncommon Items',
+                               u'Rare Items',
+                               u'Epic Items',
+                               u'Legendary Items',
+                               u'Special Items',
+                               u'Basic Items',
+                               u'Battle Rank Items',
+                               u'Ingredients',
+                               u'Gear',
+                               u'Vehicles',
+                               u'Weapons',
+                               u'Rifle',
+                               u'Heavy Weapons',
+                               u'Handguns',
+                               u'Melee Weapons',
+                               u'Gift Items',
+                               u'Faction Items',
+                               u'Dragon Syndicate Items',
+                               u'Street Items',
+                               u'The Cartel Items',
+                               u'The Mafia Items',
+                               u'Needs Type']
+
+        # Does the page use an item template ?
+        the_params = None
+        is_tech_lab_item = False
+        is_stub = False
+        for template,params in templatesWithParams:
+            # Find the templates we're interested in
+            if template == u'Stub':
+                is_stub = True
+
+            if template == u'Item':
+                wikipedia.output("Directly uses Item template")
+
+            if template == u'Lab':
+                is_tech_lab_item = True
+                ingredients = params
+
+            if template == u'Gift Item':
+                the_template = template
+                the_params = params
+            elif template == u'Mystery Gift Item':
+                the_template = template
+                the_params = params
+            elif template == u'Faction Item':
+                the_template = template
+                the_params = params
+            elif template == u'Special Item':
+                the_template = template
+                the_params = params
+            elif template == u'Basic Item':
+                the_template = template
+                the_params = params
+            elif template == u'Battle Rank Item':
+                the_template = template
+                the_params = params
+            elif template == u'Ingredient':
+                the_template = template
+                the_params = params
+
+        # Drop out early if not an item page
+        # This ignores Stamina Pack and Energy Pack, but that's probably fine
+        # TODO Is there a better test ?
+        if the_params == None:
+            return text
+
+        # Check for explicit categories that should be implicit
+        for cat in implicit_categories:
+            if self.catInCategories(cat, categories):
+                wikipedia.output("Explictly in implicit category %s" % cat)
+                text = self.removeCategory(text, cat)
+
+        # __NOWYSIWYG__
+        text = self.prependNowysiwygIfNeeded(text)
+
+        # TODO Look at all these special cases, and consider moving some checks
+        # into the type-specific item fixing methods, even if there is some
+        # duplication (can put the code in a separate method, called in several places)
+
+        # from parameter
+        if the_template == u'Gift Item' or the_template == u'Mystery Gift Item':
+            # from has a different meaning for gifts
+            # but we always know where they come from
+            from_present = True
+        elif the_template == u'Basic Item' or the_template == u'Battle Rank Item':
+            # Basic items and Battle Rank Items are always from the shop
+            from_present = True
+        elif the_template == u'Faction Item':
+            # These are awarded when you accumulate enough Affiliation Points
+            from_present = True
+        elif is_tech_lab_item:
+            # The "from={{Lab ...}} confuses the parser. We know "from" is there
+            from_present = True
+        elif is_stub:
+            # Don't bother adding individual "Needs" categories to stubs
+            from_present = True
+        else:
+            from_present = False
+            for param in the_params:
+                m = Rparam.match(param)
+                if m.group('name') == u'from':
+                    from_present = True
+                    from_param = m.group('value')
+                    # TODO Actually check the parameter content
+                    wikipedia.output("From %s" % m.group('value'))
+                    wikipedia.output(list(refs))
+
+        # Check Needs categories
+        if self.catInCategories(u'Needs Source', categories):
+            if from_present:
+                wikipedia.output("In Needs Source category, but from parameter is present")
+                text = self.removeCategory(text, u'Needs Source')
+        else:
+            if not from_present:
+                text = self.appendCategory(text, u'Needs Source')
+
+        # Ingredients and Mystery Gift Items never have costs
+        if the_template != u'Ingredient' and the_template != u'Mystery Gift Item' and not is_stub:
+            text = self.fixNeedsCategory(text, the_params, categories, u'Needs Cost', u'cost')
+        # Some ingredients (cellphones) don't have descriptions
+        # TODO check the ones that should
+        # Mystery Gift Items never have costs
+        if the_template != u'Ingredient' and the_template != u'Mystery Gift Item' and not is_stub:
+            text = self.fixNeedsCategory(text, the_params, categories, u'Needs Description', u'description')
+        # Mystery Gift Items don't have rarities, either
+        if the_template != u'Mystery Gift Item' and not is_stub:
+            text = self.fixNeedsCategory(text, the_params, categories, u'Needs Rarity', u'rarity')
+
+        # Do more detailed checks for specific sub-types
+        if the_template == u'Gift Item':
+            text = self.fixGiftItem(text)
+        elif the_template == u'Mystery Gift Item':
+            text = self.fixMysteryGiftItem(text)
+        elif the_template == u'Faction Item':
+            text = self.fixFactionItem(text)
+        elif the_template == u'Special Item':
+            text = self.fixSpecialItem(text)
+        elif the_template == u'Basic Item':
+            text = self.fixBasicItem(text)
+        elif the_template == u'Battle Rank Item':
+            text = self.fixBattleItem(text)
+        elif the_template == u'Ingredient':
+            text = self.fixIngredient(text)
+
+        if if_tech_lab_item:
+            text = self.fixTechLabItem(text)
+
+        return text
+
+    def fixGiftItem(self, text):
+        # TODO Implement
+        return text
+
+    def fixMysteryGiftItem(self, text):
+        # TODO Implement
+        return text
+
+    def fixFactionItem(self, text):
+        # TODO Implement
+        return text
+
+    def fixSpecialItem(self, text):
+        # TODO Implement
+        return text
+
+    def fixBasicItem(self, text):
+        # TODO Implement
+        # TODO Ensure that daily items are specified with parameter, not explicit category
+        return text
+
+    def fixBattleItem(self, text):
+        # TODO Implement
+        return text
+
+    def fixIngredient(self, text):
+        # TODO Implement
+        return text
+
+    def fixTechLabItem(self, text):
+        # TODO Implement
+        return text
 
 class XrefBot:
     def __init__(self, generator, acceptall = False):

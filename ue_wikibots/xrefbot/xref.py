@@ -823,7 +823,7 @@ class XrefToolkit:
         elif the_template == u'Basic Item':
             text = self.fixBasicItem(text)
         elif the_template == u'Battle Rank Item':
-            text = self.fixBattleItem(text)
+            text = self.fixBattleItem(name, text, the_params, categories)
         elif the_template == u'Ingredient':
             text = self.fixIngredient(text)
 
@@ -874,7 +874,7 @@ class XrefToolkit:
 
     def fixMysteryGiftItem(self, name, text, params, categories):
         """
-        Ensures that gift items have image, from, item_1, and item_2
+        Ensures that mystery gift items have image, from, item_1, and item_2
         parameters, or appropriate "Needs" category.
         Checks that the minimum level is specified, and that it matches what the Gift page says.
         Assumes that that page uses the Mystery Gift Item template.
@@ -902,8 +902,34 @@ class XrefToolkit:
         # TODO Ensure that daily items are specified with parameter, not explicit category
         return text
 
-    def fixBattleItem(self, text):
-        # TODO Implement
+    def fixBattleItem(self, name, text, params, categories):
+        """
+        Ensures that battle rank items have description, image, atk, def, cost, rarity params
+        or appopriate "Needs" category.
+        Checks that the battle rank is specified, and that it matches what the Battle Rank page says.
+        Assumes that the page uses the Battle Rank Item template.
+        """
+        # Check simple parameters
+        text = self.fixNeedsCategory(text, params, categories, u'Needs Description', u'description')
+        text = self.fixNeedsCategory(text, params, categories, u'Needs Image', u'image')
+        text = self.fixNeedsStats(text, params, categories)
+        text = self.fixNeedsCategory(text, params, categories, u'Needs Cost', u'cost')
+        text = self.fixNeedsCategory(text, params, categories, u'Needs Rarity', u'rarity')
+
+        # Check rank parameter against Battle Rank page
+        rank_param = paramFromParams(params, u'rank')
+        if rank_param == None:
+            text = self.appendCategory(u'Needs Information')
+        else:
+            rank_page = wikipedia.Page(wikipedia.getSite(), u'Battle Rank')
+            templatesWithParams = rank_page.templatesWithParams()
+            for t,p in templatesWithParams:
+                if t == u'Battle Rank List':
+                    rank = paramFromParams(u'number',p)
+                    item = paramFromParams(u'reward',p)
+                    if item == u'[[%s]]' % name and rank != rank_param:
+                        wikipedia.output("Minimum battle rank mismatch - Battle Rank page says %s, this page says %s" % (rank, rank_param))
+
         return text
 
     def fixIngredient(self, text):

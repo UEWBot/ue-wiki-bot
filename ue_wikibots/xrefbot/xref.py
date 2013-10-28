@@ -41,6 +41,9 @@ Rparam = re.compile(ur'\s*(?P<name>\S+)\s*=\s*(?P<value>.*)', re.DOTALL)
 # This doesn't match level 1 headers, but they're rare...
 Rheader = re.compile(ur'(={2,})\s*(?P<title>[^=]+)\s*\1')
 
+# List items on gift page
+Rgift = re.compile(ur'<li value=(?P<level>.*)>\[\[(?P<item>.*)\]\]</li>')
+
 # String used for category REs
 category_re = ur'\[\[\s*Category:\s*%s\s*\]\]'
 #TODO fix this so it doesn't coalesce multiple categories
@@ -103,6 +106,19 @@ def dropParamsMatch(param1, param2):
     # TODO Match link with nonlink with mismatched first character
     return False
 
+def paramFromParams(params, param):
+    """
+    Returns the value for 'param' in 'params', or None if it isn't present.
+    """
+    for p in params:
+        m = Rparam.match(p)
+        if m.group('name') == param:
+            val = m.group('value')
+            # People sometimes provide the parameters, even though we don't know the value
+            if val != u'' and val != u'?':
+                return val
+    return None
+
 class XrefToolkit:
     def __init__(self, site, debug = False):
         self.site = site
@@ -122,12 +138,17 @@ class XrefToolkit:
         # not those added by templates.
         categories = page.categories()
         templatesWithParams = page.templatesWithParams()
+        # Don't do anything to stub pages
+        for template,params in templatesWithParams:
+            if template == u'Stub':
+                wikipedia.output("Not touching stub page %s" % titleWithoutNamespace)
+                return text
         refs = page.getReferences()
         oldText = text
         #wikipedia.output("******\nIn text:\n%s" % text)
         # TODO There's probably a sensible order for these...
         text = self.fixBoss(titleWithoutNamespace, text, categories, templatesWithParams)
-        text = self.fixItem(text, categories, templatesWithParams, refs)
+        text = self.fixItem(titleWithoutNamespace, text, categories, templatesWithParams, refs)
         #wikipedia.output("******\nOld text:\n%s" % oldText)
         #wikipedia.output("******\nIn text:\n%s" % text)
         # Just comparing oldText with text wasn't sufficient
@@ -542,6 +563,7 @@ class XrefToolkit:
         is present in the text 'params' and whether the category 'cat' is
         present in the list 'categories'.
         """
+        # TODO Use paramFromParams, like fixNeedsStats(), below.
         present = False
         for p in params:
             m = Rparam.match(p)
@@ -557,6 +579,28 @@ class XrefToolkit:
         else:
             if not present:
                 wikipedia.output("Not in %s category, but %s param not specified." % (cat, param));
+                text = self.appendCategory(text, cat)
+        return text
+
+    def fixNeedsStats(self, text, params, categories):
+        """
+        Similar to fixNeedsCategory(), except checks for atk and def parameters,
+        and uses Needs Stats category.
+        """
+        cat = u'Needs Stats'
+        attack = paramFromParams(params, u'atk')
+        defence = paramFromParams(params, u'def')
+        present = (attack != None) and (defence != None)
+        if self.catInCategories(cat, categories):
+            if present:
+                wikipedia.output("In %s category, but atk=%s and def=%s." % (cat, attack, defence));
+                text = self.removeCategory(text, cat)
+        else:
+            if not present:
+                if attack == None:
+                    wikipedia.output("Not in %s category, but atk param not specified." % cat);
+                if defence == None:
+                    wikipedia.output("Not in %s category, but def param not specified." % cat);
                 text = self.appendCategory(text, cat)
         return text
 
@@ -641,7 +685,7 @@ class XrefToolkit:
 
         return text
 
-    def fixItem(self, text, categories, templatesWithParams, refs):
+    def fixItem(self, name, text, categories, templatesWithParams, refs):
         """
         If the page uses any of the templates 'Item', 'Gift Item', 'Mystery Gift Item', 
         'Faction Item', 'Special Item', 'Basic Item', 'Battle Rank Item', or 'Ingredient':
@@ -681,12 +725,8 @@ class XrefToolkit:
         # Does the page use an item template ?
         the_params = None
         is_tech_lab_item = False
-        is_stub = False
         for template,params in templatesWithParams:
             # Find the templates we're interested in
-            if template == u'Stub':
-                is_stub = True
-
             if template == u'Item':
                 wikipedia.output("Directly uses Item template")
 
@@ -749,19 +789,13 @@ class XrefToolkit:
         elif is_tech_lab_item:
             # The "from={{Lab ...}} confuses the parser. We know "from" is there
             from_present = True
-        elif is_stub:
-            # Don't bother adding individual "Needs" categories to stubs
-            from_present = True
         else:
-            from_present = False
-            for param in the_params:
-                m = Rparam.match(param)
-                if m.group('name') == u'from':
-                    from_present = True
-                    from_param = m.group('value')
-                    # TODO Actually check the parameter content
-                    wikipedia.output("From %s" % m.group('value'))
-                    wikipedia.output(list(refs))
+            from_param = paramFromParams(the_params, u'from')
+            from_present = (from_param != None)
+            if from_present:
+                # TODO Actually check the parameter content
+                wikipedia.output("From %s" % m.group('value'))
+                wikipedia.output(list(refs))
 
         # Check Needs categories
         if self.catInCategories(u'Needs Source', categories):
@@ -773,22 +807,22 @@ class XrefToolkit:
                 text = self.appendCategory(text, u'Needs Source')
 
         # Ingredients and Mystery Gift Items never have costs
-        if the_template != u'Ingredient' and the_template != u'Mystery Gift Item' and not is_stub:
+        if the_template != u'Ingredient' and the_template != u'Mystery Gift Item':
             text = self.fixNeedsCategory(text, the_params, categories, u'Needs Cost', u'cost')
         # Some ingredients (cellphones) don't have descriptions
         # TODO check the ones that should
         # Mystery Gift Items never have costs
-        if the_template != u'Ingredient' and the_template != u'Mystery Gift Item' and not is_stub:
+        if the_template != u'Ingredient' and the_template != u'Mystery Gift Item':
             text = self.fixNeedsCategory(text, the_params, categories, u'Needs Description', u'description')
         # Mystery Gift Items don't have rarities, either
-        if the_template != u'Mystery Gift Item' and not is_stub:
+        if the_template != u'Mystery Gift Item':
             text = self.fixNeedsCategory(text, the_params, categories, u'Needs Rarity', u'rarity')
 
         # Do more detailed checks for specific sub-types
         if the_template == u'Gift Item':
-            text = self.fixGiftItem(text)
+            text = self.fixGiftItem(name, text, the_params, categories)
         elif the_template == u'Mystery Gift Item':
-            text = self.fixMysteryGiftItem(text)
+            text = self.fixMysteryGiftItem(name, text, the_params, categories)
         elif the_template == u'Faction Item':
             text = self.fixFactionItem(text)
         elif the_template == u'Special Item':
@@ -800,17 +834,66 @@ class XrefToolkit:
         elif the_template == u'Ingredient':
             text = self.fixIngredient(text)
 
-        if if_tech_lab_item:
+        if is_tech_lab_item:
             text = self.fixTechLabItem(text)
 
         return text
 
-    def fixGiftItem(self, text):
-        # TODO Implement
+    def fixGiftLevel(self, name, text, params, categories):
+        """
+        Checks the from parameter.
+        Adds or removes Needs Minimum Level category.
+        Warns if the from parameter differs from what the Gift page says.
+        """
+        from_param = paramFromParams(params, u'from')
+        if from_param == None:
+            text = self.appendCategory(u'Needs Minimum Level')
+        else:
+            if self.catInCategories(u'Needs Minimum Level', categories):
+                text = self.removeCategory(u'Needs Minimum Level')
+            gift_page = wikipedia.Page(wikipedia.getSite(), u'Gift')
+            iterator = Rgift.finditer(gift_page.get())
+            for m in iterator:
+                if m.group('item') == name:
+                    if m.group('level') != from_param:
+                        wikipedia.output("Minimum level mismatch - Gift page says %s, this page says %s" % (m.group('level'), from_param))
         return text
 
-    def fixMysteryGiftItem(self, text):
-        # TODO Implement
+    def fixGiftItem(self, name, text, params, categories):
+        """
+        Ensures that gift items have description, image, atk, def, cost, rarity, and from
+        parameters, or appropriate "Needs" category.
+        Trusts that type param will be checked elsewhere.
+        Checks that the minimum level is specified, and that it matches what the Gift page says.
+        Assumes that that page uses the Gift Item template.
+        """
+        # Check all the parameters
+        text = self.fixNeedsCategory(text, params, categories, u'Needs Description', u'description')
+        text = self.fixNeedsCategory(text, params, categories, u'Needs Image', u'image')
+        text = self.fixNeedsStats(text, params, categories)
+        text = self.fixNeedsCategory(text, params, categories, u'Needs Cost', u'cost')
+        text = self.fixNeedsCategory(text, params, categories, u'Needs Rarity', u'rarity')
+
+        # Check from parameter against the Gift page
+        text = self.fixGiftLevel(name, text, params, categories)
+
+        return text
+
+    def fixMysteryGiftItem(self, name, text, params, categories):
+        """
+        Ensures that gift items have image, from, item_1, and item_2
+        parameters, or appropriate "Needs" category.
+        Checks that the minimum level is specified, and that it matches what the Gift page says.
+        Assumes that that page uses the Mystery Gift Item template.
+        """
+        # Check all the parameters
+        text = self.fixNeedsCategory(text, params, categories, u'Needs Image', u'image')
+        text = self.fixNeedsCategory(text, params, categories, u'Needs Information', u'item_1')
+        text = self.fixNeedsCategory(text, params, categories, u'Needs Information', u'item_2')
+
+        # Check from parameter against the Gift page
+        text = self.fixGiftLevel(name, text, params, categories)
+
         return text
 
     def fixFactionItem(self, text):

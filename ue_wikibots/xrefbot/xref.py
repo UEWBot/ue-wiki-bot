@@ -563,15 +563,8 @@ class XrefToolkit:
         is present in the text 'params' and whether the category 'cat' is
         present in the list 'categories'.
         """
-        # TODO Use paramFromParams, like fixNeedsStats(), below.
-        present = False
-        for p in params:
-            m = Rparam.match(p)
-            if m.group('name') == param:
-                val = m.group('value')
-                # People sometimes provide the parameters, even though we don't know the value
-                if val != u'' and val != u'?':
-                    present = True
+        val = paramFromParams(params, param)
+        present = (val != None)
         if self.catInCategories(cat, categories):
             if present:
                 wikipedia.output("In %s category, but %s specified as %s." % (cat, param, val));
@@ -794,7 +787,7 @@ class XrefToolkit:
             from_present = (from_param != None)
             if from_present:
                 # TODO Actually check the parameter content
-                wikipedia.output("From %s" % m.group('value'))
+                wikipedia.output("From %s" % from_param)
                 wikipedia.output(list(refs))
 
         # Check Needs categories

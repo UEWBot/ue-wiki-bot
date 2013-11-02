@@ -50,6 +50,9 @@ Rfaction = re.compile(ur'\*\s*(?P<points>\S*)>\s*points - \[\[(?P<item>.*)\]\]')
 # Any link
 Rlink = re.compile(ur'\[\[\s*(?P<page>[^\|\]]*)\s*.*\]\]')
 
+# Ingredient, with source
+Ringredient = re.compile(ur'\[\[\s*(?P<ingredient>.*)\s*.*\]\].*from\s*\[\[\s*(?P<source>[^\|\]]*)\s*.*\]\]')
+
 # String used for category REs
 category_re = ur'\[\[\s*Category:\s*%s\s*\]\]'
 #TODO fix this so it doesn't coalesce multiple categories
@@ -543,6 +546,7 @@ class XrefToolkit:
             # TODO Clean this code up
             if (template.find(u'Item') != -1) or (template == u'Ingredient'):
                 item_params = paramsToDict(params)
+                # Check the drop parameters we do have
                 for key in drop_params.keys():
                     if (key == u'name'):
                         continue
@@ -550,6 +554,11 @@ class XrefToolkit:
                         continue
                     elif not dropParamsMatch(drop_params[key], item_params[key]):
                         wikipedia.output("Drop parameter mismatch for %s parameter of item %s (%s vs %s)" % (key, drop_params[u'name'], item_params[key], drop_params[key]))
+                # Then check for any that may be missing
+                # TODO This is too strict - "for" parameter should only list Epic Research Items
+                for key in [u'name', u'image', u'atk', u'def', u'type', u'for']:
+                    if key not in drop_params and key in item_params:
+                        wikipedia.output("Drop parameter %s not provided for %s, but should be %s" % (key, drop_params[u'name'], item_params[key]))
                 if source not in item_params['from']:
                     wikipedia.output("Boss claims to drop %s, but is not listed on that page" % drop_params['name'])
             elif template.find(u'Lieutenant') != -1:
@@ -1078,10 +1087,47 @@ class XrefToolkit:
         # Check that the ingredients match
         # Lab ingredients are links, and often say where they drop
         # Recipe ingredients are just the item name
-        if lab_param != recipe_param:
-            wikipedia.output("part_%d parameter mismatch - %s in page, %s on Tech Lab page" % (i, lab_param, recipe_param))
-        # TODO check drop location for each part
-        # TODO check that each part lists this item as "for"
+        # TODO This doesn't work when multiple sources are listed e.g. Apache: Gun
+        r = Ringredient.search(lab_param)
+        if r:
+            item = r.group('ingredient')
+            source = r.group('source')
+        else:
+            r = Rlink.search(lab_param)
+            item = r.group('page')
+            source = None
+        if item != recipe_param:
+            wikipedia.output("part_%d parameter mismatch - %s in page, %s on Tech Lab page" % (i, item, recipe_param))
+        #wikipedia.output("%s from %s." % (item, source))
+
+        # Check that the part lists this item as "for"
+        page = wikipedia.Page(wikipedia.getSite(), item)
+        templatesWithParams = page.templatesWithParams()
+        for template,params in templatesWithParams:
+            for_param = paramFromParams(params, u'for')
+            if for_param != None:
+                if name not in for_param:
+                    wikipedia.output("%s is an ingredient, but doesn't list this page as somethign it is for" % item)
+
+        # Check drop location for the part
+        # TODO Some of this should be in fixBoss, where we can fix it
+        if source != None:
+            found = False
+            page = wikipedia.Page(wikipedia.getSite(), source)
+            templatesWithParams = page.templatesWithParams()
+            for template,params in templatesWithParams:
+                if template == u'Drop':
+                    name_param = paramFromParams(params, u'name')
+                    if name_param == item:
+                        for_param = paramFromParams(params, u'for')
+                        found = True
+                        break
+            if not found:
+                wikipedia.output("Ingredient %s is listed as dropping from %s, but that page disagrees" % (item, source))
+            elif for_param == None:
+                wikipedia.output("Ingredient %s drops from %s, but that page doesn't say that it makes %s" % (item, source, name))
+            elif for_param != name:
+                wikipedia.output("Ingredient %s drops from %s, but that page says that it makes %s" % (item, source, for_param))
 
     def fixTechLabItem(self, name, text, params, categories, lab_params):
         """

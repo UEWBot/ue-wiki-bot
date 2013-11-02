@@ -822,7 +822,7 @@ class XrefToolkit:
         elif the_template == u'Faction Item':
             text = self.fixFactionItem(name, text, the_params, categories)
         elif the_template == u'Special Item':
-            text = self.fixSpecialItem(text)
+            text = self.fixSpecialItem(text, the_params, categories, is_tech_lab_item)
         elif the_template == u'Basic Item':
             text = self.fixBasicItem(text, the_params, categories)
         elif the_template == u'Battle Rank Item':
@@ -956,8 +956,28 @@ class XrefToolkit:
 
         return text
 
-    def fixSpecialItem(self, text):
-        # TODO Implement
+    def fixSpecialItem(self, text, params, categories, is_tech_lab_item):
+        """
+        Ensures that special items have description, image, atk, def, cost, rarity, type
+        and from params or appropriate "Needs" category.
+        Assumes that the page uses the Special Item template.
+        """
+        # Check simple parameters
+        text = self.fixNeedsCategory(text, params, categories, u'Needs Description', u'description')
+        text = self.fixNeedsCategory(text, params, categories, u'Needs Image', u'image')
+        text = self.fixNeedsStats(text, params, categories)
+        text = self.fixNeedsCategory(text, params, categories, u'Needs Cost', u'cost')
+        text = self.fixNeedsCategory(text, params, categories, u'Needs Rarity', u'rarity')
+        # If it's a tech lab item, don't bother checking what it's made from.
+        # That will be done in fixTechLabItem.
+        if not is_tech_lab_item:
+            text = self.fixNeedsCategory(text, params, categories, u'Needs Source', u'from')
+
+        # Check type param
+        text = self.fixItemType(text, params, categories)
+
+        # TODO Check that the item is listed everywhere it is from
+
         return text
 
     def fixBasicItem(self, text, params, categories):

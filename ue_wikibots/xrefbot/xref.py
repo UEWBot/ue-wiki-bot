@@ -122,6 +122,12 @@ def paramFromParams(params, param):
                 return val
     return None
 
+def oneCap(string):
+    """
+    Returns the string with the first letter capitalised and the rest left alone.
+    """
+    return string[0].upper() + string[1:]
+
 class XrefToolkit:
     def __init__(self, site, debug = False):
         self.site = site
@@ -759,6 +765,7 @@ class XrefToolkit:
             return text
 
         # Check for explicit categories that should be implicit
+        # TODO How much is redundant with template-based checks ?
         for cat in implicit_categories:
             if self.catInCategories(cat, categories):
                 wikipedia.output("Explictly in implicit category %s" % cat)
@@ -767,52 +774,12 @@ class XrefToolkit:
         # __NOWYSIWYG__
         text = self.prependNowysiwygIfNeeded(text)
 
-        # TODO Look at all these special cases, and consider moving some checks
-        # into the type-specific item fixing methods, even if there is some
-        # duplication (can put the code in a separate method, called in several places)
-
-        # from parameter
-        if the_template == u'Gift Item' or the_template == u'Mystery Gift Item':
-            # from has a different meaning for gifts
-            # but we always know where they come from
-            from_present = True
-        elif the_template == u'Basic Item' or the_template == u'Battle Rank Item':
-            # Basic items and Battle Rank Items are always from the shop
-            from_present = True
-        elif the_template == u'Faction Item':
-            # These are awarded when you accumulate enough Affiliation Points
-            from_present = True
-        elif is_tech_lab_item:
-            # The "from={{Lab ...}} confuses the parser. We know "from" is there
-            from_present = True
-        else:
+        # If the item comes from somewhere special (other than tech lab), do cross-ref check
+        # (Mystery) Gift Item template uses from with a different meaning
+        if template != u'Gift Item' and template != u'Mystery Gift Item':
             from_param = paramFromParams(the_params, u'from')
-            from_present = (from_param != None)
-            if from_present:
-                # TODO Actually check the parameter content
-                wikipedia.output("From %s" % from_param)
-                wikipedia.output(list(refs))
-
-        # Check Needs categories
-        if self.catInCategories(u'Needs Source', categories):
-            if from_present:
-                wikipedia.output("In Needs Source category, but from parameter is present")
-                text = self.removeCategory(text, u'Needs Source')
-        else:
-            if not from_present:
-                text = self.appendCategory(text, u'Needs Source')
-
-        # Ingredients and Mystery Gift Items never have costs
-        if the_template != u'Ingredient' and the_template != u'Mystery Gift Item':
-            text = self.fixNeedsCategory(text, the_params, categories, u'Needs Cost', u'cost')
-        # Some ingredients (cellphones) don't have descriptions
-        # TODO check the ones that should
-        # Mystery Gift Items never have costs
-        if the_template != u'Ingredient' and the_template != u'Mystery Gift Item':
-            text = self.fixNeedsCategory(text, the_params, categories, u'Needs Description', u'description')
-        # Mystery Gift Items don't have rarities, either
-        if the_template != u'Mystery Gift Item':
-            text = self.fixNeedsCategory(text, the_params, categories, u'Needs Rarity', u'rarity')
+            if from_param != None:
+                text = self.fixDrop(name, text, from_param, refs)
 
         # Do more detailed checks for specific sub-types
         if the_template == u'Gift Item':
@@ -830,9 +797,15 @@ class XrefToolkit:
         elif the_template == u'Ingredient':
             text = self.fixIngredient(name, text, the_params, categories, is_tech_lab_item)
 
+        # Do special checks for any Epic Research Items
         if is_tech_lab_item:
             text = self.fixTechLabItem(text)
 
+        return text
+
+    def fixDrop(self, name, text, from_param, refs):
+        wikipedia.output("Check that %s drops from %s" % (name, from_param))
+        # TODO Implement
         return text
 
     def fixItemType(self, text, params, categories):
@@ -845,7 +818,8 @@ class XrefToolkit:
                  u'Melee Weapons',
                  u'Rifles',
                  u'Handguns',
-                 u'Heavy Weapons']
+                 u'Heavy Weapons',
+                 u'Needs Type']
         cat = u'Needs Type'
         if self.catInCategories(cat, categories):
             wikipedia.output("Explictly in implicit category %s" % cat)
@@ -856,7 +830,7 @@ class XrefToolkit:
             pass
         else:
             # Check that the type is one we expect
-            if type_param not in types:
+            if oneCap(type_param) not in types:
                 wikipedia.output("Unexpected type '%s'" % type_param)
                 # TODO Change it to Needs Type
 
@@ -976,8 +950,6 @@ class XrefToolkit:
         # Check type param
         text = self.fixItemType(text, params, categories)
 
-        # TODO Check that the item is listed everywhere it is from
-
         return text
 
     def fixBasicItem(self, text, params, categories):
@@ -1072,15 +1044,9 @@ class XrefToolkit:
         if not name in no_desc:
             text = self.fixNeedsCategory(text, params, categories, u'Needs Description', u'description')
 
-        # If it's a tech lab item, don't bother checking what it's made from.
-        # That will be done in fixTechLabItem.
+        # If it's a tech lab item, from parameter will be misleading
         if not is_tech_lab_item:
-            from_param = paramFromParams(params, u'from')
-            if from_param == None:
-                text = self.appendCategory(text, u'Needs Source')
-            else:
-                #TODO Check item is listed as a drop where appropriate
-                pass
+            text = self.fixNeedsCategory(text, params, categories, u'Needs Source', u'from')
 
         for_param = paramFromParams(params, u'for')
         if for_param == None:

@@ -47,6 +47,9 @@ Rgift = re.compile(ur'<li value=(?P<level>.*)>\[\[(?P<item>.*)\]\]</li>')
 # List items on faction page
 Rfaction = re.compile(ur'\*\s*(?P<points>\S*)>\s*points - \[\[(?P<item>.*)\]\]')
 
+# Any link
+Rlink = re.compile(ur'\[\[\s*(?P<page>[^\|\]]*)\s*.*\]\]')
+
 # String used for category REs
 category_re = ur'\[\[\s*Category:\s*%s\s*\]\]'
 #TODO fix this so it doesn't coalesce multiple categories
@@ -127,6 +130,16 @@ def oneCap(string):
     Returns the string with the first letter capitalised and the rest left alone.
     """
     return string[0].upper() + string[1:]
+
+def paramsToDict(params):
+    """
+    Takes the list of parameters to a template and returns them as a dict.
+    """
+    result = {}
+    for param in params:
+        m = Rparam.match(param)
+        result[m.group('name')] = m.group('value')
+    return result
 
 class XrefToolkit:
     def __init__(self, site, debug = False):
@@ -529,10 +542,7 @@ class XrefToolkit:
             #wikipedia.output("Template %s" % template)
             # TODO Clean this code up
             if (template.find(u'Item') != -1) or (template == u'Ingredient'):
-                item_params = {}
-                for param in params:
-                    m = Rparam.match(param)
-                    item_params[m.group('name')] = m.group('value')
+                item_params = paramsToDict(params)
                 for key in drop_params.keys():
                     if (key == u'name'):
                         continue
@@ -543,10 +553,7 @@ class XrefToolkit:
                 if source not in item_params['from']:
                     wikipedia.output("Boss claims to drop %s, but is not listed on that page" % drop_params['name'])
             elif template.find(u'Lieutenant') != -1:
-                item_params = {}
-                for param in params:
-                    m = Rparam.match(param)
-                    item_params[m.group('name')] = m.group('value')
+                item_params = paramsToDict(params)
                 for key in drop_params.keys():
                     dp = drop_params[key]
                     if key == u'name':
@@ -634,10 +641,7 @@ class XrefToolkit:
         # Check each drop
         for (template, params) in templatesWithParams:
             if template == u'Drop':
-                drop_params = {}
-                for param in params:
-                    m = Rparam.match(param)
-                    drop_params[m.group('name')] = m.group('value')
+                drop_params = paramsToDict(params)
                 self.checkItemParams(name, drop_params)
 
         # Check Needs categories
@@ -722,6 +726,7 @@ class XrefToolkit:
                                u'Street Items',
                                u'The Cartel Items',
                                u'The Mafia Items',
+                               u'Epic Research Items',
                                u'Needs Type']
 
         # Does the page use an item template ?
@@ -776,7 +781,7 @@ class XrefToolkit:
 
         # If the item comes from somewhere special (other than tech lab), do cross-ref check
         # (Mystery) Gift Item template uses from with a different meaning
-        if template != u'Gift Item' and template != u'Mystery Gift Item':
+        if template != u'Gift Item' and template != u'Mystery Gift Item' and not is_tech_lab_item:
             from_param = paramFromParams(the_params, u'from')
             if from_param != None:
                 text = self.fixDrop(name, text, from_param, refs)
@@ -799,12 +804,19 @@ class XrefToolkit:
 
         # Do special checks for any Epic Research Items
         if is_tech_lab_item:
-            text = self.fixTechLabItem(text)
+            text = self.fixTechLabItem(name, text, the_params, categories, ingredients)
 
         return text
 
     def fixDrop(self, name, text, from_param, refs):
-        wikipedia.output("Check that %s drops from %s" % (name, from_param))
+        """
+        Check that the page lists the right places it can be obtained from.
+        """
+        iterator = Rlink.finditer(from_param)
+        for m in iterator:
+            wikipedia.output("Claims to drop from %s" % m.group('page'))
+        for r in refs:
+            wikipedia.output("Linked to from %s" % r)
         # TODO Implement
         return text
 
@@ -1057,8 +1069,77 @@ class XrefToolkit:
 
         return text
 
-    def fixTechLabItem(self, text):
-        # TODO Implement
+    def checkIngredient(self, name, i, lab_param, recipe_param):
+        """
+        Compare one ingredient listed on an item page with the corresponding one on the Tech Lab page.
+        Check that the ingredient does drop where the page claims it does (and nowhere else).
+        Check that the ingredient lists this item as something it is "for".
+        """
+        # Check that the ingredients match
+        # Lab ingredients are links, and often say where they drop
+        # Recipe ingredients are just the item name
+        if lab_param != recipe_param:
+            wikipedia.output("part_%d parameter mismatch - %s in page, %s on Tech Lab page" % (i, lab_param, recipe_param))
+        # TODO check drop location for each part
+        # TODO check that each part lists this item as "for"
+
+    def fixTechLabItem(self, name, text, params, categories, lab_params):
+        """
+        Check that it is listed as made in the same way on its page and the Tech Lab page.
+        Check that the parts drop where its page says they drop.
+        """
+        # Find the recipe on the Tech Lab page
+        found = False
+        tl_page = wikipedia.Page(wikipedia.getSite(), u'Tech Lab')
+        templatesWithParams = tl_page.templatesWithParams()
+        for template,params in templatesWithParams:
+            if template == u'Recipe':
+                recipe_params = paramsToDict(params)
+                if recipe_params[u'name'] == name:
+                    # This is the one we're interested in
+                    found = True
+                    break
+        if not found:
+            wikipedia.output("Tech Lab item not on the Tech Lab page")
+
+        # Now we can cross-check between the two
+        # Lab template has time, num_parts, part_1..part_n
+        # Recipe template has time, atk, def, description, image, part_1..part_n
+        # Note that recipe description may differ from item description
+        img_param = paramFromParams(params, u'image')
+        if img_param != None and img_param != recipe_params[u'image']:
+            wikipedia.output("Image parameter mismatch - %s in page, %s on Tech Lab page" % (img_param, recipe_params[u'image']))
+        time_param = paramFromParams(lab_params, u'time')
+        if time_param == None:
+            text = self.appendCategory(text, u'Needs Build Time')
+            if recipe_params[u'time'] != None:
+                # TODO Should be possible to fix this
+                wikipedia.output("Page is missing time to build. Tech Lab page says %s" % recipe_params[u'time'])
+        else:
+            if time_param != recipe_params[u'time']:
+                wikipedia.output("Time parameter mismatch - %s in page, %s on Tech Lab page" % (time_param, recipe_params[u'time']))
+        # Compare atk
+        atk_param = paramFromParams(params, u'atk')
+        if atk_param != None and atk_param != recipe_params[u'atk']:
+            wikipedia.output("Attack parameter mismatch - %s in page, %s on Tech Lab page" % (atk_param, recipe_params[u'atk']))
+        # Compare def
+        def_param = paramFromParams(params, u'def')
+        if def_param != None and def_param != recipe_params[u'def']:
+            wikipedia.output("Defence parameter mismatch - %s in page, %s on Tech Lab page" % (def_param, recipe_params[u'atk']))
+        # Check that num_parts is right
+        num_parts = paramFromParams(lab_params, u'num_parts')
+        for i in range(1,7):
+            part_param = paramFromParams(lab_params, u'part_%d' % i)
+            if i <= int(num_parts):
+                # Check part_n
+                if part_param == None:
+                    wikipedia.output("num_parts is %s, but part_%d param is missing" % (num_parts, i))
+                else:
+                    recipe_param = recipe_params[u'part_%d' % i]
+                    self.checkIngredient(name, i, part_param, recipe_param)
+            elif i > int(num_parts) and part_param != None:
+                wikipedia.output("num_parts is %s, but part_%d param is present" % (num_parts, i))
+
         return text
 
 class XrefBot:

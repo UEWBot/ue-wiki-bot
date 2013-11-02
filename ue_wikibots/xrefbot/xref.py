@@ -828,7 +828,7 @@ class XrefToolkit:
         elif the_template == u'Battle Rank Item':
             text = self.fixBattleItem(name, text, the_params, categories)
         elif the_template == u'Ingredient':
-            text = self.fixIngredient(text)
+            text = self.fixIngredient(name, text, the_params, categories, is_tech_lab_item)
 
         if is_tech_lab_item:
             text = self.fixTechLabItem(text)
@@ -870,7 +870,7 @@ class XrefToolkit:
         """
         from_param = paramFromParams(params, u'from')
         if from_param == None:
-            text = self.appendCategory(u'Needs Minimum Level')
+            text = self.appendCategory(text, u'Needs Minimum Level')
         else:
             if self.catInCategories(u'Needs Minimum Level', categories):
                 text = self.removeCategory(u'Needs Minimum Level')
@@ -941,7 +941,7 @@ class XrefToolkit:
         faction_param = paramFromParams(params, u'faction')
         points_param = paramFromParams(params, u'points')
         if faction_param == None or points_param == None:
-            text = self.appendCategory(u'Needs Information')
+            text = self.appendCategory(text, u'Needs Information')
         else:
             faction_page = wikipedia.Page(wikipedia.getSite(), faction_param)
             iterator = Rfaction.finditer(faction_page.get())
@@ -963,7 +963,7 @@ class XrefToolkit:
     def fixBasicItem(self, text, params, categories):
         """
         Ensures that basic items have description, image, atk, def, cost, rarity, quote
-        and time params or appopriate "Needs" category.
+        and time params or appropriate "Needs" category.
         Checks that either level or district is specified.
         Checks that it not explcitly in Daily Rewards category.
         Assumes that the page uses the Basic Item template.
@@ -1003,7 +1003,7 @@ class XrefToolkit:
     def fixBattleItem(self, name, text, params, categories):
         """
         Ensures that battle rank items have description, image, atk, def, cost, rarity params
-        or appopriate "Needs" category.
+        or appropriate "Needs" category.
         Checks that the battle rank is specified, and that it matches what the Battle Rank page says.
         Assumes that the page uses the Battle Rank Item template.
         """
@@ -1017,7 +1017,7 @@ class XrefToolkit:
         # Check rank parameter against Battle Rank page
         rank_param = paramFromParams(params, u'rank')
         if rank_param == None:
-            text = self.appendCategory(u'Needs Information')
+            text = self.appendCategory(text, u'Needs Information')
         else:
             rank_page = wikipedia.Page(wikipedia.getSite(), u'Battle Rank')
             templatesWithParams = rank_page.templatesWithParams()
@@ -1033,8 +1033,42 @@ class XrefToolkit:
 
         return text
 
-    def fixIngredient(self, text):
-        # TODO Implement
+    def fixIngredient(self, name, text, params, categories, is_tech_lab_item):
+        """
+        Ensures that ingredient items have image, rarity, from and for params
+        or appropriate "Needs" category.
+        Checks that the item is listed on the from and for pages.
+        Assumes that the page uses the Ingredient template.
+        """
+        no_desc = [u"Boss Frank's Cell Phone",
+                   u"Boss Twins' Cell Phone",
+                   u"Boss Victor's Cell Phone",
+                   u"Corrupt Cop's Cell Phone",
+                   u"Street Rival's Cell Phone"]
+        # Check simple parameters
+        text = self.fixNeedsCategory(text, params, categories, u'Needs Image', u'image')
+        text = self.fixNeedsCategory(text, params, categories, u'Needs Rarity', u'rarity')
+        # Most ingredients have a description, too
+        if not name in no_desc:
+            text = self.fixNeedsCategory(text, params, categories, u'Needs Description', u'description')
+
+        # If it's a tech lab item, don't bother checking what it's made from.
+        # That will be done in fixTechLabItem.
+        if not is_tech_lab_item:
+            from_param = paramFromParams(params, u'from')
+            if from_param == None:
+                text = self.appendCategory(text, u'Needs Source')
+            else:
+                #TODO Check item is listed as a drop where appropriate
+                pass
+
+        for_param = paramFromParams(params, u'for')
+        if for_param == None:
+            text = self.appendCategory(text, u'Needs Information')
+        else:
+            #TODO Check item is listed as an ingredient where appropriate
+            pass
+
         return text
 
     def fixTechLabItem(self, text):

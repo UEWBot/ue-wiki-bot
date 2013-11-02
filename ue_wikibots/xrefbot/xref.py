@@ -44,6 +44,9 @@ Rheader = re.compile(ur'(={2,})\s*(?P<title>[^=]+)\s*\1')
 # List items on gift page
 Rgift = re.compile(ur'<li value=(?P<level>.*)>\[\[(?P<item>.*)\]\]</li>')
 
+# List items on faction page
+Rfaction = re.compile(ur'\*\s*(?P<points>\S*)>\s*points - \[\[(?P<item>.*)\]\]')
+
 # String used for category REs
 category_re = ur'\[\[\s*Category:\s*%s\s*\]\]'
 #TODO fix this so it doesn't coalesce multiple categories
@@ -817,7 +820,7 @@ class XrefToolkit:
         elif the_template == u'Mystery Gift Item':
             text = self.fixMysteryGiftItem(name, text, the_params, categories)
         elif the_template == u'Faction Item':
-            text = self.fixFactionItem(text)
+            text = self.fixFactionItem(name, text, the_params, categories)
         elif the_template == u'Special Item':
             text = self.fixSpecialItem(text)
         elif the_template == u'Basic Item':
@@ -870,6 +873,8 @@ class XrefToolkit:
         # Check from parameter against the Gift page
         text = self.fixGiftLevel(name, text, params, categories)
 
+        # TODO type param
+
         return text
 
     def fixMysteryGiftItem(self, name, text, params, categories):
@@ -889,8 +894,37 @@ class XrefToolkit:
 
         return text
 
-    def fixFactionItem(self, text):
-        # TODO Implement
+    def fixFactionItem(self, name, text, params, categories):
+        """
+        Ensures that faction items have description, image, atk, def, cost, rarity params
+        or appropriate "Needs" category.
+        Checks that the faction is specified, and that the item is listed on that page, and
+        that the points param is right.
+        Assumes that the page uses the Faction Item template.
+        """
+        # Check simple parameters
+        text = self.fixNeedsCategory(text, params, categories, u'Needs Description', u'description')
+        text = self.fixNeedsCategory(text, params, categories, u'Needs Image', u'image')
+        text = self.fixNeedsStats(text, params, categories)
+        text = self.fixNeedsCategory(text, params, categories, u'Needs Cost', u'cost')
+        text = self.fixNeedsCategory(text, params, categories, u'Needs Rarity', u'rarity')
+
+        # Check points against corresponding faction page
+        faction_param = paramFromParams(params, u'faction')
+        points_param = paramFromParams(params, u'points')
+        if faction_param == None or points_param == None:
+            text = self.appendCategory(u'Needs Information')
+        else:
+            faction_page = wikipedia.Page(wikipedia.getSite(), faction_param)
+            iterator = Rfaction.finditer(faction_page.get())
+            for m in iterator:
+                if m.group('item') == name:
+                    if points_param != m.group('points'):
+                        wikipedia.output("Faction points mismatch - %s page says %s, this page says %s" % (faction_param, m.group('points'), points_param))
+                        # TODO Can probably fix item page here
+
+        # TODO type param
+
         return text
 
     def fixSpecialItem(self, text):
@@ -932,6 +966,8 @@ class XrefToolkit:
             text = self.removeCategory(text, cat)
             # TODO Add "daily=yes" to Basic Item parameters
 
+        # TODO type param
+
         return text
 
     def fixBattleItem(self, name, text, params, categories):
@@ -961,6 +997,8 @@ class XrefToolkit:
                     item = paramFromParams(u'reward',p)
                     if item == u'[[%s]]' % name and rank != rank_param:
                         wikipedia.output("Minimum battle rank mismatch - Battle Rank page says %s, this page says %s" % (rank, rank_param))
+
+        # TODO type param
 
         return text
 

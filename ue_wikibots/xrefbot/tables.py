@@ -127,7 +127,7 @@ def summary_header(row_template):
         # Time to recoup cost column
         text += u'!span="col" | Hrs to recoup\n'
         # Unlock criteria
-        text += u'!span="col" | Unlocked when'
+        text += u'!span="col" | Unlocked when\n'
     elif row_template == u'Job Row':
         # District column
         text += u'!span="col" | District\n'

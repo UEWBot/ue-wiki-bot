@@ -835,6 +835,33 @@ class XrefToolkit:
 
         return text
 
+    def fixItemType(self, text, params, categories):
+        """
+        Checks the type parameter.
+        Adds or removes the Needs Type category.
+        """
+        types = [u'Gear',
+                 u'Vehicles',
+                 u'Melee Weapons',
+                 u'Rifles',
+                 u'Handguns',
+                 u'Heavy Weapons']
+        cat = u'Needs Type'
+        if self.catInCategories(cat, categories):
+            wikipedia.output("Explictly in implicit category %s" % cat)
+            text = self.removeCategory(text, cat)
+        type_param = paramFromParams(params, u'type')
+        if type_param == None:
+            # TODO Add "|from=Needs Type"
+            pass
+        else:
+            # Check that the type is one we expect
+            if type_param not in types:
+                wikipedia.output("Unexpected type '%s'" % type_param)
+                # TODO Change it to Needs Type
+
+        return text
+
     def fixGiftLevel(self, name, text, params, categories):
         """
         Checks the from parameter.
@@ -873,7 +900,8 @@ class XrefToolkit:
         # Check from parameter against the Gift page
         text = self.fixGiftLevel(name, text, params, categories)
 
-        # TODO type param
+        # Check type param
+        text = self.fixItemType(text, params, categories)
 
         return text
 
@@ -923,7 +951,8 @@ class XrefToolkit:
                         wikipedia.output("Faction points mismatch - %s page says %s, this page says %s" % (faction_param, m.group('points'), points_param))
                         # TODO Can probably fix item page here
 
-        # TODO type param
+        # Check type param
+        text = self.fixItemType(text, params, categories)
 
         return text
 
@@ -966,7 +995,8 @@ class XrefToolkit:
             text = self.removeCategory(text, cat)
             # TODO Add "daily=yes" to Basic Item parameters
 
-        # TODO type param
+        # Check type param
+        text = self.fixItemType(text, params, categories)
 
         return text
 
@@ -998,7 +1028,8 @@ class XrefToolkit:
                     if item == u'[[%s]]' % name and rank != rank_param:
                         wikipedia.output("Minimum battle rank mismatch - Battle Rank page says %s, this page says %s" % (rank, rank_param))
 
-        # TODO type param
+        # Check type param
+        text = self.fixItemType(text, params, categories)
 
         return text
 

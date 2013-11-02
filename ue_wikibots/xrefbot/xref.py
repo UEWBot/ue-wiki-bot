@@ -821,7 +821,7 @@ class XrefToolkit:
         elif the_template == u'Special Item':
             text = self.fixSpecialItem(text)
         elif the_template == u'Basic Item':
-            text = self.fixBasicItem(text)
+            text = self.fixBasicItem(text, the_params, categories)
         elif the_template == u'Battle Rank Item':
             text = self.fixBattleItem(name, text, the_params, categories)
         elif the_template == u'Ingredient':
@@ -897,9 +897,41 @@ class XrefToolkit:
         # TODO Implement
         return text
 
-    def fixBasicItem(self, text):
-        # TODO Implement
-        # TODO Ensure that daily items are specified with parameter, not explicit category
+    def fixBasicItem(self, text, params, categories):
+        """
+        Ensures that basic items have description, image, atk, def, cost, rarity, quote
+        and time params or appopriate "Needs" category.
+        Checks that either level or district is specified.
+        Checks that it not explcitly in Daily Rewards category.
+        Assumes that the page uses the Basic Item template.
+        """
+        # Check simple parameters
+        text = self.fixNeedsCategory(text, params, categories, u'Needs Description', u'description')
+        text = self.fixNeedsCategory(text, params, categories, u'Needs Image', u'image')
+        text = self.fixNeedsStats(text, params, categories)
+        text = self.fixNeedsCategory(text, params, categories, u'Needs Cost', u'cost')
+        text = self.fixNeedsCategory(text, params, categories, u'Needs Rarity', u'rarity')
+        text = self.fixNeedsCategory(text, params, categories, u'Needs Quote', u'quote')
+        text = self.fixNeedsCategory(text, params, categories, u'Needs Build Time', u'time')
+
+        # Check that we have either level or district but not both
+        level_param = paramFromParams(params, u'level')
+        district_param = paramFromParams(params, u'district')
+        if level_param == None:
+            if district_param == None:
+                wikipedia.output("Missing both level and district parameters")
+                text = self.appendCategory(text, u'Needs Information')
+        else:
+            if district_param != None:
+                wikipedia.output("Both level and district parameters are present")
+
+        # Ensure that daily items are specified with parameter, not explicit category
+        cat = u'Daily Rewards'
+        if self.catInCategories(cat, categories):
+            wikipedia.output("Explictly in implicit category %s" % cat)
+            text = self.removeCategory(text, cat)
+            # TODO Add "daily=yes" to Basic Item parameters
+
         return text
 
     def fixBattleItem(self, name, text, params, categories):

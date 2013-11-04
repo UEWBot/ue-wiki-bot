@@ -174,8 +174,9 @@ class XrefToolkit:
         # TODO There's probably a sensible order for these...
         text = self.fixBoss(titleWithoutNamespace, text, categories, templatesWithParams)
         text = self.fixItem(titleWithoutNamespace, text, categories, templatesWithParams, refs)
-        text = self.fixLieutenant(titleWithoutNamespace, text, categories, templatesWithParams, refs)
-        text = self.fixProperty(titleWithoutNamespace, text, categories, templatesWithParams, refs)
+        text = self.fixLieutenant(titleWithoutNamespace, text, categories, templatesWithParams)
+        text = self.fixProperty(titleWithoutNamespace, text, categories, templatesWithParams)
+        text = self.fixExecutionMethod(text, categories, templatesWithParams)
         #wikipedia.output("******\nOld text:\n%s" % oldText)
         #wikipedia.output("******\nIn text:\n%s" % text)
         # Just comparing oldText with text wasn't sufficient
@@ -692,20 +693,64 @@ class XrefToolkit:
 
         return text
 
-    def fixProperty(self, name, text, categories, templatesWithParams, refs):
+    def fixExecutionMethod(self, text, categories, templatesWithParams):
         """
-        If the page uses any of the templates 'Lieutenant Common', 'Lieutenant Uncommon',
-        'Lieutenant Rare, or 'Lieutenant Epic':
+        If the page uses either the template 'Execution Method':
         Ensures that __NOWYSIWYG__ is present.
         Checks that the page doesn't explictly list any categories that should be
         assigned by the template.
+        Checks for mandatory template parameters or corresponding Needs category.
+        """
+        implicit_categories = [u'Execution Methods']
+
+        # Does the page use the execution method template ?
+        the_params = None
+        for template,params in templatesWithParams:
+            if template == u'Execution Method':
+                the_template = template
+                the_params = params
+
+        # Drop out early if not an execution method page
+        # TODO Is there a better test ?
+        if the_params == None:
+            return text
+
+        # Check for explicit categories that should be implicit
+        for cat in implicit_categories:
+            if self.catInCategories(cat, categories):
+                wikipedia.output("Explictly in implicit category %s" % cat)
+                text = self.removeCategory(text, cat)
+
+        # __NOWYSIWYG__
+        text = self.prependNowysiwygIfNeeded(text)
+
+        # Check all the parameters
+        # TODO No such category
+        text = self.fixNeedsCategory(text, the_params, categories, u'Needs Image', u'image')
+        text = self.fixNeedsCategory(text, the_params, categories, u'Needs Stamina Cost', u'cost')
+        # TODO No such category
+        text = self.fixNeedsCategory(text, the_params, categories, u'Needs Bonus Chance', u'chance')
+        # TODO No such category
+        text = self.fixNeedsCategory(text, the_params, categories, u'Needs Bonus', u'bonus')
+        # TODO No such category
+        text = self.fixNeedsCategory(text, the_params, categories, u'Needs Prerequisite', u'need')
+        text = self.fixNeedsCategory(text, the_params, categories, u'Needs Initial Success', u'success')
+
+        return text
+
+    def fixProperty(self, name, text, categories, templatesWithParams):
+        """
+        If the page uses either of the templates 'Income Property' or 'Upgrade Property':
+        Ensures that __NOWYSIWYG__ is present.
+        Checks that the page doesn't explictly list any categories that should be
+        assigned by the template.
+        Checks for mandatory template parameters or corresponding Needs category.
         """
         implicit_categories = [u'Income Properties',
                                u'Upgrade Properties']
 
         # Does the page use a property template ?
         the_params = None
-        is_tech_lab_item = False
         for template,params in templatesWithParams:
             if template == u'Income Property':
                 the_template = template
@@ -732,6 +777,7 @@ class XrefToolkit:
 
         # Check all the parameters
         text = self.fixNeedsCategory(text, the_params, categories, u'Needs Description', u'description')
+        # TODO No such category
         text = self.fixNeedsCategory(text, the_params, categories, u'Needs Image', u'image')
         text = self.fixNeedsCategory(text, the_params, categories, u'Needs Initial Cost', u'cost')
         text = self.fixNeedsCategory(text, the_params, categories, u'Needs Build Time', u'time')
@@ -748,7 +794,7 @@ class XrefToolkit:
 
         return text
 
-    def fixLieutenant(self, name, text, categories, templatesWithParams, refs):
+    def fixLieutenant(self, name, text, categories, templatesWithParams):
         """
         If the page uses any of the templates 'Lieutenant Common', 'Lieutenant Uncommon',
         'Lieutenant Rare, or 'Lieutenant Epic':
@@ -807,6 +853,7 @@ class XrefToolkit:
 
         # Check all the parameters
         text = self.fixNeedsCategory(text, the_params, categories, u'Needs Description', u'description')
+        # TODO No such category
         text = self.fixNeedsCategory(text, the_params, categories, u'Needs Image', u'image')
         text = self.fixNeedsCategory(text, the_params, categories, u'Needs Quote', u'quote')
         # If it's a tech lab lieutenant, don't bother checking what it's made from.
@@ -1022,6 +1069,7 @@ class XrefToolkit:
         """
         # Check all the parameters
         text = self.fixNeedsCategory(text, params, categories, u'Needs Description', u'description')
+        # TODO No such category
         text = self.fixNeedsCategory(text, params, categories, u'Needs Image', u'image')
         text = self.fixNeedsMulti(text, params, categories, u'Needs Stats', [u'atk', u'def'])
         text = self.fixNeedsCategory(text, params, categories, u'Needs Cost', u'cost')
@@ -1043,6 +1091,7 @@ class XrefToolkit:
         Assumes that that page uses the Mystery Gift Item template.
         """
         # Check all the parameters
+        # TODO No such category
         text = self.fixNeedsCategory(text, params, categories, u'Needs Image', u'image')
         text = self.fixNeedsCategory(text, params, categories, u'Needs Information', u'item_1')
         text = self.fixNeedsCategory(text, params, categories, u'Needs Information', u'item_2')
@@ -1062,6 +1111,7 @@ class XrefToolkit:
         """
         # Check simple parameters
         text = self.fixNeedsCategory(text, params, categories, u'Needs Description', u'description')
+        # TODO No such category
         text = self.fixNeedsCategory(text, params, categories, u'Needs Image', u'image')
         text = self.fixNeedsMulti(text, params, categories, u'Needs Stats', [u'atk', u'def'])
         text = self.fixNeedsCategory(text, params, categories, u'Needs Cost', u'cost')
@@ -1094,6 +1144,7 @@ class XrefToolkit:
         """
         # Check simple parameters
         text = self.fixNeedsCategory(text, params, categories, u'Needs Description', u'description')
+        # TODO No such category
         text = self.fixNeedsCategory(text, params, categories, u'Needs Image', u'image')
         text = self.fixNeedsMulti(text, params, categories, u'Needs Stats', [u'atk', u'def'])
         text = self.fixNeedsCategory(text, params, categories, u'Needs Cost', u'cost')
@@ -1118,6 +1169,7 @@ class XrefToolkit:
         """
         # Check simple parameters
         text = self.fixNeedsCategory(text, params, categories, u'Needs Description', u'description')
+        # TODO No such category
         text = self.fixNeedsCategory(text, params, categories, u'Needs Image', u'image')
         text = self.fixNeedsMulti(text, params, categories, u'Needs Stats', [u'atk', u'def'])
         text = self.fixNeedsCategory(text, params, categories, u'Needs Cost', u'cost')
@@ -1157,6 +1209,7 @@ class XrefToolkit:
         """
         # Check simple parameters
         text = self.fixNeedsCategory(text, params, categories, u'Needs Description', u'description')
+        # TODO No such category
         text = self.fixNeedsCategory(text, params, categories, u'Needs Image', u'image')
         text = self.fixNeedsMulti(text, params, categories, u'Needs Stats', [u'atk', u'def'])
         text = self.fixNeedsCategory(text, params, categories, u'Needs Cost', u'cost')
@@ -1194,6 +1247,7 @@ class XrefToolkit:
                    u"Corrupt Cop's Cell Phone",
                    u"Street Rival's Cell Phone"]
         # Check simple parameters
+        # TODO No such category
         text = self.fixNeedsCategory(text, params, categories, u'Needs Image', u'image')
         text = self.fixNeedsCategory(text, params, categories, u'Needs Rarity', u'rarity')
         # Most ingredients have a description, too

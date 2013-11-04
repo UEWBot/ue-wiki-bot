@@ -611,7 +611,7 @@ class XrefToolkit:
         is present in the text 'params' and whether the category 'cat' is
         present in the list 'categories'.
         """
-        return self.fixNeedsMulti(text, params, category, cat, [param])
+        return self.fixNeedsMulti(text, params, categories, cat, [param])
 
     def fixBoss(self, name, text, categories, templatesWithParams):
         """

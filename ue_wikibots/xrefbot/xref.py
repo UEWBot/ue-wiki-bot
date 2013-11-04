@@ -175,6 +175,7 @@ class XrefToolkit:
         text = self.fixBoss(titleWithoutNamespace, text, categories, templatesWithParams)
         text = self.fixItem(titleWithoutNamespace, text, categories, templatesWithParams, refs)
         text = self.fixLieutenant(titleWithoutNamespace, text, categories, templatesWithParams, refs)
+        text = self.fixProperty(titleWithoutNamespace, text, categories, templatesWithParams, refs)
         #wikipedia.output("******\nOld text:\n%s" % oldText)
         #wikipedia.output("******\nIn text:\n%s" % text)
         # Just comparing oldText with text wasn't sufficient
@@ -688,6 +689,62 @@ class XrefToolkit:
         elif start == -1:
             # Section not present
             text = self.appendCategory(text, u'Needs Time Limit')
+
+        return text
+
+    def fixProperty(self, name, text, categories, templatesWithParams, refs):
+        """
+        If the page uses any of the templates 'Lieutenant Common', 'Lieutenant Uncommon',
+        'Lieutenant Rare, or 'Lieutenant Epic':
+        Ensures that __NOWYSIWYG__ is present.
+        Checks that the page doesn't explictly list any categories that should be
+        assigned by the template.
+        """
+        implicit_categories = [u'Income Properties',
+                               u'Upgrade Properties']
+
+        # Does the page use a property template ?
+        the_params = None
+        is_tech_lab_item = False
+        for template,params in templatesWithParams:
+            if template == u'Income Property':
+                the_template = template
+                the_params = params
+            elif template == u'Upgrade Property':
+                the_template = template
+                the_params = params
+
+        # TODO Check Safe House
+
+        # Drop out early if not a property page
+        # TODO Is there a better test ?
+        if the_params == None:
+            return text
+
+        # Check for explicit categories that should be implicit
+        for cat in implicit_categories:
+            if self.catInCategories(cat, categories):
+                wikipedia.output("Explictly in implicit category %s" % cat)
+                text = self.removeCategory(text, cat)
+
+        # __NOWYSIWYG__
+        text = self.prependNowysiwygIfNeeded(text)
+
+        # Check all the parameters
+        text = self.fixNeedsCategory(text, the_params, categories, u'Needs Description', u'description')
+        text = self.fixNeedsCategory(text, the_params, categories, u'Needs Image', u'image')
+        text = self.fixNeedsCategory(text, the_params, categories, u'Needs Initial Cost', u'cost')
+        text = self.fixNeedsCategory(text, the_params, categories, u'Needs Build Time', u'time')
+        # TODO No such category
+        text = self.fixNeedsCategory(text, the_params, categories, u'Needs Unlock Criteria', u'unlock')
+        if the_template == u'Upgrade Property':
+            # TODO No such category
+            text = self.fixNeedsCategory(text, the_params, categories, u'Needs Power', u'power')
+            # TODO No such category
+            text = self.fixNeedsCategory(text, the_params, categories, u'Needs Max Number', u'max')
+        else:
+            # TODO No such category
+            text = self.fixNeedsCategory(text, the_params, categories, u'Needs Income', u'income')
 
         return text
 

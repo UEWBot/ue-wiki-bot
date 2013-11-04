@@ -174,6 +174,7 @@ class XrefToolkit:
         # TODO There's probably a sensible order for these...
         text = self.fixBoss(titleWithoutNamespace, text, categories, templatesWithParams)
         text = self.fixItem(titleWithoutNamespace, text, categories, templatesWithParams, refs)
+        text = self.fixLieutenant(titleWithoutNamespace, text, categories, templatesWithParams, refs)
         #wikipedia.output("******\nOld text:\n%s" % oldText)
         #wikipedia.output("******\nIn text:\n%s" % text)
         # Just comparing oldText with text wasn't sufficient
@@ -582,45 +583,35 @@ class XrefToolkit:
             elif (template != u'Job Link') and (template != u'For') and (template != u'Sic'):
                 wikipedia.output("Ignoring template %s" % template)
 
-    def fixNeedsCategory(self, text, params, categories, cat, param):
+    def fixNeedsMulti(self, text, all_params, categories, cat, the_params):
         """
-        Adds or removes a "Needs" category based on whether the paameter 'param'
-        is present in the text 'params' and whether the category 'cat' is
-        present in the list 'categories'.
+        Check for multiple parameters. If any one is missing, category should be present.
+        If all params are present, category should be absent. Adds or removes cat as
+        appropriate.
         """
-        val = paramFromParams(params, param)
-        present = (val != None)
+        any_missing = False
+        missing = []
+        for param in the_params:
+            val = paramFromParams(all_params, param)
+            if val == None:
+                missing.append(param)
         if self.catInCategories(cat, categories):
-            if present:
-                wikipedia.output("In %s category, but %s specified as %s." % (cat, param, val));
+            if not missing:
+                wikipedia.output("In %s category but all params present." % cat);
                 text = self.removeCategory(text, cat)
         else:
-            if not present:
-                wikipedia.output("Not in %s category, but %s param not specified." % (cat, param));
+            if missing:
+                wikipedia.output("Not in %s category, but params %s not specified." % (cat, missing));
                 text = self.appendCategory(text, cat)
         return text
 
-    def fixNeedsStats(self, text, params, categories):
+    def fixNeedsCategory(self, text, params, categories, cat, param):
         """
-        Similar to fixNeedsCategory(), except checks for atk and def parameters,
-        and uses Needs Stats category.
+        Adds or removes a 'Needs' category cat based on whether the parameter 'param'
+        is present in the text 'params' and whether the category 'cat' is
+        present in the list 'categories'.
         """
-        cat = u'Needs Stats'
-        attack = paramFromParams(params, u'atk')
-        defence = paramFromParams(params, u'def')
-        present = (attack != None) and (defence != None)
-        if self.catInCategories(cat, categories):
-            if present:
-                wikipedia.output("In %s category, but atk=%s and def=%s." % (cat, attack, defence));
-                text = self.removeCategory(text, cat)
-        else:
-            if not present:
-                if attack == None:
-                    wikipedia.output("Not in %s category, but atk param not specified." % cat);
-                if defence == None:
-                    wikipedia.output("Not in %s category, but def param not specified." % cat);
-                text = self.appendCategory(text, cat)
-        return text
+        return self.fixNeedsMulti(text, params, category, cat, [param])
 
     def fixBoss(self, name, text, categories, templatesWithParams):
         """
@@ -697,6 +688,93 @@ class XrefToolkit:
         elif start == -1:
             # Section not present
             text = self.appendCategory(text, u'Needs Time Limit')
+
+        return text
+
+    def fixLieutenant(self, name, text, categories, templatesWithParams, refs):
+        """
+        If the page uses any of the templates 'Lieutenant Common', 'Lieutenant Uncommon',
+        'Lieutenant Rare, or 'Lieutenant Epic':
+        Ensures that __NOWYSIWYG__ is present.
+        Checks that the page doesn't explictly list any categories that should be
+        assigned by the template.
+        """
+        implicit_categories = [u'Lieutenants',
+                               u'Common Lieutenants',
+                               u'Uncommon Lieutenants',
+                               u'Rare Lieutenants',
+                               u'Epic Lieutenants',
+                               u'Dragon Syndicate Lieutenants',
+                               u'Street Lieutenants',
+                               u'The Cartel Lieutenants',
+                               u'The Mafia Lieutenants']
+
+        # Does the page use a lieutenant template ?
+        the_params = None
+        is_tech_lab_item = False
+        for template,params in templatesWithParams:
+            # Find the templates we're interested in
+            if template == u'Lieutenant':
+                wikipedia.output("Directly uses Lieutenant template")
+
+            if template == u'Lab':
+                is_tech_lab_item = True
+                ingredients = params
+
+            if template == u'Lieutenant Common':
+                the_template = template
+                the_params = params
+            elif template == u'Lieutenant Uncommon':
+                the_template = template
+                the_params = params
+            elif template == u'Lieutenant Rare':
+                the_template = template
+                the_params = params
+            elif template == u'Lieutenant Epic':
+                the_template = template
+                the_params = params
+
+        # Drop out early if not a lieutenant page
+        # TODO Is there a better test ?
+        if the_params == None:
+            return text
+
+        # Check for explicit categories that should be implicit
+        for cat in implicit_categories:
+            if self.catInCategories(cat, categories):
+                wikipedia.output("Explictly in implicit category %s" % cat)
+                text = self.removeCategory(text, cat)
+
+        # __NOWYSIWYG__
+        text = self.prependNowysiwygIfNeeded(text)
+
+        # Check all the parameters
+        text = self.fixNeedsCategory(text, the_params, categories, u'Needs Description', u'description')
+        text = self.fixNeedsCategory(text, the_params, categories, u'Needs Image', u'image')
+        text = self.fixNeedsCategory(text, the_params, categories, u'Needs Quote', u'quote')
+        # If it's a tech lab lieutenant, don't bother checking what it's made from.
+        # That will be done in fixTechLabItem.
+        if not is_tech_lab_item:
+            text = self.fixNeedsCategory(text, params, categories, u'Needs Source', u'from')
+        # TODO Needs Faction doesn't exist
+        text = self.fixNeedsCategory(text, the_params, categories, u'Needs Faction', u'faction')
+
+        # Needs Powers is used for both ability and pwr_1..10
+        params = [u'ability']
+        for i in range(1,10):
+            params.append(u'pwr_%d' % i)
+        text = self.fixNeedsMulti(text, the_params, categories, u'Needs Powers', params)
+
+        # Check for atk_1..10 and def_1..10
+        params = []
+        for i in range(1,10):
+            params.append(u'atk_%d' % i)
+            params.append(u'def_%d' % i)
+        text = self.fixNeedsMulti(text, the_params, categories, u'Needs Stats', params)
+
+        # Do special checks for any Epic Research Items
+        if is_tech_lab_item:
+            text = self.fixTechLabItem(name, text, the_params, categories, ingredients)
 
         return text
 
@@ -888,7 +966,7 @@ class XrefToolkit:
         # Check all the parameters
         text = self.fixNeedsCategory(text, params, categories, u'Needs Description', u'description')
         text = self.fixNeedsCategory(text, params, categories, u'Needs Image', u'image')
-        text = self.fixNeedsStats(text, params, categories)
+        text = self.fixNeedsMulti(text, params, categories, u'Needs Stats', [u'atk', u'def'])
         text = self.fixNeedsCategory(text, params, categories, u'Needs Cost', u'cost')
         text = self.fixNeedsCategory(text, params, categories, u'Needs Rarity', u'rarity')
 
@@ -928,7 +1006,7 @@ class XrefToolkit:
         # Check simple parameters
         text = self.fixNeedsCategory(text, params, categories, u'Needs Description', u'description')
         text = self.fixNeedsCategory(text, params, categories, u'Needs Image', u'image')
-        text = self.fixNeedsStats(text, params, categories)
+        text = self.fixNeedsMulti(text, params, categories, u'Needs Stats', [u'atk', u'def'])
         text = self.fixNeedsCategory(text, params, categories, u'Needs Cost', u'cost')
         text = self.fixNeedsCategory(text, params, categories, u'Needs Rarity', u'rarity')
 
@@ -960,7 +1038,7 @@ class XrefToolkit:
         # Check simple parameters
         text = self.fixNeedsCategory(text, params, categories, u'Needs Description', u'description')
         text = self.fixNeedsCategory(text, params, categories, u'Needs Image', u'image')
-        text = self.fixNeedsStats(text, params, categories)
+        text = self.fixNeedsMulti(text, params, categories, u'Needs Stats', [u'atk', u'def'])
         text = self.fixNeedsCategory(text, params, categories, u'Needs Cost', u'cost')
         text = self.fixNeedsCategory(text, params, categories, u'Needs Rarity', u'rarity')
         # If it's a tech lab item, don't bother checking what it's made from.
@@ -984,7 +1062,7 @@ class XrefToolkit:
         # Check simple parameters
         text = self.fixNeedsCategory(text, params, categories, u'Needs Description', u'description')
         text = self.fixNeedsCategory(text, params, categories, u'Needs Image', u'image')
-        text = self.fixNeedsStats(text, params, categories)
+        text = self.fixNeedsMulti(text, params, categories, u'Needs Stats', [u'atk', u'def'])
         text = self.fixNeedsCategory(text, params, categories, u'Needs Cost', u'cost')
         text = self.fixNeedsCategory(text, params, categories, u'Needs Rarity', u'rarity')
         text = self.fixNeedsCategory(text, params, categories, u'Needs Quote', u'quote')
@@ -1023,7 +1101,7 @@ class XrefToolkit:
         # Check simple parameters
         text = self.fixNeedsCategory(text, params, categories, u'Needs Description', u'description')
         text = self.fixNeedsCategory(text, params, categories, u'Needs Image', u'image')
-        text = self.fixNeedsStats(text, params, categories)
+        text = self.fixNeedsMulti(text, params, categories, u'Needs Stats', [u'atk', u'def'])
         text = self.fixNeedsCategory(text, params, categories, u'Needs Cost', u'cost')
         text = self.fixNeedsCategory(text, params, categories, u'Needs Rarity', u'rarity')
 

@@ -177,6 +177,7 @@ class XrefToolkit:
         text = self.fixLieutenant(titleWithoutNamespace, text, categories, templatesWithParams)
         text = self.fixProperty(titleWithoutNamespace, text, categories, templatesWithParams)
         text = self.fixExecutionMethod(text, categories, templatesWithParams)
+        text = self.fixClass(text, categories, templatesWithParams)
         #wikipedia.output("******\nOld text:\n%s" % oldText)
         #wikipedia.output("******\nIn text:\n%s" % text)
         # Just comparing oldText with text wasn't sufficient
@@ -693,9 +694,82 @@ class XrefToolkit:
 
         return text
 
+    def fixClass(self, text, categories, templatesWithParams):
+        """
+        If the page uses the template 'Class':
+        Ensures that __NOWYSIWYG__ is present.
+        Checks that the page doesn't explictly list any categories that should be
+        assigned by the template.
+        Checks for mandatory template parameters or corresponding Needs category.
+        """
+        implicit_categories = [u'Classes']
+
+        # Does the page use the Class template ?
+        the_params = None
+        for template,params in templatesWithParams:
+            if template == u'Class':
+                the_template = template
+                the_params = params
+
+        # Drop out early if not a class page
+        # TODO Is there a better test ?
+        if the_params == None:
+            return text
+
+        # Check for explicit categories that should be implicit
+        for cat in implicit_categories:
+            if self.catInCategories(cat, categories):
+                wikipedia.output("Explictly in implicit category %s" % cat)
+                text = self.removeCategory(text, cat)
+
+        # __NOWYSIWYG__
+        text = self.prependNowysiwygIfNeeded(text)
+
+        # Check all the parameters of the Class template
+        text = self.fixNeedsCategory(text, the_params, categories, u'Needs Description', u'description')
+        # TODO No such category
+        text = self.fixNeedsCategory(text, the_params, categories, u'Needs Short Description', u'short_description')
+        # TODO No such category
+        text = self.fixNeedsCategory(text, the_params, categories, u'Needs Image', u'image')
+        # TODO No such category
+        text = self.fixNeedsCategory(text, the_params, categories, u'Needs Weapons', u'weapons')
+        # TODO No such category
+        text = self.fixNeedsCategory(text, the_params, categories, u'Needs Strength', u'strength')
+        # TODO No such category
+        text = self.fixNeedsCategory(text, the_params, categories, u'Needs Special Attack Name', u'special_atk_name')
+        # TODO No such category
+        text = self.fixNeedsCategory(text, the_params, categories, u'Needs Special Attack Effect', u'special_atk_effect')
+        # TODO No such category
+        text = self.fixNeedsCategory(text, the_params, categories, u'Needs Help Text', u'help_text')
+
+        # Check each use of the Skill template
+        for template,params in templatesWithParams:
+            if template != u'Class':
+                text = self.fixSkill(text, params, categories)
+
+        return text
+
+    def fixSkill(self, text, params, categories):
+        """
+        Checks the parameters for the Skill template.
+        Adds or removes Needs category as appropriate.
+        """
+        # TODO Probably doesn't work right when the Skill template is used multiple times
+        # on one page. Will remove wrongly or add multiple times...
+        # May need to add to a set of missing parameters instead.
+        # TODO No such category
+        text = self.fixNeedsCategory(text, params, categories, u'Needs Skill Level', u'level')
+        # TODO No such category
+        text = self.fixNeedsCategory(text, params, categories, u'Needs Skill Effect', u'effect')
+        # TODO No such category
+        text = self.fixNeedsCategory(text, params, categories, u'Needs Skill Cost', u'cost')
+        # TODO No such category
+        text = self.fixNeedsCategory(text, params, categories, u'Needs Skill Time', u'time')
+        return text
+
     def fixExecutionMethod(self, text, categories, templatesWithParams):
         """
-        If the page uses either the template 'Execution Method':
+        If the page uses the template 'Execution Method':
         Ensures that __NOWYSIWYG__ is present.
         Checks that the page doesn't explictly list any categories that should be
         assigned by the template.

@@ -115,6 +115,17 @@ def dropParamsMatch(param1, param2):
     # TODO Match link with nonlink with mismatched first character
     return False
 
+def missingParams(all_params, mandatory_list):
+    """
+    Returns the set of all the parameters in mandatory_list that are not represented in all_params.
+    """
+    ret = set(mandatory_list)
+    for p in all_params:
+        m = Rparam.match(p)
+        if m.group('name') in ret:
+            ret.remove(m.group('name'))
+    return ret
+
 def paramFromParams(params, param):
     """
     Returns the value for 'param' in 'params', or None if it isn't present.
@@ -229,6 +240,31 @@ class XrefToolkit:
         Rcat = re.compile(category_re % category)
         # Remove the category
         return Rcat.sub('', text)
+
+    def fixNeedsCats(self, text, missing_params, categories, param_cat_map):
+        """
+        Returns the text with need categories added or removed as appropriate.
+        param_cat_map is a dict, indexed by parameter, of Needs categories.
+        missing_params is a set of parameters that are missing from the page.
+        """
+        for (p,c) in param_cat_map.items():
+            # Add the categories corresponding to any missing parameters
+            if p in missing_params and not self.catInCategories(c, categories):
+                text = self.appendCategory(text, c)
+            # And remove any corresponding to any that aren't missing
+            elif p not in missing_params and self.catInCategories(c, categories):
+                # But don't remove Needs Information, because it has other uses
+                if c != u'Needs Information':
+                    text = self.removeCategory(text, c)
+        return text
+
+    def fixNeedsCategories(self, text, params, categories, param_cat_map):
+        """
+        Returns the text with need categories added or removed as appropriate.
+        param_cat_map is a dict, indexed by parameter, of Needs categories.
+        """
+        missing_params = missingParams(params, param_cat_map.keys())
+        return self.fixNeedsCats(text, missing_params, categories, param_cat_map)
 
     def templateParam(self, templatesWithParams, template, param):
         """
@@ -701,6 +737,7 @@ class XrefToolkit:
         Checks that the page doesn't explictly list any categories that should be
         assigned by the template.
         Checks for mandatory template parameters or corresponding Needs category.
+        Checks for increasing skill levels.
         """
         implicit_categories = [u'Classes']
 
@@ -726,45 +763,38 @@ class XrefToolkit:
         text = self.prependNowysiwygIfNeeded(text)
 
         # Check all the parameters of the Class template
-        text = self.fixNeedsCategory(text, the_params, categories, u'Needs Description', u'description')
-        # TODO No such category
-        text = self.fixNeedsCategory(text, the_params, categories, u'Needs Short Description', u'short_description')
-        # TODO No such category
-        text = self.fixNeedsCategory(text, the_params, categories, u'Needs Image', u'image')
-        # TODO No such category
-        text = self.fixNeedsCategory(text, the_params, categories, u'Needs Weapons', u'weapons')
-        # TODO No such category
-        text = self.fixNeedsCategory(text, the_params, categories, u'Needs Strength', u'strength')
-        # TODO No such category
-        text = self.fixNeedsCategory(text, the_params, categories, u'Needs Special Attack Name', u'special_atk_name')
-        # TODO No such category
-        text = self.fixNeedsCategory(text, the_params, categories, u'Needs Special Attack Effect', u'special_atk_effect')
-        # TODO No such category
-        text = self.fixNeedsCategory(text, the_params, categories, u'Needs Help Text', u'help_text')
+        class_param_map = {u'description': u'Needs Description',
+                           # TODO None of these categories exist
+                           u'short_description': u'Needs Short Description',
+                           u'image': u'Needs Image',
+                           u'weapons': u'Needs Weapons',
+                           u'strength': u'Needs Strength',
+                           u'special_atk_name': u'Needs Special Attack Name',
+                           u'special_atk_effect': u'Needs Special Attack Effect',
+                           u'help_text': u'Needs Help Text'}
+ 
+        text = self.fixNeedsCategories(text, the_params, categories, class_param_map)
 
+        # TODO None of these categories exist
+        skill_param_map = { u'level': u'Needs Skill Level',
+                           u'effect': u'Needs Skill Effect',
+                           u'cost': u'Needs Skill Cost',
+                           u'time': u'Needs Skill Time'}
         # Check each use of the Skill template
+        missing_params = set()
+        old_level = 0
         for template,params in templatesWithParams:
-            if template != u'Class':
-                text = self.fixSkill(text, params, categories)
+            if template == u'Skill':
+                level = paramFromParams(params, u'level')
+                if level != None:
+                    if level == old_level and level != 1:
+                        wikipedia.output("copy-paste error for skill level %s ?" % level)
+                    old_level = level
+                missing_params |= missingParams(params, skill_param_map.keys())
+        wikipedia.output("Set of missing skill parameters is %s" % missing_params)
+        # Ensure the Needs categories are correct
+        text = self.fixNeedsCats(text, missing_params, categories, skill_param_map)
 
-        return text
-
-    def fixSkill(self, text, params, categories):
-        """
-        Checks the parameters for the Skill template.
-        Adds or removes Needs category as appropriate.
-        """
-        # TODO Probably doesn't work right when the Skill template is used multiple times
-        # on one page. Will remove wrongly or add multiple times...
-        # May need to add to a set of missing parameters instead.
-        # TODO No such category
-        text = self.fixNeedsCategory(text, params, categories, u'Needs Skill Level', u'level')
-        # TODO No such category
-        text = self.fixNeedsCategory(text, params, categories, u'Needs Skill Effect', u'effect')
-        # TODO No such category
-        text = self.fixNeedsCategory(text, params, categories, u'Needs Skill Cost', u'cost')
-        # TODO No such category
-        text = self.fixNeedsCategory(text, params, categories, u'Needs Skill Time', u'time')
         return text
 
     def fixExecutionMethod(self, text, categories, templatesWithParams):

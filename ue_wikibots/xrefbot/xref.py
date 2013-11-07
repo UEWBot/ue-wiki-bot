@@ -247,12 +247,15 @@ class XrefToolkit:
         param_cat_map is a dict, indexed by parameter, of Needs categories.
         missing_params is a set of parameters that are missing from the page.
         """
+        cats_needed = set()
         for (p,c) in param_cat_map.items():
-            # Add the categories corresponding to any missing parameters
-            if p in missing_params and not self.catInCategories(c, categories):
+            if p in missing_params:
+                cats_needed.add(c)
+        for c in cats_needed:
+            if not self.catInCategories(c, categories):
                 text = self.appendCategory(text, c)
-            # And remove any corresponding to any that aren't missing
-            elif p not in missing_params and self.catInCategories(c, categories):
+        for c in set(param_cat_map.values()):
+            if self.catInCategories(c, categories) and c not in cats_needed:
                 # But don't remove Needs Information, because it has other uses
                 if c != u'Needs Information':
                     text = self.removeCategory(text, c)
@@ -622,36 +625,6 @@ class XrefToolkit:
             elif (template != u'Job Link') and (template != u'For') and (template != u'Sic'):
                 wikipedia.output("Ignoring template %s" % template)
 
-    def fixNeedsMulti(self, text, all_params, categories, cat, the_params):
-        """
-        Check for multiple parameters. If any one is missing, category should be present.
-        If all params are present, category should be absent. Adds or removes cat as
-        appropriate.
-        """
-        any_missing = False
-        missing = []
-        for param in the_params:
-            val = paramFromParams(all_params, param)
-            if val == None:
-                missing.append(param)
-        if self.catInCategories(cat, categories):
-            if not missing:
-                wikipedia.output("In %s category but all params present." % cat);
-                text = self.removeCategory(text, cat)
-        else:
-            if missing:
-                wikipedia.output("Not in %s category, but params %s not specified." % (cat, missing));
-                text = self.appendCategory(text, cat)
-        return text
-
-    def fixNeedsCategory(self, text, params, categories, cat, param):
-        """
-        Adds or removes a 'Needs' category cat based on whether the parameter 'param'
-        is present in the text 'params' and whether the category 'cat' is
-        present in the list 'categories'.
-        """
-        return self.fixNeedsMulti(text, params, categories, cat, [param])
-
     def fixBoss(self, name, text, categories, templatesWithParams):
         """
         If the page is in either the 'Job Bosses' or 'Tech Lab Bosses' categories:
@@ -762,7 +735,7 @@ class XrefToolkit:
         # __NOWYSIWYG__
         text = self.prependNowysiwygIfNeeded(text)
 
-        # Check all the parameters of the Class template
+        # Check mandatory parameters of the Class template
         class_param_map = {u'description': u'Needs Description',
                            # TODO None of these categories exist
                            u'short_description': u'Needs Short Description',
@@ -828,17 +801,16 @@ class XrefToolkit:
         # __NOWYSIWYG__
         text = self.prependNowysiwygIfNeeded(text)
 
-        # Check all the parameters
-        # TODO No such category
-        text = self.fixNeedsCategory(text, the_params, categories, u'Needs Image', u'image')
-        text = self.fixNeedsCategory(text, the_params, categories, u'Needs Stamina Cost', u'cost')
-        # TODO No such category
-        text = self.fixNeedsCategory(text, the_params, categories, u'Needs Bonus Chance', u'chance')
-        # TODO No such category
-        text = self.fixNeedsCategory(text, the_params, categories, u'Needs Bonus', u'bonus')
-        # TODO No such category
-        text = self.fixNeedsCategory(text, the_params, categories, u'Needs Prerequisite', u'need')
-        text = self.fixNeedsCategory(text, the_params, categories, u'Needs Initial Success', u'success')
+        # Check mandatory parameters
+        method_param_map = {u'cost': u'Needs Stamina Cost',
+                            u'success': u'Needs Initial Success',
+                            # TODO None of these categories exist
+                            u'image': u'Needs Image',
+                            u'chance': u'Needs Bonus Chance',
+                            u'bonus': u'Needs Bonus',
+                            u'need': u'Needs Prerequisite'}
+ 
+        text = self.fixNeedsCategories(text, the_params, categories, method_param_map)
 
         return text
 
@@ -879,22 +851,20 @@ class XrefToolkit:
         # __NOWYSIWYG__
         text = self.prependNowysiwygIfNeeded(text)
 
-        # Check all the parameters
-        text = self.fixNeedsCategory(text, the_params, categories, u'Needs Description', u'description')
-        # TODO No such category
-        text = self.fixNeedsCategory(text, the_params, categories, u'Needs Image', u'image')
-        text = self.fixNeedsCategory(text, the_params, categories, u'Needs Initial Cost', u'cost')
-        text = self.fixNeedsCategory(text, the_params, categories, u'Needs Build Time', u'time')
-        # TODO No such category
-        text = self.fixNeedsCategory(text, the_params, categories, u'Needs Unlock Criteria', u'unlock')
+        # Check mandatory parameters
+        prop_param_map = {u'description': u'Needs Description',
+                          u'cost': u'Needs Initial Cost',
+                          u'time': u'Needs Build Time',
+                          # TODO None of these categories exist
+                          u'image': u'Needs Image',
+                          u'unlock': u'Needs Unlock Criteria'}
         if the_template == u'Upgrade Property':
-            # TODO No such category
-            text = self.fixNeedsCategory(text, the_params, categories, u'Needs Power', u'power')
-            # TODO No such category
-            text = self.fixNeedsCategory(text, the_params, categories, u'Needs Max Number', u'max')
+            prop_param_map[u'power'] = u'Needs Power'
+            prop_param_map[u'max'] = u'Needs Max Number'
         else:
-            # TODO No such category
-            text = self.fixNeedsCategory(text, the_params, categories, u'Needs Income', u'income')
+            prop_param_map[u'income'] = u'Needs Income'
+ 
+        text = self.fixNeedsCategories(text, the_params, categories, prop_param_map)
 
         return text
 
@@ -955,30 +925,27 @@ class XrefToolkit:
         # __NOWYSIWYG__
         text = self.prependNowysiwygIfNeeded(text)
 
-        # Check all the parameters
-        text = self.fixNeedsCategory(text, the_params, categories, u'Needs Description', u'description')
-        # TODO No such category
-        text = self.fixNeedsCategory(text, the_params, categories, u'Needs Image', u'image')
-        text = self.fixNeedsCategory(text, the_params, categories, u'Needs Quote', u'quote')
+        # Check mandatory parameters
+        lt_param_map = {u'description': u'Needs Description',
+                        u'quote': u'Needs Quote',
+                        u'ability': u'Needs Powers',
+                        # TODO None of these categories exist
+                        u'image': u'Needs Image',
+                        u'faction': u'Needs Faction'}
+        # Needs Powers is used for both ability and pwr_1..10
+        for i in range(1,10):
+            lt_param_map[u'pwr_%d' % i] = u'Needs Powers'
+        # Check for atk_1..10 and def_1..10
+        for i in range(1,10):
+            lt_param_map[u'atk_%d' % i] = u'Needs Stats'
+            lt_param_map[u'def_%d' % i] = u'Needs Stats'
+
         # If it's a tech lab lieutenant, don't bother checking what it's made from.
         # That will be done in fixTechLabItem.
         if not is_tech_lab_item:
-            text = self.fixNeedsCategory(text, params, categories, u'Needs Source', u'from')
-        # TODO Needs Faction doesn't exist
-        text = self.fixNeedsCategory(text, the_params, categories, u'Needs Faction', u'faction')
-
-        # Needs Powers is used for both ability and pwr_1..10
-        params = [u'ability']
-        for i in range(1,10):
-            params.append(u'pwr_%d' % i)
-        text = self.fixNeedsMulti(text, the_params, categories, u'Needs Powers', params)
-
-        # Check for atk_1..10 and def_1..10
-        params = []
-        for i in range(1,10):
-            params.append(u'atk_%d' % i)
-            params.append(u'def_%d' % i)
-        text = self.fixNeedsMulti(text, the_params, categories, u'Needs Stats', params)
+            lt_param_map[u'from'] = u'Needs Source'
+ 
+        text = self.fixNeedsCategories(text, the_params, categories, lt_param_map)
 
         # Do special checks for any Epic Research Items
         if is_tech_lab_item:
@@ -1171,13 +1138,16 @@ class XrefToolkit:
         Checks that the minimum level is specified, and that it matches what the Gift page says.
         Assumes that that page uses the Gift Item template.
         """
-        # Check all the parameters
-        text = self.fixNeedsCategory(text, params, categories, u'Needs Description', u'description')
-        # TODO No such category
-        text = self.fixNeedsCategory(text, params, categories, u'Needs Image', u'image')
-        text = self.fixNeedsMulti(text, params, categories, u'Needs Stats', [u'atk', u'def'])
-        text = self.fixNeedsCategory(text, params, categories, u'Needs Cost', u'cost')
-        text = self.fixNeedsCategory(text, params, categories, u'Needs Rarity', u'rarity')
+        # Check mandatory parameters
+        gift_param_map = {u'description': u'Needs Description',
+                          u'atk': u'Needs Stats',
+                          u'def': u'Needs Stats',
+                          u'cost': u'Needs Cost',
+                          u'rarity': u'Needs Rarity',
+                          # TODO None of these categories exist
+                          u'image': u'Needs Image'}
+ 
+        text = self.fixNeedsCategories(text, params, categories, gift_param_map)
 
         # Check from parameter against the Gift page
         text = self.fixGiftLevel(name, text, params, categories)
@@ -1194,11 +1164,13 @@ class XrefToolkit:
         Checks that the minimum level is specified, and that it matches what the Gift page says.
         Assumes that that page uses the Mystery Gift Item template.
         """
-        # Check all the parameters
-        # TODO No such category
-        text = self.fixNeedsCategory(text, params, categories, u'Needs Image', u'image')
-        text = self.fixNeedsCategory(text, params, categories, u'Needs Information', u'item_1')
-        text = self.fixNeedsCategory(text, params, categories, u'Needs Information', u'item_2')
+        # Check mandatory parameters
+        gift_param_map = {u'item_1': u'Needs Information',
+                          u'item_2': u'Needs Information',
+                          # TODO None of these categories exist
+                          u'image': u'Needs Image'}
+ 
+        text = self.fixNeedsCategories(text, params, categories, gift_param_map)
 
         # Check from parameter against the Gift page
         text = self.fixGiftLevel(name, text, params, categories)
@@ -1213,13 +1185,16 @@ class XrefToolkit:
         that the points param is right.
         Assumes that the page uses the Faction Item template.
         """
-        # Check simple parameters
-        text = self.fixNeedsCategory(text, params, categories, u'Needs Description', u'description')
-        # TODO No such category
-        text = self.fixNeedsCategory(text, params, categories, u'Needs Image', u'image')
-        text = self.fixNeedsMulti(text, params, categories, u'Needs Stats', [u'atk', u'def'])
-        text = self.fixNeedsCategory(text, params, categories, u'Needs Cost', u'cost')
-        text = self.fixNeedsCategory(text, params, categories, u'Needs Rarity', u'rarity')
+        # Check mandatory parameters
+        faction_param_map = {u'description': u'Needs Description',
+                             u'atk': u'Needs Stats',
+                             u'def': u'Needs Stats',
+                             u'cost': u'Needs Cost',
+                             u'rarity': u'Needs Rarity',
+                             # TODO None of these categories exist
+                             u'image': u'Needs Image'}
+ 
+        text = self.fixNeedsCategories(text, params, categories, faction_param_map)
 
         # Check points against corresponding faction page
         faction_param = paramFromParams(params, u'faction')
@@ -1246,17 +1221,20 @@ class XrefToolkit:
         and from params or appropriate "Needs" category.
         Assumes that the page uses the Special Item template.
         """
-        # Check simple parameters
-        text = self.fixNeedsCategory(text, params, categories, u'Needs Description', u'description')
-        # TODO No such category
-        text = self.fixNeedsCategory(text, params, categories, u'Needs Image', u'image')
-        text = self.fixNeedsMulti(text, params, categories, u'Needs Stats', [u'atk', u'def'])
-        text = self.fixNeedsCategory(text, params, categories, u'Needs Cost', u'cost')
-        text = self.fixNeedsCategory(text, params, categories, u'Needs Rarity', u'rarity')
+        # Check mandatory parameters
+        special_param_map = {u'description': u'Needs Description',
+                             u'atk': u'Needs Stats',
+                             u'def': u'Needs Stats',
+                             u'cost': u'Needs Cost',
+                             u'rarity': u'Needs Rarity',
+                             # TODO None of these categories exist
+                             u'image': u'Needs Image'}
         # If it's a tech lab item, don't bother checking what it's made from.
         # That will be done in fixTechLabItem.
         if not is_tech_lab_item:
-            text = self.fixNeedsCategory(text, params, categories, u'Needs Source', u'from')
+            special_param_map[u'from'] = u'Needs Source'
+ 
+        text = self.fixNeedsCategories(text, params, categories, special_param_map)
 
         # Check type param
         text = self.fixItemType(text, params, categories)
@@ -1271,15 +1249,18 @@ class XrefToolkit:
         Checks that it not explcitly in Daily Rewards category.
         Assumes that the page uses the Basic Item template.
         """
-        # Check simple parameters
-        text = self.fixNeedsCategory(text, params, categories, u'Needs Description', u'description')
-        # TODO No such category
-        text = self.fixNeedsCategory(text, params, categories, u'Needs Image', u'image')
-        text = self.fixNeedsMulti(text, params, categories, u'Needs Stats', [u'atk', u'def'])
-        text = self.fixNeedsCategory(text, params, categories, u'Needs Cost', u'cost')
-        text = self.fixNeedsCategory(text, params, categories, u'Needs Rarity', u'rarity')
-        text = self.fixNeedsCategory(text, params, categories, u'Needs Quote', u'quote')
-        text = self.fixNeedsCategory(text, params, categories, u'Needs Build Time', u'time')
+        # Check mandatory parameters
+        basic_param_map = {u'description': u'Needs Description',
+                           u'atk': u'Needs Stats',
+                           u'def': u'Needs Stats',
+                           u'cost': u'Needs Cost',
+                           u'rarity': u'Needs Rarity',
+                           u'quote': u'Needs Quote',
+                           u'time': u'Needs Build Time',
+                           # TODO None of these categories exist
+                           u'image': u'Needs Image'}
+ 
+        text = self.fixNeedsCategories(text, params, categories, basic_param_map)
 
         # Check that we have either level or district but not both
         level_param = paramFromParams(params, u'level')
@@ -1311,13 +1292,16 @@ class XrefToolkit:
         Checks that the battle rank is specified, and that it matches what the Battle Rank page says.
         Assumes that the page uses the Battle Rank Item template.
         """
-        # Check simple parameters
-        text = self.fixNeedsCategory(text, params, categories, u'Needs Description', u'description')
-        # TODO No such category
-        text = self.fixNeedsCategory(text, params, categories, u'Needs Image', u'image')
-        text = self.fixNeedsMulti(text, params, categories, u'Needs Stats', [u'atk', u'def'])
-        text = self.fixNeedsCategory(text, params, categories, u'Needs Cost', u'cost')
-        text = self.fixNeedsCategory(text, params, categories, u'Needs Rarity', u'rarity')
+        # Check mandatory parameters
+        battle_param_map = {u'description': u'Needs Description',
+                            u'atk': u'Needs Stats',
+                            u'def': u'Needs Stats',
+                            u'cost': u'Needs Cost',
+                            u'rarity': u'Needs Rarity',
+                            # TODO None of these categories exist
+                            u'image': u'Needs Image'}
+ 
+        text = self.fixNeedsCategories(text, params, categories, battle_param_map)
 
         # Check rank parameter against Battle Rank page
         rank_param = paramFromParams(params, u'rank')
@@ -1350,17 +1334,19 @@ class XrefToolkit:
                    u"Boss Victor's Cell Phone",
                    u"Corrupt Cop's Cell Phone",
                    u"Street Rival's Cell Phone"]
-        # Check simple parameters
-        # TODO No such category
-        text = self.fixNeedsCategory(text, params, categories, u'Needs Image', u'image')
-        text = self.fixNeedsCategory(text, params, categories, u'Needs Rarity', u'rarity')
+        # Check mandatory parameters
+        ingr_param_map = {u'rarity': u'Needs Rarity',
+                          # TODO None of these categories exist
+                          u'image': u'Needs Image'}
         # Most ingredients have a description, too
         if not name in no_desc:
-            text = self.fixNeedsCategory(text, params, categories, u'Needs Description', u'description')
-
+            ingr_param_map[u'description'] = u'Needs Description'
+ 
         # If it's a tech lab item, from parameter will be misleading
         if not is_tech_lab_item:
-            text = self.fixNeedsCategory(text, params, categories, u'Needs Source', u'from')
+            ingr_param_map[u'from'] = u'Needs Source'
+
+        text = self.fixNeedsCategories(text, params, categories, ingr_param_map)
 
         for_param = paramFromParams(params, u'for')
         if for_param == None:

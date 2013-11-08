@@ -737,22 +737,20 @@ class XrefToolkit:
 
         # Check mandatory parameters of the Class template
         class_param_map = {u'description': u'Needs Description',
-                           # TODO None of these categories exist
-                           u'short_description': u'Needs Short Description',
-                           u'image': u'Needs Image',
-                           u'weapons': u'Needs Weapons',
-                           u'strength': u'Needs Strength',
-                           u'special_atk_name': u'Needs Special Attack Name',
-                           u'special_atk_effect': u'Needs Special Attack Effect',
-                           u'help_text': u'Needs Help Text'}
+                           u'short_description': u'Needs Information', #u'Needs Short Description',
+                           u'image': u'Needs Improvement', #u'Needs Image',
+                           u'weapons': u'Needs Information', #u'Needs Weapons',
+                           u'strength': u'Needs Information', #u'Needs Strength',
+                           u'special_atk_name': u'Needs Information', #u'Needs Special Attack Name',
+                           u'special_atk_effect': u'Needs Information', #u'Needs Special Attack Effect',
+                           u'help_text': u'Needs Information'} #u'Needs Help Text'}
  
         text = self.fixNeedsCategories(text, the_params, categories, class_param_map)
 
-        # TODO None of these categories exist
-        skill_param_map = { u'level': u'Needs Skill Level',
-                           u'effect': u'Needs Skill Effect',
-                           u'cost': u'Needs Skill Cost',
-                           u'time': u'Needs Skill Time'}
+        skill_param_map = { u'level': u'Needs Information', #u'Needs Skill Level',
+                           u'effect': u'Needs Information', #u'Needs Skill Effect',
+                           u'cost': u'Needs Information', #u'Needs Skill Cost',
+                           u'time': u'Needs Information'} #u'Needs Skill Time'}
         # Check each use of the Skill template
         missing_params = set()
         old_level = 0
@@ -804,11 +802,10 @@ class XrefToolkit:
         # Check mandatory parameters
         method_param_map = {u'cost': u'Needs Stamina Cost',
                             u'success': u'Needs Initial Success',
-                            # TODO None of these categories exist
-                            u'image': u'Needs Image',
-                            u'chance': u'Needs Bonus Chance',
-                            u'bonus': u'Needs Bonus',
-                            u'need': u'Needs Prerequisite'}
+                            u'image': u'Needs Improvement', #u'Needs Image',
+                            u'chance': u'Needs Information', #u'Needs Bonus Chance',
+                            u'bonus': u'Needs Information', #u'Needs Bonus',
+                            u'need': u'Needs Information'} #u'Needs Prerequisite'}
  
         text = self.fixNeedsCategories(text, the_params, categories, method_param_map)
 
@@ -855,9 +852,8 @@ class XrefToolkit:
         prop_param_map = {u'description': u'Needs Description',
                           u'cost': u'Needs Initial Cost',
                           u'time': u'Needs Build Time',
-                          # TODO None of these categories exist
-                          u'image': u'Needs Image',
-                          u'unlock': u'Needs Unlock Criteria'}
+                          u'image': u'Needs Improvement', #u'Needs Image',
+                          u'unlock': u'Needs Information'} #u'Needs Unlock Criteria'}
         if the_template == u'Upgrade Property':
             prop_param_map[u'power'] = u'Needs Power'
             prop_param_map[u'max'] = u'Needs Max Number'
@@ -929,9 +925,8 @@ class XrefToolkit:
         lt_param_map = {u'description': u'Needs Description',
                         u'quote': u'Needs Quote',
                         u'ability': u'Needs Powers',
-                        # TODO None of these categories exist
-                        u'image': u'Needs Image',
-                        u'faction': u'Needs Faction'}
+                        u'image': u'Needs Improvement', #u'Needs Image',
+                        u'faction': u'Needs Information'} #u'Needs Faction'}
         # Needs Powers is used for both ability and pwr_1..10
         for i in range(1,10):
             lt_param_map[u'pwr_%d' % i] = u'Needs Powers'
@@ -1144,8 +1139,7 @@ class XrefToolkit:
                           u'def': u'Needs Stats',
                           u'cost': u'Needs Cost',
                           u'rarity': u'Needs Rarity',
-                          # TODO None of these categories exist
-                          u'image': u'Needs Image'}
+                          u'image': u'Needs Improvement'} #u'Needs Image'}
  
         text = self.fixNeedsCategories(text, params, categories, gift_param_map)
 
@@ -1165,10 +1159,9 @@ class XrefToolkit:
         Assumes that that page uses the Mystery Gift Item template.
         """
         # Check mandatory parameters
-        gift_param_map = {u'item_1': u'Needs Information',
-                          u'item_2': u'Needs Information',
-                          # TODO None of these categories exist
-                          u'image': u'Needs Image'}
+        gift_param_map = {u'item_1': u'Needs Information', #u'Needs Item',
+                          u'item_2': u'Needs Information', #u'Needs Item',
+                          u'image': u'Needs Improvement'} #u'Needs Image'}
  
         text = self.fixNeedsCategories(text, params, categories, gift_param_map)
 
@@ -1191,8 +1184,7 @@ class XrefToolkit:
                              u'def': u'Needs Stats',
                              u'cost': u'Needs Cost',
                              u'rarity': u'Needs Rarity',
-                             # TODO None of these categories exist
-                             u'image': u'Needs Image'}
+                             u'image': u'Needs Improvement'} #u'Needs Image'}
  
         text = self.fixNeedsCategories(text, params, categories, faction_param_map)
 
@@ -1200,7 +1192,7 @@ class XrefToolkit:
         faction_param = paramFromParams(params, u'faction')
         points_param = paramFromParams(params, u'points')
         if faction_param == None or points_param == None:
-            text = self.appendCategory(text, u'Needs Information')
+            text = self.appendCategory(text, u'Needs Information') # u'Needs Faction' or u'Needs Points'
         else:
             faction_page = wikipedia.Page(wikipedia.getSite(), faction_param)
             iterator = Rfaction.finditer(faction_page.get())
@@ -1227,8 +1219,7 @@ class XrefToolkit:
                              u'def': u'Needs Stats',
                              u'cost': u'Needs Cost',
                              u'rarity': u'Needs Rarity',
-                             # TODO None of these categories exist
-                             u'image': u'Needs Image'}
+                             u'image': u'Needs Improvement'} #u'Needs Image'}
         # If it's a tech lab item, don't bother checking what it's made from.
         # That will be done in fixTechLabItem.
         if not is_tech_lab_item:
@@ -1257,8 +1248,7 @@ class XrefToolkit:
                            u'rarity': u'Needs Rarity',
                            u'quote': u'Needs Quote',
                            u'time': u'Needs Build Time',
-                           # TODO None of these categories exist
-                           u'image': u'Needs Image'}
+                           u'image': u'Needs Improvement'} #u'Needs Image'}
  
         text = self.fixNeedsCategories(text, params, categories, basic_param_map)
 
@@ -1268,7 +1258,7 @@ class XrefToolkit:
         if level_param == None:
             if district_param == None:
                 wikipedia.output("Missing both level and district parameters")
-                text = self.appendCategory(text, u'Needs Information')
+                text = self.appendCategory(text, u'Needs Information') # u'Needs Prerequisites'
         else:
             if district_param != None:
                 wikipedia.output("Both level and district parameters are present")
@@ -1298,15 +1288,14 @@ class XrefToolkit:
                             u'def': u'Needs Stats',
                             u'cost': u'Needs Cost',
                             u'rarity': u'Needs Rarity',
-                            # TODO None of these categories exist
-                            u'image': u'Needs Image'}
+                            u'image': u'Needs Improvement'} #u'Needs Image'}
  
         text = self.fixNeedsCategories(text, params, categories, battle_param_map)
 
         # Check rank parameter against Battle Rank page
         rank_param = paramFromParams(params, u'rank')
         if rank_param == None:
-            text = self.appendCategory(text, u'Needs Information')
+            text = self.appendCategory(text, u'Needs Information') # u'Needs Rank'
         else:
             rank_page = wikipedia.Page(wikipedia.getSite(), u'Battle Rank')
             templatesWithParams = rank_page.templatesWithParams()
@@ -1336,8 +1325,7 @@ class XrefToolkit:
                    u"Street Rival's Cell Phone"]
         # Check mandatory parameters
         ingr_param_map = {u'rarity': u'Needs Rarity',
-                          # TODO None of these categories exist
-                          u'image': u'Needs Image'}
+                          u'image': u'Needs Improvement'} #u'Needs Image'}
         # Most ingredients have a description, too
         if not name in no_desc:
             ingr_param_map[u'description'] = u'Needs Description'
@@ -1350,7 +1338,7 @@ class XrefToolkit:
 
         for_param = paramFromParams(params, u'for')
         if for_param == None:
-            text = self.appendCategory(text, u'Needs Information')
+            text = self.appendCategory(text, u'Needs Information') # u'Needs Purpose'
         else:
             #TODO Check item is listed as an ingredient where appropriate
             pass

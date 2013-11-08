@@ -159,6 +159,9 @@ class XrefToolkit:
     def __init__(self, site, debug = False):
         self.site = site
         self.debug = debug
+        # Find all the sub-categories of Needs Information
+        cat = catlib.Category(wikipedia.getSite(), u'Category:Needs Information')
+        self.specificNeeds = set(c.titleWithoutNamespace() for c in cat.subcategories(recurse=True))
 
     def change(self, text, page):
         """
@@ -256,8 +259,8 @@ class XrefToolkit:
                 text = self.appendCategory(text, c)
         for c in set(param_cat_map.values()):
             if self.catInCategories(c, categories) and c not in cats_needed:
-                # But don't remove Needs Information, because it has other uses
-                if c != u'Needs Information':
+                # Only remove specific needs categories, not more general ones
+                if c in self.specificNeeds:
                     text = self.removeCategory(text, c)
         return text
 

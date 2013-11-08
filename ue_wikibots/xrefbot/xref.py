@@ -156,12 +156,10 @@ def paramsToDict(params):
     return result
 
 class XrefToolkit:
-    def __init__(self, site, debug = False):
+    def __init__(self, site, specificNeeds, debug = False):
         self.site = site
+        self.specificNeeds = specificNeeds
         self.debug = debug
-        # Find all the sub-categories of Needs Information
-        cat = catlib.Category(wikipedia.getSite(), u'Category:Needs Information')
-        self.specificNeeds = set(c.titleWithoutNamespace() for c in cat.subcategories(recurse=True))
 
     def change(self, text, page):
         """
@@ -1447,13 +1445,16 @@ class XrefBot:
         self.acceptall = acceptall
         # Load default summary message.
         wikipedia.setAction(wikipedia.translate(wikipedia.getSite(), msg_standalone))
+        # Find all the sub-categories of Needs Information
+        cat = catlib.Category(wikipedia.getSite(), u'Category:Needs Information')
+        self.specificNeeds = set(c.titleWithoutNamespace() for c in cat.subcategories(recurse=True))
 
     def treat(self, page):
         try:
             # Show the title of the page we're working on.
             # Highlight the title in purple.
             wikipedia.output(u"\n\n>>> \03{lightpurple}%s\03{default} <<<" % page.title())
-            xrToolkit = XrefToolkit(page.site(), debug = True)
+            xrToolkit = XrefToolkit(page.site(), self.specificNeeds, debug = True)
             changedText = xrToolkit.change(page.get(), page)
             # TODO Modify to treat just whitespace as unchanged
             # Just comparing changedText with page.get() wasn't sufficient

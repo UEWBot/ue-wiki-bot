@@ -715,8 +715,6 @@ class XrefToolkit:
         Checks for mandatory template parameters or corresponding Needs category.
         Checks for increasing skill levels.
         """
-        implicit_categories = [u'Classes']
-
         # Does the page use the Class template ?
         the_params = None
         for template,params in templatesWithParams:
@@ -728,12 +726,6 @@ class XrefToolkit:
         # TODO Is there a better test ?
         if the_params == None:
             return text
-
-        # Check for explicit categories that should be implicit
-        for cat in implicit_categories:
-            if self.catInCategories(cat, categories):
-                wikipedia.output("Explictly in implicit category %s" % cat)
-                text = self.removeCategory(text, cat)
 
         # __NOWYSIWYG__
         text = self.prependNowysiwygIfNeeded(text)
@@ -779,8 +771,6 @@ class XrefToolkit:
         assigned by the template.
         Checks for mandatory template parameters or corresponding Needs category.
         """
-        implicit_categories = [u'Execution Methods']
-
         # Does the page use the execution method template ?
         the_params = None
         for template,params in templatesWithParams:
@@ -792,12 +782,6 @@ class XrefToolkit:
         # TODO Is there a better test ?
         if the_params == None:
             return text
-
-        # Check for explicit categories that should be implicit
-        for cat in implicit_categories:
-            if self.catInCategories(cat, categories):
-                wikipedia.output("Explictly in implicit category %s" % cat)
-                text = self.removeCategory(text, cat)
 
         # __NOWYSIWYG__
         text = self.prependNowysiwygIfNeeded(text)
@@ -822,9 +806,6 @@ class XrefToolkit:
         assigned by the template.
         Checks for mandatory template parameters or corresponding Needs category.
         """
-        implicit_categories = [u'Income Properties',
-                               u'Upgrade Properties']
-
         # Does the page use a property template ?
         the_params = None
         for template,params in templatesWithParams:
@@ -841,12 +822,6 @@ class XrefToolkit:
         # TODO Is there a better test ?
         if the_params == None:
             return text
-
-        # Check for explicit categories that should be implicit
-        for cat in implicit_categories:
-            if self.catInCategories(cat, categories):
-                wikipedia.output("Explictly in implicit category %s" % cat)
-                text = self.removeCategory(text, cat)
 
         # __NOWYSIWYG__
         text = self.prependNowysiwygIfNeeded(text)
@@ -875,16 +850,6 @@ class XrefToolkit:
         Checks that the page doesn't explictly list any categories that should be
         assigned by the template.
         """
-        implicit_categories = [u'Lieutenants',
-                               u'Common Lieutenants',
-                               u'Uncommon Lieutenants',
-                               u'Rare Lieutenants',
-                               u'Epic Lieutenants',
-                               u'Dragon Syndicate Lieutenants',
-                               u'Street Lieutenants',
-                               u'The Cartel Lieutenants',
-                               u'The Mafia Lieutenants']
-
         # Does the page use a lieutenant template ?
         the_params = None
         is_tech_lab_item = False
@@ -914,12 +879,6 @@ class XrefToolkit:
         # TODO Is there a better test ?
         if the_params == None:
             return text
-
-        # Check for explicit categories that should be implicit
-        for cat in implicit_categories:
-            if self.catInCategories(cat, categories):
-                wikipedia.output("Explictly in implicit category %s" % cat)
-                text = self.removeCategory(text, cat)
 
         # __NOWYSIWYG__
         text = self.prependNowysiwygIfNeeded(text)
@@ -962,7 +921,8 @@ class XrefToolkit:
         Checks whether the categories Needs Cost and Needs Type are used correctly.
         Calls the appropriate fix function for the specific type of item.
         """
-        # All these categories should be added by the template
+        # All these categories should be added by the various templates
+        # Note that Daily Rewards also logically belongs here, but we do clever stuff for that one
         implicit_categories = [u'Items',
                                u'Common Items',
                                u'Uncommon Items',
@@ -987,7 +947,20 @@ class XrefToolkit:
                                u'The Cartel Items',
                                u'The Mafia Items',
                                u'Epic Research Items',
-                               u'Needs Type']
+                               u'Needs Type',
+                               u'Classes',
+                               u'Income Properties',
+                               u'Upgrade Properties',
+                               u'Execution Methods',
+                               u'Lieutenants',
+                               u'Common Lieutenants',
+                               u'Uncommon Lieutenants',
+                               u'Rare Lieutenants',
+                               u'Epic Lieutenants',
+                               u'Dragon Syndicate Lieutenants',
+                               u'Street Lieutenants',
+                               u'The Cartel Lieutenants',
+                               u'The Mafia Lieutenants']
 
         # Does the page use an item template ?
         the_params = None
@@ -1030,7 +1003,6 @@ class XrefToolkit:
             return text
 
         # Check for explicit categories that should be implicit
-        # TODO How much is redundant with template-based checks ?
         for cat in implicit_categories:
             if self.catInCategories(cat, categories):
                 wikipedia.output("Explictly in implicit category %s" % cat)
@@ -1093,18 +1065,23 @@ class XrefToolkit:
                  u'Heavy Weapons',
                  u'Needs Type']
         cat = u'Needs Type'
-        if self.catInCategories(cat, categories):
-            wikipedia.output("Explictly in implicit category %s" % cat)
-            text = self.removeCategory(text, cat)
+
         type_param = paramFromParams(params, u'type')
         if type_param == None:
-            # TODO Add "|from=Needs Type"
-            pass
+            # Add a type parameter, with value Needs Type
+            # Note that this just finds the first instance of params...
+            start = text.find(params)
+            if start != -1:
+                text = text[0:start] + u'|type=' + cat + text[start:]
+            else:
+                assert 0, "Failed to find params %s" % params
         else:
             # Check that the type is one we expect
             if oneCap(type_param) not in types:
                 wikipedia.output("Unexpected type '%s'" % type_param)
-                # TODO Change it to Needs Type
+                # Change it to Needs Type
+                # Note that this replaces every instance of the text in type_param...
+                text.replace(type_param, cat)
 
         return text
 
@@ -1240,7 +1217,7 @@ class XrefToolkit:
         Ensures that basic items have description, image, atk, def, cost, rarity, quote
         and time params or appropriate "Needs" category.
         Checks that either level or district is specified.
-        Checks that it not explcitly in Daily Rewards category.
+        Checks that it not explicitly in Daily Rewards category.
         Assumes that the page uses the Basic Item template.
         """
         # Check mandatory parameters
@@ -1271,7 +1248,13 @@ class XrefToolkit:
         if self.catInCategories(cat, categories):
             wikipedia.output("Explictly in implicit category %s" % cat)
             text = self.removeCategory(text, cat)
-            # TODO Add "daily=yes" to Basic Item parameters
+            # Add a daily parameter, with value yes
+            # Note that this just finds the first instance of params...
+            start = text.find(params)
+            if start != -1:
+                text = text[0:start] + u'|daily=yes' + text[start:]
+            else:
+                assert 0, "Failed to find params %s" % params
 
         # Check type param
         text = self.fixItemType(text, params, categories)

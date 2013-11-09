@@ -190,7 +190,7 @@ class XrefToolkit:
         text = self.fixProperty(titleWithoutNamespace, text, categories, templatesWithParams)
         text = self.fixExecutionMethod(text, categories, templatesWithParams)
         text = self.fixClass(text, categories, templatesWithParams)
-        text = self.fixTechLab(titleWithoutNamespace, text, categories, templatesWithParams)
+        text = self.fixTechLab(titleWithoutNamespace, text, templatesWithParams)
         #wikipedia.output("******\nOld text:\n%s" % oldText)
         #wikipedia.output("******\nIn text:\n%s" % text)
         # Just comparing oldText with text wasn't sufficient

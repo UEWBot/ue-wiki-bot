@@ -1177,8 +1177,9 @@ class XrefToolkit:
             for m in iterator:
                 if m.group('item') == name:
                     if points_param != m.group('points'):
-                        wikipedia.output("Faction points mismatch - %s page says %s, this page says %s" % (faction_param, m.group('points'), points_param))
-                        # TODO Can probably fix item page here
+                        # Change the value
+                        # Note that this replaces every instance of the text in points_param...
+                        text.replace(points_param, m.group('points'))
 
         # Check type param
         text = self.fixItemType(text, params, categories)
@@ -1410,8 +1411,13 @@ class XrefToolkit:
         if time_param == None:
             text = self.appendCategory(text, u'Needs Build Time')
             if recipe_params[u'time'] != None:
-                # TODO Should be possible to fix this
-                wikipedia.output("Page is missing time to build. Tech Lab page says %s" % recipe_params[u'time'])
+                # Add a time parameter, with appropriate value
+                # Note that this just finds the first instance of params...
+                start = text.find(lab_params)
+                if start != -1:
+                    text = text[0:start] + u'|time=' + recipe_params[u'time'] + text[start:]
+                else:
+                    assert 0, "Failed to find params %s" % lab_params
         else:
             if time_param != recipe_params[u'time']:
                 wikipedia.output("Time parameter mismatch - %s in page, %s on Tech Lab page" % (time_param, recipe_params[u'time']))

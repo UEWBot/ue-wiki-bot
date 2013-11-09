@@ -190,7 +190,7 @@ class XrefToolkit:
         text = self.fixProperty(titleWithoutNamespace, text, categories, templatesWithParams)
         text = self.fixExecutionMethod(text, categories, templatesWithParams)
         text = self.fixClass(text, categories, templatesWithParams)
-        text = self.fixTechLab(titleWithoutNamespace, text, templatesWithParams)
+        text = self.fixTechLab(titleWithoutNamespace, text, categories, templatesWithParams)
         #wikipedia.output("******\nOld text:\n%s" % oldText)
         #wikipedia.output("******\nIn text:\n%s" % text)
         # Just comparing oldText with text wasn't sufficient
@@ -705,7 +705,7 @@ class XrefToolkit:
 
         return text
 
-    def fixTechLab(self, name, text, templatesWithParams):
+    def fixTechLab(self, name, text, categories, templatesWithParams):
         """
         Fixes the Tech Lab page.
         Ensures that __NOWYSIWYG__ is present.

@@ -190,6 +190,7 @@ class XrefToolkit:
         text = self.fixProperty(titleWithoutNamespace, text, categories, templatesWithParams)
         text = self.fixExecutionMethod(text, categories, templatesWithParams)
         text = self.fixClass(text, categories, templatesWithParams)
+        text = self.fixTechLab(titleWithoutNamespace, text, categories, templatesWithParams)
         #wikipedia.output("******\nOld text:\n%s" % oldText)
         #wikipedia.output("******\nIn text:\n%s" % text)
         # Just comparing oldText with text wasn't sufficient
@@ -701,6 +702,46 @@ class XrefToolkit:
         elif start == -1:
             # Section not present
             text = self.appendCategory(text, u'Needs Time Limit')
+
+        return text
+
+    def fixTechLab(self, name, text, templatesWithParams):
+        """
+        Fixes the Tech Lab page.
+        Ensures that __NOWYSIWYG__ is present.
+        Checks for mandatory template parameters or corresponding Needs category.
+        """
+        if name != u'Tech Lab':
+            return text
+
+        # __NOWYSIWYG__
+        text = self.prependNowysiwygIfNeeded(text)
+
+        # Find the start of the Historical section
+        start, end = self.findSpecificSection(text, u'Historical Items')
+
+        # Check each recipe
+        recipe_param_map = {u'name': u'Needs Information', #u'Needs Item Name',
+                            u'image': u'Needs Improvement', #u'Needs Image',
+                            u'atk': u'Needs Stats',
+                            u'def': u'Needs Stats',
+                            u'time': u'Needs Build Time',
+                            u'part_1': u'Needs Information', #u'Needs Ingredient',
+                            u'part_2': u'Needs Information'} #u'Needs Ingredient'}
+        old_recipe_map = {u'available' : u'Needs Information'}
+        missing_params = set()
+        for template, params in templatesWithParams:
+            if template == u'Recipe':
+                missing_params |= missingParams(params, recipe_param_map.keys())
+                # Find this item on the page
+                name = paramFromParams(params, u'name')
+                # Is it a historical recipe ?
+                if text.find(name) > start:
+                    missing_params |= missingParams(params, old_recipe_map.keys())
+                # TODO Cross-reference against item page
+        wikipedia.output("Set of missing recipe parameters is %s" % missing_params)
+        # Ensure the Needs categories are correct
+        text = self.fixNeedsCats(text, missing_params, categories, recipe_param_map)
 
         return text
 

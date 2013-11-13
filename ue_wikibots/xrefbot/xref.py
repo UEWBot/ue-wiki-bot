@@ -191,6 +191,7 @@ class XrefToolkit:
         text = self.fixExecutionMethod(text, categories, templatesWithParams)
         text = self.fixClass(text, categories, templatesWithParams)
         text = self.fixTechLab(titleWithoutNamespace, text, categories, templatesWithParams)
+        text = self.fixDistrict(titleWithoutNamespace, text, categories, templatesWithParams)
         #wikipedia.output("******\nOld text:\n%s" % oldText)
         #wikipedia.output("******\nIn text:\n%s" % text)
         # Just comparing oldText with text wasn't sufficient
@@ -702,6 +703,46 @@ class XrefToolkit:
         elif start == -1:
             # Section not present
             text = self.appendCategory(text, u'Needs Time Limit')
+
+        return text
+
+    def fixDistrict(self, name, text, categories, templatesWithParams):
+        """
+        Fixes a District page.
+        Ensures that __NOWYSIWYG__ is present.
+        Checks for mandatory template parameters or corresponding Needs category.
+        """
+        # Drop out if it isn't a district page
+        if not self.catInCategories(u'Districts', categories):
+            return text
+
+        # __NOWYSIWYG__
+        text = self.prependNowysiwygIfNeeded(text)
+
+        # Check each template
+        common_param_map = {u'name': u'Needs Information', #u'Needs Job Name',
+                            u'image': u'Needs Improvement', #u'Needs Image',
+                            u'description': u'Needs Information', #u'Needs Job Description',
+                            u'energy': u'Needs Information', #u'Needs Job Energy',
+                            u'total_energy': u'Needs Information', #u'Needs Job Total Energy',
+                            u'cash_min': u'Needs Information', #u'Needs Job Cash',
+                            u'cash_max': u'Needs Information'} #u'Needs Job Cash'}
+        job_param_map = {u'lieutenant': u'Needs Information', #u'Needs Job Lieutenant',
+                         u'gear': u'Needs Information', #u'Needs Job Gear',
+                         u'faction': u'Needs Information'} #u'Needs Job Faction'}
+        challenge_param_map = {u'xp_min': u'Needs Information', #u'Needs Job XP',
+                               u'xp_max': u'Needs Information', #u'Needs Job XP',
+                               u'rewards': u'Needs Information'} #u'Needs Job Rewards'}
+        missing_params = set()
+        for template, params in templatesWithParams:
+            if template == u'Job':
+                missing_params |= missingParams(params, common_param_map.keys() + job_param_map.keys())
+                #TODO Also need either u'xp' or u'xp_min" and u'xp_max'
+            elif template == u'Challenge Job':
+                missing_params |= missingParams(params, common_param_map.keys() + challenge_param_map.keys())
+        wikipedia.output("Set of missing job parameters is %s" % missing_params)
+        # Ensure the Needs categories are correct
+        text = self.fixNeedsCats(text, missing_params, categories, dict(common_param_map.items() + job_param_map.items() + challenge_param_map.items()))
 
         return text
 

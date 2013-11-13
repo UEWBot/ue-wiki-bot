@@ -729,15 +729,20 @@ class XrefToolkit:
                             u'cash_max': u'Needs Information'} #u'Needs Job Cash'}
         job_param_map = {u'lieutenant': u'Needs Information', #u'Needs Job Lieutenant',
                          u'gear': u'Needs Information', #u'Needs Job Gear',
+                         # Special code for XP below
+                         u'xp': u'Needs Information', #u'Needs Job XP',
                          u'faction': u'Needs Information'} #u'Needs Job Faction'}
-        challenge_param_map = {u'xp_min': u'Needs Information', #u'Needs Job XP',
-                               u'xp_max': u'Needs Information', #u'Needs Job XP',
-                               u'rewards': u'Needs Information'} #u'Needs Job Rewards'}
+        xp_pair_param_map = {u'xp_min': u'Needs Information', #u'Needs Job XP',
+                             u'xp_max': u'Needs Information'} #u'Needs Job XP'}
+        challenge_param_map = dict(xp_pair_param_map.items() + [(u'rewards', u'Needs Information')]) #u'Needs Job Rewards'}
         missing_params = set()
         for template, params in templatesWithParams:
             if template == u'Job':
                 missing_params |= missingParams(params, common_param_map.keys() + job_param_map.keys())
-                #TODO Also need either u'xp' or u'xp_min" and u'xp_max'
+                if u'xp' in missing_params:
+                    # xp_min and xp_max will do instead
+                    missing_params.remove(u'xp')
+                    missing_params |= missingParams(params, xp_pair_param_map.keys())
             elif template == u'Challenge Job':
                 missing_params |= missingParams(params, common_param_map.keys() + challenge_param_map.keys())
         wikipedia.output("Set of missing job parameters is %s" % missing_params)

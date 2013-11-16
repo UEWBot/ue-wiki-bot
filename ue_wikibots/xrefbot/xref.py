@@ -1128,13 +1128,37 @@ class XrefToolkit:
     def fixDrop(self, name, text, from_param, refs):
         """
         Check that the page lists the right places it can be obtained from.
+        Adds any that are missing
         """
+        # First, find pages that list this item as a drop
+        # Starting with the list of pages that link here
+        source_list = []
+        for r in refs:
+            for template,params in r.templatesWithParams():
+                if template == u'Drop':
+                    if paramFromParams(params, u'name') == name:
+                        source_list.append(r.titleWithoutNamespace())
+        # Then, find the places listed as sources in this page
+        # Remove any that match from the source list, leaving missing sources
+        # Count the number of sources already in the list as we go
+        src_count = 0
         iterator = Rlink.finditer(from_param)
         for m in iterator:
-            wikipedia.output("Claims to drop from %s" % m.group('page'))
-        for r in refs:
-            wikipedia.output("Linked to from %s" % r)
-        # TODO Implement
+            src_count += 1
+            src = m.group('page')
+            if src in source_list:
+                source_list.remove(src)
+            else:
+                # Note that this is not necessarily an error
+                # many items can be obtained from places other than Bosses
+                #TODO Should be able to validate Black Market, Crates, and Events
+                wikipedia.output("Page lists %s as a source, but that page doesn't list it as a drop" % src)
+        # Convert from single source to a list if necessary
+        if len(source_list) > 0 and src_count == 1:
+            text = text.replace(from_param, u'<br/>\n*' + from_param)
+        # Add missing sources to the page
+        for src in source_list:
+            text = text.replace(from_param, from_param + u'\n*[[%s]]' % src)
         return text
 
     def fixItemType(self, text, params, categories):

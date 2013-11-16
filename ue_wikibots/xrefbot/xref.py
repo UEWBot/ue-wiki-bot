@@ -1178,7 +1178,8 @@ class XrefToolkit:
         """
         from_param = paramFromParams(params, u'from')
         if from_param == None:
-            text = self.appendCategory(text, u'Needs Minimum Level')
+            if not self.catInCategories(u'Needs Minimum Level', categories):
+                text = self.appendCategory(text, u'Needs Minimum Level')
         else:
             if self.catInCategories(u'Needs Minimum Level', categories):
                 text = self.removeCategory(u'Needs Minimum Level')
@@ -1257,7 +1258,8 @@ class XrefToolkit:
         faction_param = paramFromParams(params, u'faction')
         points_param = paramFromParams(params, u'points')
         if faction_param == None or points_param == None:
-            text = self.appendCategory(text, u'Needs Information') # u'Needs Faction' or u'Needs Points'
+            if not self.catInCategories(u'Needs Information', categories):
+                text = self.appendCategory(text, u'Needs Information') # u'Needs Faction' or u'Needs Points'
         else:
             faction_page = wikipedia.Page(wikipedia.getSite(), faction_param)
             iterator = Rfaction.finditer(faction_page.get())
@@ -1324,7 +1326,8 @@ class XrefToolkit:
         if level_param == None:
             if district_param == None:
                 wikipedia.output("Missing both level and district parameters")
-                text = self.appendCategory(text, u'Needs Information') # u'Needs Prerequisites'
+                if not self.catInCategories(u'Needs Information', categories):
+                    text = self.appendCategory(text, u'Needs Information') # u'Needs Prerequisites'
         else:
             if district_param != None:
                 wikipedia.output("Both level and district parameters are present")
@@ -1367,7 +1370,8 @@ class XrefToolkit:
         # Check rank parameter against Battle Rank page
         rank_param = paramFromParams(params, u'rank')
         if rank_param == None:
-            text = self.appendCategory(text, u'Needs Information') # u'Needs Rank'
+            if not self.catInCategories(u'Needs Information', categories):
+                text = self.appendCategory(text, u'Needs Information') # u'Needs Rank'
         else:
             rank_page = wikipedia.Page(wikipedia.getSite(), u'Battle Rank')
             templatesWithParams = rank_page.templatesWithParams()
@@ -1410,7 +1414,8 @@ class XrefToolkit:
 
         for_param = paramFromParams(params, u'for')
         if for_param == None:
-            text = self.appendCategory(text, u'Needs Information') # u'Needs Purpose'
+            if not self.catInCategories(u'Needs Information', categories):
+                text = self.appendCategory(text, u'Needs Information') # u'Needs Purpose'
         else:
             #TODO Check item is listed as an ingredient where appropriate
             pass
@@ -1496,7 +1501,8 @@ class XrefToolkit:
             wikipedia.output("Image parameter mismatch - %s in page, %s on Tech Lab page" % (img_param, recipe_params[u'image']))
         time_param = paramFromParams(lab_params, u'time')
         if time_param == None:
-            text = self.appendCategory(text, u'Needs Build Time')
+            if not self.catInCategories(u'Needs Build Time', categories):
+                text = self.appendCategory(text, u'Needs Build Time')
             if recipe_params[u'time'] != None:
                 # Add a time parameter, with appropriate value
                 # Note that this just finds the first instance of params...

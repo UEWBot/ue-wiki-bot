@@ -599,6 +599,7 @@ class XrefToolkit:
                     elif (key == u'creator'):
                         continue
                     elif not dropParamsMatch(drop_params[key], item_params[key]):
+                        # TODO Should be able to fix some of them at least...
                         wikipedia.output("Drop parameter mismatch for %s parameter of item %s (%s vs %s)" % (key, drop_params[u'name'], item_params[key], drop_params[key]))
                 # Then check for any that may be missing
                 # TODO This is too strict - "for" parameter should only list Epic Research Items
@@ -916,7 +917,7 @@ class XrefToolkit:
                           u'cost': u'Needs Initial Cost',
                           u'time': u'Needs Build Time',
                           u'image': u'Needs Improvement', #u'Needs Image',
-                          u'unlock': u'Needs Information'} #u'Needs Unlock Criteria'}
+                          u'unlock': u'Needs Unlock Criterion'}
         if the_template == u'Upgrade Property':
             prop_param_map[u'power'] = u'Needs Power'
             prop_param_map[u'max'] = u'Needs Max Number'
@@ -1281,9 +1282,12 @@ class XrefToolkit:
         # Check points against corresponding faction page
         faction_param = paramFromParams(params, u'faction')
         points_param = paramFromParams(params, u'points')
-        if faction_param == None or points_param == None:
+        if faction_param == None:
             if not self.catInCategories(u'Needs Information', categories):
-                text = self.appendCategory(text, u'Needs Information') # u'Needs Faction' or u'Needs Points'
+                text = self.appendCategory(text, u'Needs Information') # u'Needs Faction'
+        elif points_param == None:
+            if not self.catInCategories(u'Needs Unlock Criterion', categories):
+                text = self.appendCategory(text, u'Needs Unlock Criterion')
         else:
             faction_page = wikipedia.Page(wikipedia.getSite(), faction_param)
             iterator = Rfaction.finditer(faction_page.get())
@@ -1350,8 +1354,8 @@ class XrefToolkit:
         if level_param == None:
             if district_param == None:
                 wikipedia.output("Missing both level and district parameters")
-                if not self.catInCategories(u'Needs Information', categories):
-                    text = self.appendCategory(text, u'Needs Information') # u'Needs Prerequisites'
+                if not self.catInCategories(u'Needs Unlock Criterion', categories):
+                    text = self.appendCategory(text, u'Needs Unlock Criterion')
         else:
             if district_param != None:
                 wikipedia.output("Both level and district parameters are present")
@@ -1394,8 +1398,8 @@ class XrefToolkit:
         # Check rank parameter against Battle Rank page
         rank_param = paramFromParams(params, u'rank')
         if rank_param == None:
-            if not self.catInCategories(u'Needs Information', categories):
-                text = self.appendCategory(text, u'Needs Information') # u'Needs Rank'
+            if not self.catInCategories(u'Needs Unlock Criterion', categories):
+                text = self.appendCategory(text, u'Needs Unlock Criterion')
         else:
             rank_page = wikipedia.Page(wikipedia.getSite(), u'Battle Rank')
             templatesWithParams = rank_page.templatesWithParams()

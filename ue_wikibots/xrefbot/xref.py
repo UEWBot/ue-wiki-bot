@@ -122,7 +122,7 @@ def missingParams(all_params, mandatory_list):
     ret = set(mandatory_list)
     for p in all_params:
         m = Rparam.match(p)
-        if m.group('name') in ret:
+        if m != None and m.group('name') in ret:
             ret.remove(m.group('name'))
     return ret
 
@@ -132,7 +132,7 @@ def paramFromParams(params, param):
     """
     for p in params:
         m = Rparam.match(p)
-        if m.group('name') == param:
+        if m != None and m.group('name') == param:
             val = m.group('value')
             # People sometimes provide the parameters, even though we don't know the value
             if val != u'' and val != u'?':
@@ -152,7 +152,8 @@ def paramsToDict(params):
     result = {}
     for param in params:
         m = Rparam.match(param)
-        result[m.group('name')] = m.group('value')
+        if m != None:
+            result[m.group('name')] = m.group('value')
     return result
 
 class XrefToolkit:
@@ -186,7 +187,7 @@ class XrefToolkit:
         # TODO There's probably a sensible order for these...
         text = self.fixBoss(titleWithoutNamespace, text, categories, templatesWithParams)
         text = self.fixItem(titleWithoutNamespace, text, categories, templatesWithParams, refs)
-        text = self.fixLieutenant(titleWithoutNamespace, text, categories, templatesWithParams)
+        text = self.fixLieutenant(titleWithoutNamespace, text, categories, templatesWithParams, refs)
         text = self.fixProperty(titleWithoutNamespace, text, categories, templatesWithParams)
         text = self.fixExecutionMethod(text, categories, templatesWithParams)
         text = self.fixClass(text, categories, templatesWithParams)
@@ -928,7 +929,7 @@ class XrefToolkit:
 
         return text
 
-    def fixLieutenant(self, name, text, categories, templatesWithParams):
+    def fixLieutenant(self, name, text, categories, templatesWithParams, refs):
         """
         If the page uses any of the templates 'Lieutenant Common', 'Lieutenant Uncommon',
         'Lieutenant Rare, or 'Lieutenant Epic':
@@ -993,6 +994,30 @@ class XrefToolkit:
         # Do special checks for any Epic Research Items
         if is_tech_lab_item:
             text = self.fixTechLabItem(name, text, the_params, categories, ingredients)
+
+        # Validate items parameter, if present
+        items_param = paramFromParams(the_params, u'items')
+        # Check for any items that have a power that affects this Lt
+        itemList = []
+        for r in refs:
+            for template,params in r.templatesWithParams():
+                powerParam = paramFromParams(params, u'power')
+                if powerParam != None and name in powerParam:
+                    powerText = "[[%s]] gives %s" % (r.titleWithoutNamespace(), powerParam)
+                    itemList.append(powerText)
+        if len(itemList) > 0:
+            if items_param == None:
+                # Create new items param from scratch
+                itemsText = '|items='
+                if len(itemList) > 1:
+                    itemsText += u'<br\>\n*'
+                itemsText += u'\n*'.join(itemList)
+                text = text.replace(the_template, the_template + '\n' + itemsText, 1)
+            else:
+                # TODO check that it contains all the items it should
+                pass
+        elif items_param != None:
+            wikipedia.output("Page claims item bonus of %s, but no items found that give bonusus" % items_param)
 
         return text
 

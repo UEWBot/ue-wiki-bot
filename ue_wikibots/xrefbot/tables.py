@@ -10,6 +10,7 @@ sys.path.append(os.environ['HOME'] + '/ue/ue_wikibots/pywikipedia')
 import wikipedia, pagegenerators, catlib
 import re, difflib
 import logging
+import utils
 
 # Stuff for the wikipedia help system
 parameterHelp = pagegenerators.parameterHelp + """\
@@ -115,9 +116,9 @@ def summary_header(row_template):
         text += u'!span="col" | Atk+Def\n'
         text += u'!span="col" | Atk+70% of Def\n'
         text += u'!span="col" | 70% of Atk + Def\n'
-    elif row_template == u'Property Rows':
+    elif row_template == u'Property Row':
         # Number column
-        text += u'!span="col" | #\n'
+        text += u'!span="col" | Level\n'
         # Name column
         text += u'!span="col" | Name\n'
         # Cost column, sorted as currency
@@ -127,7 +128,7 @@ def summary_header(row_template):
         # Time to recoup cost column
         text += u'!span="col" | Hrs to recoup\n'
         # Unlock criteria
-        text += u'!span="col" | Unlocked when\n'
+        text += u'!span="col" | Prerequisite(s)\n'
     elif row_template == u'Job Row':
         # District column
         text += u'!span="col" | District\n'
@@ -147,7 +148,7 @@ def summary_header(row_template):
         text += u'!span="col" data-sort-type="currency" | Cash/energy\n'
         # XP/energy Column
         text += u'!span="col" | XP/energy\n'
-    else: # Lieutenant Row
+    elif row_template == u'Lieutenant Row':
         # Name column
         text += u'!span="col" rowspan="2" | Name\n'
         # Faction column
@@ -162,6 +163,8 @@ def summary_header(row_template):
             text += u'!span="col" | Atk\n'
             text += u'!span="col" | Def\n'
             text += u'!span="col" class="unsortable" | Power\n'
+    else:
+        wikipedia.output("Unexpected row template %s" % row_template)
 
     return text
 
@@ -171,6 +174,49 @@ def summary_footer(row_template):
     """
     return u'|}'
 
+def property_row(name, d, count):
+    """
+    Returns a property row line for the specified property.
+    name is the name of the property.
+    d is a dict of template parameters.
+    count is the level of the property.
+    """
+    # We need to provide count, name, cost, income, and unlock
+    # We have name and count.
+    row = u'{{Property Row|name=%s|count=%d' % (name, count)
+    # Income comes straight from the corresponding parameter, if present.
+    if u'income' in d:
+        row += u'|income=%s' % d[u'income']
+    else:
+        row += u'|income=1000'
+    # Unlock we need to construct from a number of things
+    unlock = u''
+    if count == 1 and u'unlock_area' in d:
+        unlock += u'[[%s]] open' % d[u'unlock_area']
+    if u'unlock_prop' in d:
+        if u'plus_one' in d:
+            if count > 1:
+                unlock += 'level %d [[%s]]' % (count - 1, d[u'unlock_prop'])
+        else:
+            unlock += u'level %d [[%s]]' % (count, d[u'unlock_prop'])
+    if count > 10:
+        unlock += u'level %d [[%s]]' % (count - 10, u'Fortress')
+    if count > 1:
+        if len(unlock) > 0:
+            unlock += u' and '
+        unlock += u'level %d [[%s]]' % (count - 1, name)
+    if u'fp_prop'in d:
+        # Override the unlock string we've created
+        unlock = u'Buy [[Favor Point]]s during promo in %s' % d[u'fp_prop']
+    row += u'|unlock=%s' % unlock
+    # We derive cost from the template cost and count.
+    if u'cost' in d:
+        base_cost = float(d[u'cost'].replace(u',',u''))
+    else:
+        base_cost = 0.0
+    row += u'|cost=%d}}' % (base_cost * (1 + count/10.0))
+    return row
+
 def page_to_row(page, row_template):
     """
     Creates a table row for the item described in page.
@@ -179,8 +225,8 @@ def page_to_row(page, row_template):
     row = u'{{%s|name=%s' % (row_template, page.title())
     for (template, params) in templatesWithParams:
         # We're only interested in certain templates
-        if item_templates.search(template) or property_templates.search(template):
-            # Use all the item and property template parameters for now
+        if item_templates.search(template):
+            # Pass all the item template parameters
             for param in params:
                 row += u'|%s' % param
         else:
@@ -188,7 +234,7 @@ def page_to_row(page, row_template):
             if match:
                 # Construct a rarity parameter from the template name
                 row += u'|rarity=%s' % match.group(1)
-                # Use all the item template parameters for now
+                # Pass all the lieutenant template parameters
                 for param in params:
                     row += u'|%s' % param
     row += u'}}'
@@ -198,14 +244,14 @@ def page_to_row(page, row_template):
 def page_to_rows(page, row_template):
     # TODO Look at combining this function and page_to_row().
     """
-    Creates a table row for each job described in page.
+    Returns a list of table rows for the jobs or property described in page.
     """
-    row_stub = u'{{%s|district=%s' % (row_template, page.title())
     templatesWithParams = page.templatesWithParams()
     rows = []
     for (template, params) in templatesWithParams:
         # We're only interested in certain templates
         if job_templates.search(template):
+            row_stub = u'{{%s|district=%s' % (row_template, page.title())
             # Create a new row
             row = row_stub
             # Use all the item, property, and job template parameters for now
@@ -215,6 +261,17 @@ def page_to_rows(page, row_template):
             # wikipedia.output(u'Row is "%s"' % row)
             # Add the new row to the list
             rows.append(row)
+        elif property_templates.search(template):
+            d = utils.paramsToDict(params)
+            # Figure out how many rows we need
+            if u'fp_prop'in d:
+                max = 5
+            elif template == u'Income Property':
+                max = 20
+            else:
+                max = 10
+            for count in range(1, max + 1):
+                rows.append(property_row(page.title(), d, count))
     return rows
 
 def rarities():
@@ -269,7 +326,7 @@ class XrefBot:
         """
         # Categories we're interested in
         cats = {u'Income Properties', u'Upgrade Properties'}
-        row_template = u'Property Rows'
+        row_template = u'Property Row'
 
         old_page = wikipedia.Page(wikipedia.getSite(), u'Properties Table')
         rows = []
@@ -277,7 +334,7 @@ class XrefBot:
             cat = catlib.Category(wikipedia.getSite(), u'Category:%s' % name)
             # One row per page in category
             for page in cat.articlesList():
-                rows.append(page_to_row(page, row_template))
+                rows += page_to_rows(page, row_template)
         # Start the new page text
         new_text = summary_header(row_template)
         # TODO: Sort rows into some sensible order
@@ -354,7 +411,13 @@ class XrefBot:
         Lieutenants Table
         """
         # Categories we're interested in and row template to use for each category
-        cat_to_templ = { u'Rifles': 'Item Row', u'Handguns': 'Item Row', u'Melee Weapons': 'Item Row', u'Heavy Weapons': 'Item Row', u'Vehicles': 'Item Row', u'Gear': 'Item Row', u'Lieutenants': 'Lieutenant Row'}
+        cat_to_templ = {u'Rifles': 'Item Row',
+                        u'Handguns': 'Item Row',
+                        u'Melee Weapons': 'Item Row',
+                        u'Heavy Weapons': 'Item Row',
+                        u'Vehicles': 'Item Row',
+                        u'Gear': 'Item Row',
+                        u'Lieutenants': 'Lieutenant Row'}
 
         # Go through cat_to_templ, and create/update summary page for each one
         for name, template in cat_to_templ.iteritems():

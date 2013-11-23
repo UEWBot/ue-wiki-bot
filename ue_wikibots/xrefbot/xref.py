@@ -9,6 +9,7 @@ sys.path.append(os.environ['HOME'] + '/ue/ue_wikibots/pywikipedia')
 
 import wikipedia, pagegenerators, catlib
 import re, difflib
+import utils
 
 # Stuff for the wikipedia help system
 parameterHelp = pagegenerators.parameterHelp + """\
@@ -33,9 +34,6 @@ msg_append = {
 Rtemplate = re.compile(ur'{{(msg:)?(?P<name>[^{\|]+?)(\|(?P<params>[^{]+?))?}}')
 # Modified from the above
 namedtemplate = (ur'{{(msg:)?(%s[^{\|]+?)(\|(?P<params>[^{]+?))?}}')
-
-# Separate the name and value for a template parameter
-Rparam = re.compile(ur'\s*(?P<name>\S+)\s*=\s*(?P<value>.*)', re.DOTALL)
 
 # Headers
 # This doesn't match level 1 headers, but they're rare...
@@ -121,40 +119,16 @@ def missingParams(all_params, mandatory_list):
     """
     ret = set(mandatory_list)
     for p in all_params:
-        m = Rparam.match(p)
+        m = utils.Rparam.match(p)
         if m != None and m.group('name') in ret:
             ret.remove(m.group('name'))
     return ret
-
-def paramFromParams(params, param):
-    """
-    Returns the value for 'param' in 'params', or None if it isn't present.
-    """
-    for p in params:
-        m = Rparam.match(p)
-        if m != None and m.group('name') == param:
-            val = m.group('value')
-            # People sometimes provide the parameters, even though we don't know the value
-            if val != u'' and val != u'?':
-                return val
-    return None
 
 def oneCap(string):
     """
     Returns the string with the first letter capitalised and the rest left alone.
     """
     return string[0].upper() + string[1:]
-
-def paramsToDict(params):
-    """
-    Takes the list of parameters to a template and returns them as a dict.
-    """
-    result = {}
-    for param in params:
-        m = Rparam.match(param)
-        if m != None:
-            result[m.group('name')] = m.group('value')
-    return result
 
 class XrefToolkit:
     def __init__(self, site, specificNeeds, debug = False):
@@ -592,7 +566,7 @@ class XrefToolkit:
             #wikipedia.output("Template %s" % template)
             # TODO Clean this code up
             if (template.find(u'Item') != -1) or (template == u'Ingredient'):
-                item_params = paramsToDict(params)
+                item_params = utils.paramsToDict(params)
                 # Check the drop parameters we do have
                 for key in drop_params.keys():
                     if (key == u'name'):
@@ -610,7 +584,7 @@ class XrefToolkit:
                 if source not in item_params['from']:
                     wikipedia.output("Boss claims to drop %s, but is not listed on that page" % drop_params['name'])
             elif template.find(u'Lieutenant') != -1:
-                item_params = paramsToDict(params)
+                item_params = utils.paramsToDict(params)
                 for key in drop_params.keys():
                     dp = drop_params[key]
                     if key == u'name':
@@ -658,7 +632,7 @@ class XrefToolkit:
         # Check each drop
         for (template, params) in templatesWithParams:
             if template == u'Drop':
-                drop_params = paramsToDict(params)
+                drop_params = utils.paramsToDict(params)
                 self.checkItemParams(name, drop_params)
 
         # Check Needs categories
@@ -782,7 +756,7 @@ class XrefToolkit:
             if template == u'Recipe':
                 missing_params |= missingParams(params, recipe_param_map.keys())
                 # Find this item on the page
-                name = paramFromParams(params, u'name')
+                name = utils.paramFromParams(params, u'name')
                 # Is it a historical recipe ?
                 if text.find(name) > start:
                     missing_params |= missingParams(params, old_recipe_map.keys())
@@ -838,7 +812,7 @@ class XrefToolkit:
         old_level = 0
         for template,params in templatesWithParams:
             if template == u'Skill':
-                level = paramFromParams(params, u'level')
+                level = utils.paramFromParams(params, u'level')
                 if level != None:
                     if level == old_level and level != 1:
                         wikipedia.output("copy-paste error for skill level %s ?" % level)
@@ -996,12 +970,12 @@ class XrefToolkit:
             text = self.fixTechLabItem(name, text, the_params, categories, ingredients)
 
         # Validate items parameter, if present
-        items_param = paramFromParams(the_params, u'items')
+        items_param = utils.paramFromParams(the_params, u'items')
         # Check for any items that have a power that affects this Lt
         itemList = []
         for r in refs:
             for template,params in r.templatesWithParams():
-                powerParam = paramFromParams(params, u'power')
+                powerParam = utils.paramFromParams(params, u'power')
                 if powerParam != None and name in powerParam:
                     powerText = "[[%s]] gives %s" % (r.titleWithoutNamespace(), powerParam)
                     itemList.append(powerText)
@@ -1125,7 +1099,7 @@ class XrefToolkit:
         # If the item comes from somewhere special (other than tech lab), do cross-ref check
         # (Mystery) Gift Item template uses from with a different meaning
         if template != u'Gift Item' and template != u'Mystery Gift Item' and not is_tech_lab_item:
-            from_param = paramFromParams(the_params, u'from')
+            from_param = utils.paramFromParams(the_params, u'from')
             if from_param != None:
                 text = self.fixDrop(name, text, from_param, refs)
 
@@ -1162,7 +1136,7 @@ class XrefToolkit:
         for r in refs:
             for template,params in r.templatesWithParams():
                 if template == u'Drop':
-                    if paramFromParams(params, u'name') == name:
+                    if utils.paramFromParams(params, u'name') == name:
                         source_list.append(r.titleWithoutNamespace())
         # Then, find the places listed as sources in this page
         # Remove any that match from the source list, leaving missing sources
@@ -1201,7 +1175,7 @@ class XrefToolkit:
                  u'Needs Type']
         cat = u'Needs Type'
 
-        type_param = paramFromParams(params, u'type')
+        type_param = utils.paramFromParams(params, u'type')
         if type_param == None:
             # Add a type parameter, with value Needs Type
             # Note that this just finds the first instance of params...
@@ -1226,7 +1200,7 @@ class XrefToolkit:
         Adds or removes Needs Minimum Level category.
         Warns if the from parameter differs from what the Gift page says.
         """
-        from_param = paramFromParams(params, u'from')
+        from_param = utils.paramFromParams(params, u'from')
         if from_param == None:
             if not self.catInCategories(u'Needs Minimum Level', categories):
                 text = self.appendCategory(text, u'Needs Minimum Level')
@@ -1305,8 +1279,8 @@ class XrefToolkit:
         text = self.fixNeedsCategories(text, params, categories, faction_param_map)
 
         # Check points against corresponding faction page
-        faction_param = paramFromParams(params, u'faction')
-        points_param = paramFromParams(params, u'points')
+        faction_param = utils.paramFromParams(params, u'faction')
+        points_param = utils.paramFromParams(params, u'points')
         if faction_param == None:
             if not self.catInCategories(u'Needs Information', categories):
                 text = self.appendCategory(text, u'Needs Information') # u'Needs Faction'
@@ -1374,8 +1348,8 @@ class XrefToolkit:
         text = self.fixNeedsCategories(text, params, categories, basic_param_map)
 
         # Check that we have either level or district but not both
-        level_param = paramFromParams(params, u'level')
-        district_param = paramFromParams(params, u'district')
+        level_param = utils.paramFromParams(params, u'level')
+        district_param = utils.paramFromParams(params, u'district')
         if level_param == None:
             if district_param == None:
                 wikipedia.output("Missing both level and district parameters")
@@ -1421,7 +1395,7 @@ class XrefToolkit:
         text = self.fixNeedsCategories(text, params, categories, battle_param_map)
 
         # Check rank parameter against Battle Rank page
-        rank_param = paramFromParams(params, u'rank')
+        rank_param = utils.paramFromParams(params, u'rank')
         if rank_param == None:
             if not self.catInCategories(u'Needs Unlock Criterion', categories):
                 text = self.appendCategory(text, u'Needs Unlock Criterion')
@@ -1430,8 +1404,8 @@ class XrefToolkit:
             templatesWithParams = rank_page.templatesWithParams()
             for t,p in templatesWithParams:
                 if t == u'Battle Rank List':
-                    rank = paramFromParams(u'number',p)
-                    item = paramFromParams(u'reward',p)
+                    rank = utils.paramFromParams(u'number',p)
+                    item = utils.paramFromParams(u'reward',p)
                     if item == u'[[%s]]' % name and rank != rank_param:
                         wikipedia.output("Minimum battle rank mismatch - Battle Rank page says %s, this page says %s" % (rank, rank_param))
 
@@ -1465,7 +1439,7 @@ class XrefToolkit:
 
         text = self.fixNeedsCategories(text, params, categories, ingr_param_map)
 
-        for_param = paramFromParams(params, u'for')
+        for_param = utils.paramFromParams(params, u'for')
         if for_param == None:
             if not self.catInCategories(u'Needs Information', categories):
                 text = self.appendCategory(text, u'Needs Information') # u'Needs Purpose'
@@ -1501,7 +1475,7 @@ class XrefToolkit:
         page = wikipedia.Page(wikipedia.getSite(), item)
         templatesWithParams = page.templatesWithParams()
         for template,params in templatesWithParams:
-            for_param = paramFromParams(params, u'for')
+            for_param = utils.paramFromParams(params, u'for')
             if for_param != None:
                 if name not in for_param:
                     wikipedia.output("%s is an ingredient, but doesn't list this page as somethign it is for" % item)
@@ -1514,9 +1488,9 @@ class XrefToolkit:
             templatesWithParams = page.templatesWithParams()
             for template,params in templatesWithParams:
                 if template == u'Drop':
-                    name_param = paramFromParams(params, u'name')
+                    name_param = utils.paramFromParams(params, u'name')
                     if name_param == item:
-                        for_param = paramFromParams(params, u'for')
+                        for_param = utils.paramFromParams(params, u'for')
                         found = True
                         break
             if not found:
@@ -1537,7 +1511,7 @@ class XrefToolkit:
         templatesWithParams = tl_page.templatesWithParams()
         for template,params in templatesWithParams:
             if template == u'Recipe':
-                recipe_params = paramsToDict(params)
+                recipe_params = utils.paramsToDict(params)
                 if recipe_params[u'name'] == name:
                     # This is the one we're interested in
                     found = True
@@ -1549,10 +1523,10 @@ class XrefToolkit:
         # Lab template has time, num_parts, part_1..part_n
         # Recipe template has time, atk, def, description, image, part_1..part_n
         # Note that recipe description may differ from item description
-        img_param = paramFromParams(params, u'image')
+        img_param = utils.paramFromParams(params, u'image')
         if img_param != None and img_param != recipe_params[u'image']:
             wikipedia.output("Image parameter mismatch - %s in page, %s on Tech Lab page" % (img_param, recipe_params[u'image']))
-        time_param = paramFromParams(lab_params, u'time')
+        time_param = utils.paramFromParams(lab_params, u'time')
         if time_param == None:
             if not self.catInCategories(u'Needs Build Time', categories):
                 text = self.appendCategory(text, u'Needs Build Time')
@@ -1568,17 +1542,17 @@ class XrefToolkit:
             if time_param != recipe_params[u'time']:
                 wikipedia.output("Time parameter mismatch - %s in page, %s on Tech Lab page" % (time_param, recipe_params[u'time']))
         # Compare atk
-        atk_param = paramFromParams(params, u'atk')
+        atk_param = utils.paramFromParams(params, u'atk')
         if atk_param != None and atk_param != recipe_params[u'atk']:
             wikipedia.output("Attack parameter mismatch - %s in page, %s on Tech Lab page" % (atk_param, recipe_params[u'atk']))
         # Compare def
-        def_param = paramFromParams(params, u'def')
+        def_param = utils.paramFromParams(params, u'def')
         if def_param != None and def_param != recipe_params[u'def']:
             wikipedia.output("Defence parameter mismatch - %s in page, %s on Tech Lab page" % (def_param, recipe_params[u'atk']))
         # Check that num_parts is right
-        num_parts = paramFromParams(lab_params, u'num_parts')
+        num_parts = utils.paramFromParams(lab_params, u'num_parts')
         for i in range(1,7):
-            part_param = paramFromParams(lab_params, u'part_%d' % i)
+            part_param = utils.paramFromParams(lab_params, u'part_%d' % i)
             if i <= int(num_parts):
                 # Check part_n
                 if part_param == None:

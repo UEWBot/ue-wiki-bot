@@ -891,11 +891,9 @@ class XrefToolkit:
         prop_param_map = {u'description': u'Needs Description',
                           u'cost': u'Needs Initial Cost',
                           u'time': u'Needs Build Time',
-                          u'image': u'Needs Improvement', #u'Needs Image',
-                          u'unlock': u'Needs Unlock Criterion'}
+                          u'image': u'Needs Improvement'} #u'Needs Image'}
         if the_template == u'Upgrade Property':
             prop_param_map[u'power'] = u'Needs Power'
-            prop_param_map[u'max'] = u'Needs Max Number'
         else:
             prop_param_map[u'income'] = u'Needs Income'
  

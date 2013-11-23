@@ -136,8 +136,9 @@ def summary_header(row_template):
         text += u'!span="col" | Job\n'
         # Faction column
         text += u'!span="col" | Faction\n'
-        # Energy column
+        # Energy columns
         text += u'!span="col" | Energy\n'
+        text += u'!span="col" data-sort-type="number" | Total Energy\n'
         # Cash columns
         text += u'!span="col" data-sort-type="currency" | Min Cash\n'
         text += u'!span="col" data-sort-type="currency" | Max Cash\n'

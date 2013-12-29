@@ -1139,7 +1139,12 @@ class XrefToolkit:
             # Assume any page liked to from the Favor Point page is available from the Black Market
             if r.titleWithoutNamespace() == u'Favor Point':
                 source_list.append(u'Black Market')
-            # TODO If it's linked to from an event page, assume it's an event reward
+            # Don't call r.categories() for redirects
+            elif r.isRedirectPage():
+                pass
+            # If it's linked to from an event page, assume it's an event reward
+            elif self.catInCategories(u'Events', r.categories()):
+                source_list.append(r.titleWithoutNamespace())
         # Then, find the places listed as sources in this page
         # Remove any that match from the source list, leaving missing sources
         # Count the number of sources already in the list as we go
@@ -1160,9 +1165,7 @@ class XrefToolkit:
                 # Ignore items that list the original crate as a source
                 pass
             else:
-                # Note that this is not necessarily an error
-                # many items can be obtained from places other than Bosses
-                # TODO Should be able to validate Events
+                # Note that this is not necessarily an error, but is worth investigating
                 wikipedia.output("Page lists %s as a source, but that page doesn't list it as a drop" % src)
         # Convert from single source to a list if necessary
         if len(source_list) > 0 and src_count == 1:

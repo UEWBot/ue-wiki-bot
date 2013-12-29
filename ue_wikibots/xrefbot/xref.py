@@ -113,6 +113,32 @@ def dropParamsMatch(param1, param2):
     # TODO Match link with nonlink with mismatched first character
     return False
 
+def timeParamsMatch(param1, param2):
+    """
+    Compares two time parameters.
+    Matches "days" with "d" and "hours" with hrs".
+    """
+    # Direct match first
+    if param1 == param2:
+        return True
+    # Split into number and units
+    Rvalue = re.compile(ur'(?P<value>\d*)\s*(?P<unit>\w*)')
+    g1 = Rvalue.match(param1)
+    g2 = Rvalue.match(param2)
+    #wikipedia.output("%s %s" % (g1.group('value'), g1.group('unit')))
+    #wikipedia.output("%s %s" % (g2.group('value'), g2.group('unit')))
+    if g1.group('value') != g2.group('value'):
+        return False
+    if g1.group('unit') == 'd' and 'day' in g2.group('unit'):
+        return True
+    if g2.group('unit') == 'd' and 'day' in g1.group('unit'):
+        return True
+    if 'hr' in g1.group('unit') and 'hour' in g2.group('unit'):
+        return True
+    if 'hr' in g2.group('unit') and 'hour' in g1.group('unit'):
+        return True
+    return False
+
 def missingParams(all_params, mandatory_list):
     """
     Returns the set of all the parameters in mandatory_list that are not represented in all_params.
@@ -1566,7 +1592,7 @@ class XrefToolkit:
                 else:
                     assert 0, "Failed to find params %s" % lab_params
         else:
-            if time_param != recipe_params[u'time']:
+            if not timeParamsMatch(time_param, recipe_params[u'time']):
                 wikipedia.output("Time parameter mismatch - %s in page, %s on Tech Lab page" % (time_param, recipe_params[u'time']))
         # Compare atk
         atk_param = utils.paramFromParams(params, u'atk')

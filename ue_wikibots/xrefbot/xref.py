@@ -184,7 +184,8 @@ class XrefToolkit:
         refs = page.getReferences()
         oldText = text
         #wikipedia.output("******\nIn text:\n%s" % text)
-        # TODO There's probably a sensible order for these...
+        # Note that these are effectively independent. Although the text gets changed,
+        # the categories, templates, and parameters are not re-generated after each call
         text = self.fixBoss(titleWithoutNamespace, text, categories, templatesWithParams)
         text = self.fixItem(titleWithoutNamespace, text, categories, templatesWithParams, refs)
         text = self.fixLieutenant(titleWithoutNamespace, text, categories, templatesWithParams, refs)
@@ -973,6 +974,18 @@ class XrefToolkit:
 
         # __NOWYSIWYG__
         text = self.prependNowysiwygIfNeeded(text)
+
+        # Now nuke any empty stat or power parameters
+        to_nuke = []
+        for param in the_params:
+            p = param.rstrip()
+            if p[-1] == u'=':
+                if u'atk_' in p or u'def_' in p or u'pwr_' in p:
+                    wikipedia.output("Nuking empty parameter %s" % param)
+                    text = text.replace(u'|%s' % p, '')
+                    to_nuke.append(param)
+        for i in to_nuke:
+            the_params.remove(i)
 
         # Check mandatory parameters
         lt_param_map = {u'description': u'Needs Description',

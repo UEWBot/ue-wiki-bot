@@ -1151,7 +1151,6 @@ class XrefToolkit:
             # Find the end of that line
             start = m.end('page')
             eol = from_param.find('\n', start)
-            wikipedia.output("start %d, end %d, text %s" % (start, eol, from_param[start:eol]))
             if src in source_list:
                 source_list.remove(src)
             elif u'before' in from_param[start:eol]:

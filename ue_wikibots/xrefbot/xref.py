@@ -1171,6 +1171,12 @@ class XrefToolkit:
             elif src == u':Category:Crates':
                 # Ignore items that list the original crate as a source
                 pass
+            elif src == u'Bosses':
+                # "all bosses" is a valid source, even if item is not listed there
+                pass
+            elif src == u'Jobs':
+                # "all jobs" is a valid source, even if item is not listed there
+                pass
             else:
                 # Note that this is not necessarily an error, but is worth investigating
                 wikipedia.output("Page lists %s as a source, but that page doesn't list it as a drop" % src)

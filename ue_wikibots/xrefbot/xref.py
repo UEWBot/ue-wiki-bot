@@ -1136,6 +1136,10 @@ class XrefToolkit:
                 if template == u'Drop':
                     if utils.paramFromParams(params, u'name') == name:
                         source_list.append(r.titleWithoutNamespace())
+            # Assume any page liked to from the Favor Point page is available from the Black Market
+            if r.titleWithoutNamespace() == u'Favor Point':
+                source_list.append(u'Black Market')
+            # TODO If it's linked to from an event page, assume it's an event reward
         # Then, find the places listed as sources in this page
         # Remove any that match from the source list, leaving missing sources
         # Count the number of sources already in the list as we go
@@ -1149,7 +1153,7 @@ class XrefToolkit:
             else:
                 # Note that this is not necessarily an error
                 # many items can be obtained from places other than Bosses
-                #TODO Should be able to validate Black Market, Crates, and Events
+                # TODO Should be able to validate Crates and Events
                 wikipedia.output("Page lists %s as a source, but that page doesn't list it as a drop" % src)
         # Convert from single source to a list if necessary
         if len(source_list) > 0 and src_count == 1:

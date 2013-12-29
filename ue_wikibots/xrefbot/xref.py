@@ -586,7 +586,8 @@ class XrefToolkit:
         params is a dictionary of the drop's parameters.
         Also checks that the drop lists the source.
         """
-        item = wikipedia.Page(wikipedia.getSite(), drop_params[u'name'])
+        item_name = drop_params[u'name']
+        item = wikipedia.Page(wikipedia.getSite(), item_name)
         templatesWithParams = item.templatesWithParams()
         for (template, params) in templatesWithParams:
             #wikipedia.output("Template %s" % template)
@@ -601,14 +602,19 @@ class XrefToolkit:
                         continue
                     elif not dropParamsMatch(drop_params[key], item_params[key]):
                         # TODO Should be able to fix some of them at least...
-                        wikipedia.output("Drop parameter mismatch for %s parameter of item %s (%s vs %s)" % (key, drop_params[u'name'], item_params[key], drop_params[key]))
+                        wikipedia.output("Drop parameter mismatch for %s parameter of item %s (%s vs %s)" % (key, item_name, item_params[key], drop_params[key]))
                 # Then check for any that may be missing
-                # TODO This is too strict - "for" parameter should only list Epic Research Items
-                for key in [u'name', u'image', u'atk', u'def', u'type', u'for']:
+                for key in [u'name', u'image', u'atk', u'def', u'type']:
                     if key not in drop_params and key in item_params:
-                        wikipedia.output("Drop parameter %s not provided for %s, but should be %s" % (key, drop_params[u'name'], item_params[key]))
+                        wikipedia.output("Drop parameter %s not provided for %s, but should be %s" % (key, item_name, item_params[key]))
+                key = u'for'
+                if key not in drop_params and key in item_params:
+                    # "for" parameter only needed where the item is a Tech Lab ingredient
+                    # TODO There should be a better way to do this...
+                    if item_name != u'Steel Beam' and item_name != u'Concrete Block' and not self.catInCategories(u'Recombinators', item.categories()):
+                        wikipedia.output("Drop parameter %s not provided for %s, but should be %s" % (key, item_name, item_params[key]))
                 if source not in item_params['from']:
-                    wikipedia.output("Boss claims to drop %s, but is not listed on that page" % drop_params['name'])
+                    wikipedia.output("Boss claims to drop %s, but is not listed on that page" % item_name)
             elif template.find(u'Lieutenant') != -1:
                 item_params = utils.paramsToDict(params)
                 for key in drop_params.keys():
@@ -624,9 +630,9 @@ class XrefToolkit:
                     else:
                         ip = item_params[key]
                     if not dropParamsMatch(dp, ip):
-                        wikipedia.output("Drop parameter mismatch for %s parameter of item %s (%s vs %s)" % (key, drop_params[u'name'], dp, ip))
+                        wikipedia.output("Drop parameter mismatch for %s parameter of item %s (%s vs %s)" % (key, item_name, dp, ip))
                 if source not in item_params['from']:
-                    wikipedia.output("Boss claims to drop %s, but is not listed on that page" % drop_params['name'])
+                    wikipedia.output("Boss claims to drop %s, but is not listed on that page" % item_name)
             elif (template != u'Job Link') and (template != u'For') and (template != u'Sic'):
                 wikipedia.output("Ignoring template %s" % template)
 

@@ -1140,6 +1140,9 @@ class XrefToolkit:
                     gift_params = utils.paramsToDict(params)
                     if name in gift_params.values():
                         source_list.append(r.titleWithoutNamespace())
+                elif template == u'Execution Method':
+                    if name in utils.paramFromParams(params, u'bonus'):
+                        source_list.append(r.titleWithoutNamespace())
             # Assume any page liked to from the Favor Point page is available from the Black Market
             if r.titleWithoutNamespace() == u'Favor Point':
                 source_list.append(u'Black Market')

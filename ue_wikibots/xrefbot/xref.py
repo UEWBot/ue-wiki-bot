@@ -1148,12 +1148,22 @@ class XrefToolkit:
         for m in iterator:
             src_count += 1
             src = m.group('page')
+            # Find the end of that line
+            start = m.end('page')
+            eol = from_param.find('\n', start)
+            wikipedia.output("start %d, end %d, text %s" % (start, eol, from_param[start:eol]))
             if src in source_list:
                 source_list.remove(src)
+            elif u'before' in from_param[start:eol]:
+                # We don't expect the item to be present on that page any more
+                pass
+            elif src == u':Category:Crates':
+                # Ignore items that list the original crate as a source
+                pass
             else:
                 # Note that this is not necessarily an error
                 # many items can be obtained from places other than Bosses
-                # TODO Should be able to validate Crates and Events
+                # TODO Should be able to validate Events
                 wikipedia.output("Page lists %s as a source, but that page doesn't list it as a drop" % src)
         # Convert from single source to a list if necessary
         if len(source_list) > 0 and src_count == 1:

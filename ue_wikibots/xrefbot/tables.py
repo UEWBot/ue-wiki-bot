@@ -175,6 +175,12 @@ def summary_footer(row_template):
     """
     return u'|}'
 
+def prop_cost(base_cost, level):
+    """
+    Calculates the cost for the specified level of a property.
+    """
+    return base_cost * (1 + (level-1)/10.0)
+
 def property_row(name, d, count):
     """
     Returns a property row line for the specified property.
@@ -215,8 +221,80 @@ def property_row(name, d, count):
         base_cost = float(d[u'cost'].replace(u',',u''))
     else:
         base_cost = 0.0
-    row += u'|cost=%d}}' % (base_cost * (1 + count/10.0))
+    row += u'|cost=%d}}' % prop_cost(base_cost, count)
     return row
+
+def safe_house_rows(name, text, row_template):
+    """
+    Returns rows for Properties Table for the Safe House page
+    """
+    rows = []
+    # Find the info we need - income, unlock criteria, cost
+    # Look for an "Income" line
+    match = re.search(ur'Income: (.*)', text)
+    if match == None:
+        wikipedia.output("Failed to find Income for %s" % name)
+        income = u'Unknown'
+    else:
+        income = match.group(1)
+    # Look for an "Unlock" line
+    match = re.search(ur'Unlocked when (.*)', text)
+    if match == None:
+        wikipedia.output("Failed to find Unlock criteria for %s" % name)
+        unlock = u'Unknown'
+    else:
+        unlock = match.group(1)
+    # Find a table of costs
+    for match in re.finditer(ur'\|\W*(?P<count>\d+)\W*\|\|\W*(?P<cost>.*)\W*\|\|.*\|\|',
+                             text, re.IGNORECASE):
+        d = match.groupdict()
+        count = int(d['count'])
+        # This assumes that rows are in numerical order, which should be true
+        if count > 1:
+            unlock = u'Level %d [[%s]]' % (count-1, name)
+        # Don't bother with the "level 0" one
+        if count > 0:
+            row = u'{{%s|name=%s|count=%d|income=%s|unlock=%s|cost=%s}}' % (row_template, name, count, income, unlock, d['cost'])
+            rows.append(row)
+    
+    return rows
+
+def fortress_rows(name, text, row_template):
+    """
+    Returns rows for Properties Table for the Fortress page
+    """
+    rows = []
+    # Find the info we need - income, unlock criteria, cost
+    # Look for an "Initial Cost" line
+    match = re.search(ur'Initial Cost\D*([\d,]+)', text, re.IGNORECASE)
+    if match == None:
+        wikipedia.output("Failed to find Initial Cost for %s" % name)
+        cost = 0.0
+    else:
+        cost = float(match.group(1))
+    # Look for an "Income" line
+    match = re.search(ur'Income: (.*)', text)
+    if match == None:
+        wikipedia.output("Failed to find Income for %s" % name)
+        income = u'Unknown'
+    else:
+        income = match.group(1)
+    # Find a table of unlock criteria
+    for match in re.finditer(ur'\|\W*(?P<count>\d+)\W*\|\|\W*\[\[(?P<prop>.*)\]\]\D*(?P<lvl>\d+)',
+                             text, re.IGNORECASE):
+        d = match.groupdict()
+        count = int(d['count'])
+        unlock = u'level %s [[%s]]' % (d['lvl'], d['prop'])
+        if count > 1:
+            unlock = u'Level %d [[%s]] and ' % (count-1, name) + unlock
+        row = u'{{%s|name=%s|count=%d|income=%s|unlock=%s|cost=%d}}' % (row_template, name, count, income, unlock, prop_cost(cost, count))
+        rows.append(row)
+    # Add extra rows for unknown prerequisites
+    for c in range(count+1,11):
+        row = u'{{%s|name=%s|count=%d|income=%s|unlock=%s|cost=%d}}' % (row_template, name, c, income, u'Unknown', prop_cost(cost, c))
+        rows.append(row)
+    
+    return rows
 
 def page_to_row(page, row_template):
     """
@@ -322,20 +400,28 @@ class XrefBot:
     def update_properties_table(self):
         """
         Creates or updates page Properties Table from the
-        content of the Income Properties and Upgrade Properties
-        categories.
+        content of the Properties category.
         """
         # Categories we're interested in
-        cats = {u'Income Properties', u'Upgrade Properties'}
+        the_cat = u'Properties'
+        # Template we're going to use
         row_template = u'Property Row'
 
         old_page = wikipedia.Page(wikipedia.getSite(), u'Properties Table')
+
         rows = []
-        for name in cats:
-            cat = catlib.Category(wikipedia.getSite(), u'Category:%s' % name)
-            # One row per page in category
-            for page in cat.articlesList():
-                rows += page_to_rows(page, row_template)
+        cat = catlib.Category(wikipedia.getSite(), the_cat)
+        for page in cat.articlesList(recurse=True):
+            new_rows = page_to_rows(page, row_template)
+            if len(new_rows):
+                rows += new_rows
+            elif page.title() == u'Fortress':
+                rows += fortress_rows(page.title(), page.get(), row_template)
+            elif page.title() == u'Safe House':
+                rows += safe_house_rows(page.title(), page.get(), row_template)
+            else:
+                wikipedia.output("Unexpected non-template property page %s" % page.title())
+
         # Start the new page text
         new_text = summary_header(row_template)
         # TODO: Sort rows into some sensible order

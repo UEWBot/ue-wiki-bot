@@ -185,7 +185,7 @@ def prop_cost_high(base_cost, level):
     """
     Calculates the cost for the specified level of a property.
     """
-    #TODO: Complete this table
+    #TODO: Extract this table from the Fortress page
     lvl_to_ratio = {1: 1.0,
                     2: 1.25,
                     3: 1.5,
@@ -292,13 +292,6 @@ def fortress_rows(name, text, row_template):
     """
     rows = []
     # Find the info we need - income, unlock criteria, cost
-    # Look for an "Initial Cost" line
-    match = re.search(ur'Initial Cost\D*([\d,]+)', text, re.IGNORECASE)
-    if match == None:
-        wikipedia.output("Failed to find Initial Cost for %s" % name)
-        cost = 0.0
-    else:
-        cost = float(match.group(1))
     # Look for an "Income" line
     match = re.search(ur'Income: (.*)', text)
     if match == None:
@@ -307,7 +300,13 @@ def fortress_rows(name, text, row_template):
     else:
         income = match.group(1)
     # Find a table of unlock criteria
-    for match in re.finditer(ur'\|\W*(?P<count>\d+)\W*\|\|\W*\[\[(?P<prop>.*)\]\]\D*(?P<lvl>\d+)',
+    match = re.search(ur'\|\W*1\W*\|\|\D*(?P<cost>\d+)\D*\|\|.*', text)
+    if match == None:
+        wikipedia.output("Failed to find level 1 cost for %s" % name)
+        cost = 0.0
+    else:
+        cost = float(match.group(1))
+    for match in re.finditer(ur'\|\W*(?P<count>\d+)\W*\|\|.*\|\|\W*\[\[(?P<prop>.*)\]\]\D*(?P<lvl>\d+)',
                              text, re.IGNORECASE):
         d = match.groupdict()
         count = int(d['count'])

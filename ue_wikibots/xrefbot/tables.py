@@ -105,20 +105,20 @@ def summary_header(row_template):
         # Name column
         text += u'!span="col" | Name\n'
         # Attack column
-        text += u'!span="col" | Attack\n'
+        text += u'!span="col" data-sort-type="number" | Attack\n'
         # Defense column
-        text += u'!span="col" | Defense\n'
+        text += u'!span="col" data-sort-type="number" | Defense\n'
         # Cost column, sorted as currency
         text += u'!span="col" data-sort-type="currency" | Cost\n'
         # Rarity column
         text += u'!span="col" | Rarity\n'
         # Three summary stats columns
-        text += u'!span="col" | Atk+Def\n'
-        text += u'!span="col" | Atk+70% of Def\n'
-        text += u'!span="col" | 70% of Atk + Def\n'
+        text += u'!span="col" data-sort-type="number" | Atk+Def\n'
+        text += u'!span="col" data-sort-type="number" | Atk+70% of Def\n'
+        text += u'!span="col" data-sort-type="number" | 70% of Atk + Def\n'
     elif row_template == u'Property Row':
         # Number column
-        text += u'!span="col" | Level\n'
+        text += u'!span="col" data-sort-type="number" | Level\n'
         # Name column
         text += u'!span="col" | Name\n'
         # Cost column, sorted as currency
@@ -126,7 +126,7 @@ def summary_header(row_template):
         # Income column, sorted as currency
         text += u'!span="col" data-sort-type="currency" | Income\n'
         # Time to recoup cost column
-        text += u'!span="col" | Hrs to recoup\n'
+        text += u'!span="col" data-sort-type="number" | Hrs to recoup\n'
         # Unlock criteria
         text += u'!span="col" | Prerequisite(s)\n'
     elif row_template == u'Job Row':
@@ -137,18 +137,18 @@ def summary_header(row_template):
         # Faction column
         text += u'!span="col" | Faction\n'
         # Energy columns
-        text += u'!span="col" | Energy\n'
+        text += u'!span="col" data-sort-type="number" | Energy\n'
         text += u'!span="col" data-sort-type="number" | Total Energy\n'
         # Cash columns
         text += u'!span="col" data-sort-type="currency" | Min Cash\n'
         text += u'!span="col" data-sort-type="currency" | Max Cash\n'
         # XP columns
-        text += u'!span="col" | Min XP\n'
-        text += u'!span="col" | Max XP\n'
+        text += u'!span="col" data-sort-type="number" | Min XP\n'
+        text += u'!span="col" data-sort-type="number" | Max XP\n'
         # Cash/energy column
         text += u'!span="col" data-sort-type="currency" | Cash/energy\n'
         # XP/energy Column
-        text += u'!span="col" | XP/energy\n'
+        text += u'!span="col" data-sort-type="number" | XP/energy\n'
     elif row_template == u'Lieutenant Row':
         # Name column
         text += u'!span="col" rowspan="2" | Name\n'
@@ -161,8 +161,8 @@ def summary_header(row_template):
             text += u'!colspan="3" class="unsortable" | %d Star\n' % stars
         text += u'|-\n'
         for stars in range(1,10):
-            text += u'!span="col" | Atk\n'
-            text += u'!span="col" | Def\n'
+            text += u'!span="col" data-sort-type="number" | Atk\n'
+            text += u'!span="col" data-sort-type="number" | Def\n'
             text += u'!span="col" class="unsortable" | Power\n'
     else:
         wikipedia.output("Unexpected row template %s" % row_template)
@@ -173,13 +173,36 @@ def summary_footer(row_template):
     """
     Returns the rest of a summary table, after the last row of data.
     """
-    return u'|}'
+    return u'|}\n[[Category:Summary Tables]]'
 
-def prop_cost(base_cost, level):
+def prop_cost_basic(base_cost, level):
     """
     Calculates the cost for the specified level of a property.
     """
     return base_cost * (1 + (level-1)/10.0)
+
+def prop_cost_high(base_cost, level):
+    """
+    Calculates the cost for the specified level of a property.
+    """
+    #TODO: Complete this table
+    lvl_to_ratio = {1: 1.0,
+                    2: 1.25,
+                    3: 1.5,
+                    4: 2.0,
+                    5: 2.5,
+                    6: 3.2}
+    if level in lvl_to_ratio:
+        return lvl_to_ratio[level] * base_cost
+    return 0
+
+def prop_cost(base_cost, level, high_cost=False):
+    """
+    Calculates the cost for the specified level of a property.
+    """
+    if high_cost:
+        return prop_cost_high(base_cost, level)
+    return prop_cost_basic(base_cost, level)
 
 def property_row(name, d, count):
     """
@@ -216,12 +239,16 @@ def property_row(name, d, count):
         # Override the unlock string we've created
         unlock = u'Buy [[Favor Point]]s during promo in %s' % d[u'fp_prop']
     row += u'|unlock=%s' % unlock
-    # We derive cost from the template cost and count.
+    # We derive cost from the template cost, count, and whether it is "high_cost" or not.
     if u'cost' in d:
         base_cost = float(d[u'cost'].replace(u',',u''))
     else:
         base_cost = 0.0
-    row += u'|cost=%d}}' % prop_cost(base_cost, count)
+    if u'high_cost' in d:
+        high_cost=True
+    else:
+        high_cost=False
+    row += u'|cost=%d}}' % prop_cost(base_cost, count, high_cost)
     return row
 
 def safe_house_rows(name, text, row_template):
@@ -287,11 +314,11 @@ def fortress_rows(name, text, row_template):
         unlock = u'level %s [[%s]]' % (d['lvl'], d['prop'])
         if count > 1:
             unlock = u'Level %d [[%s]] and ' % (count-1, name) + unlock
-        row = u'{{%s|name=%s|count=%d|income=%s|unlock=%s|cost=%d}}' % (row_template, name, count, income, unlock, prop_cost(cost, count))
+        row = u'{{%s|name=%s|count=%d|income=%s|unlock=%s|cost=%d}}' % (row_template, name, count, income, unlock, prop_cost_high(cost, count))
         rows.append(row)
     # Add extra rows for unknown prerequisites
     for c in range(count+1,11):
-        row = u'{{%s|name=%s|count=%d|income=%s|unlock=%s|cost=%d}}' % (row_template, name, c, income, u'Unknown', prop_cost(cost, c))
+        row = u'{{%s|name=%s|count=%d|income=%s|unlock=%s|cost=%d}}' % (row_template, name, c, income, u'Unknown', prop_cost_high(cost, c))
         rows.append(row)
     
     return rows

@@ -175,42 +175,34 @@ def summary_footer(row_template):
     """
     return u'|}\n[[Category:Summary Tables]]'
 
-def prop_cost_basic(base_cost, level):
+def cost_ratios():
     """
-    Calculates the cost for the specified level of a property.
+    Calculates the cost ratios table for all the original properties
     """
-    return base_cost * (1 + (level-1)/10.0)
+    cost_ratios = {}
+    for level in range(1,21):
+        cost_ratios[level] = 1.0 + (level-1)/10.0
+    return cost_ratios
 
-def prop_cost_high(base_cost, level):
+def prop_cost(base_cost, level, cost_ratios):
     """
     Calculates the cost for the specified level of a property.
+    cost_ratios is a dict, indexed by level, of the ratio of the cost to the level 1 cost
     """
-    #TODO: Extract this table from the Fortress page
-    lvl_to_ratio = {1: 1.0,
-                    2: 1.25,
-                    3: 1.5,
-                    4: 2.0,
-                    5: 2.5,
-                    6: 3.2}
-    if level in lvl_to_ratio:
-        return lvl_to_ratio[level] * base_cost
+    if level in cost_ratios:
+        return cost_ratios[level] * base_cost
     return 0
 
-def prop_cost(base_cost, level, high_cost=False):
-    """
-    Calculates the cost for the specified level of a property.
-    """
-    if high_cost:
-        return prop_cost_high(base_cost, level)
-    return prop_cost_basic(base_cost, level)
-
-def property_row(name, d, count):
+def property_row(name, d, count, high_cost_ratios):
     """
     Returns a property row line for the specified property.
     name is the name of the property.
     d is a dict of template parameters.
     count is the level of the property.
+    high_cost_ratios is a dict, indexed by level, of the ratio of the cost to the level 1 cost,
+    for high-cost properties (the later additions)
     """
+    low_cost_ratios = cost_ratios()
     # We need to provide count, name, cost, income, and unlock
     # We have name and count.
     row = u'{{Property Row|name=%s|count=%d' % (name, count)
@@ -245,10 +237,10 @@ def property_row(name, d, count):
     else:
         base_cost = 0.0
     if u'high_cost' in d:
-        high_cost=True
+        ratios = high_cost_ratios
     else:
-        high_cost=False
-    row += u'|cost=%d}}' % prop_cost(base_cost, count, high_cost)
+        ratios = low_cost_ratios
+    row += u'|cost=%d}}' % prop_cost(base_cost, count, ratios)
     return row
 
 def safe_house_rows(name, text, row_template):
@@ -286,9 +278,51 @@ def safe_house_rows(name, text, row_template):
     
     return rows
 
-def fortress_rows(name, text, row_template):
+def parsed_fortress_table(text):
+    """
+    Parse the cost and pre-requisite table on the page into a dict
+    Dict is indexed by Fortress level, and contains a (cost, pre-requisite name, pre-requisite level)
+    tuple.
+    """
+    fortress_table_full_re = re.compile(ur'\|\W*(?P<count>\d+)\W*\|\|\D*(?P<cost>\d+)\D*\|\|\W*\[\[(?P<prop>.*)\]\]\D*(?P<lvl>\d+)')
+    fortress_table_part_re = re.compile(ur'\|\W*(?P<count>\d+)\W*\|\|\W*\|\|\W*\[\[(?P<prop>.*)\]\]\D*(?P<lvl>\d+)')
+    result = {}
+    for match in fortress_table_part_re.finditer(text, re.IGNORECASE):
+        d = match.groupdict()
+        count = int(d['count'])
+        prop = d['prop']
+        lvl = int(d['lvl'])
+        result[count] = (0, prop, lvl)
+    for match in fortress_table_full_re.finditer(text, re.IGNORECASE):
+        d = match.groupdict()
+        count = int(d['count'])
+        cost = int(d['cost'])
+        prop = d['prop']
+        lvl = int(d['lvl'])
+        result[count] = (cost, prop, lvl)
+    return result
+
+def fortress_cost_ratios(the_dict):
+    """
+    Determines the cost ratios table for Fortress, from a dict parsed from the Fortress page.
+    Dict is indexed by Fortress level, and contains a (cost, pre-requisite name, pre-requisite level)
+    tuple.
+    """
+    costs = {}
+    base_cost = float(the_dict[1][0])
+    for (count, (cost, prop, lvl)) in the_dict.items():
+        costs[count] = float(cost) / base_cost
+    return costs
+
+def fortress_rows(name, text, row_template, the_dict):
     """
     Returns rows for Properties Table for the Fortress page
+    name is the name of the Fortress page.
+    text is the text of the Fortress page.
+    row_template is the name of the template to use.
+    the_dict is a dict from the table on the Fortress page.
+    Dict is indexed by Fortress level, and contains a (cost, pre-requisite name, pre-requisite level)
+    tuple.
     """
     rows = []
     # Find the info we need - income, unlock criteria, cost
@@ -299,27 +333,14 @@ def fortress_rows(name, text, row_template):
         income = u'Unknown'
     else:
         income = match.group(1)
-    # Find a table of unlock criteria
-    match = re.search(ur'\|\W*1\W*\|\|\D*(?P<cost>\d+)\D*\|\|.*', text)
-    if match == None:
-        wikipedia.output("Failed to find level 1 cost for %s" % name)
-        cost = 0.0
-    else:
-        cost = float(match.group(1))
-    for match in re.finditer(ur'\|\W*(?P<count>\d+)\W*\|\|.*\|\|\W*\[\[(?P<prop>.*)\]\]\D*(?P<lvl>\d+)',
-                             text, re.IGNORECASE):
-        d = match.groupdict()
-        count = int(d['count'])
-        unlock = u'level %s [[%s]]' % (d['lvl'], d['prop'])
+    # Work through the table of cost and unlock criteria dict
+    for (count, (cost, prop, lvl)) in the_dict.items():
+        unlock = u'level %d [[%s]]' % (lvl, prop)
         if count > 1:
             unlock = u'Level %d [[%s]] and ' % (count-1, name) + unlock
-        row = u'{{%s|name=%s|count=%d|income=%s|unlock=%s|cost=%d}}' % (row_template, name, count, income, unlock, prop_cost_high(cost, count))
+        row = u'{{%s|name=%s|count=%d|income=%s|unlock=%s|cost=%d}}' % (row_template, name, count, income, unlock, cost)
         rows.append(row)
-    # Add extra rows for unknown prerequisites
-    for c in range(count+1,11):
-        row = u'{{%s|name=%s|count=%d|income=%s|unlock=%s|cost=%d}}' % (row_template, name, c, income, u'Unknown', prop_cost_high(cost, c))
-        rows.append(row)
-    
+    rows.sort()
     return rows
 
 def page_to_row(page, row_template):
@@ -346,7 +367,7 @@ def page_to_row(page, row_template):
     # wikipedia.output(u'Row is "%s"' % row)
     return row
 
-def page_to_rows(page, row_template):
+def page_to_rows(page, row_template, high_cost_ratios={}):
     # TODO Look at combining this function and page_to_row().
     """
     Returns a list of table rows for the jobs or property described in page.
@@ -376,7 +397,7 @@ def page_to_rows(page, row_template):
             else:
                 max = 10
             for count in range(1, max + 1):
-                rows.append(property_row(page.title(), d, count))
+                rows.append(property_row(page.title(), d, count, high_cost_ratios))
     return rows
 
 def rarities():
@@ -428,6 +449,11 @@ class XrefBot:
         Creates or updates page Properties Table from the
         content of the Properties category.
         """
+        # Extract cost ratio table from the Fortress page
+        fortress_page = wikipedia.Page(wikipedia.getSite(), u'Fortress')
+        fortress_text = fortress_page.get()
+        fortress_dict = parsed_fortress_table(fortress_text)
+        lvl_to_ratio = fortress_cost_ratios(fortress_dict)
         # Categories we're interested in
         the_cat = u'Properties'
         # Template we're going to use
@@ -438,11 +464,12 @@ class XrefBot:
         rows = []
         cat = catlib.Category(wikipedia.getSite(), the_cat)
         for page in cat.articlesList(recurse=True):
-            new_rows = page_to_rows(page, row_template)
+            new_rows = page_to_rows(page, row_template, lvl_to_ratio)
             if len(new_rows):
                 rows += new_rows
             elif page.title() == u'Fortress':
-                rows += fortress_rows(page.title(), page.get(), row_template)
+                # Use the cached page text
+                rows += fortress_rows(page.title(), fortress_text, row_template, fortress_dict)
             elif page.title() == u'Safe House':
                 rows += safe_house_rows(page.title(), page.get(), row_template)
             else:
@@ -553,10 +580,10 @@ class XrefBot:
             self.update_or_create_page(old_page, new_text);
 
     def run(self):
-        self.update_most_tables()
+        #self.update_most_tables()
         self.update_properties_table()
-        self.update_jobs_table()
-        self.update_lt_rarity_table()
+        #self.update_jobs_table()
+        #self.update_lt_rarity_table()
 
 def main():
     #logging.basicConfig()

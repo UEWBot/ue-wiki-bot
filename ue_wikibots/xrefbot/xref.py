@@ -836,7 +836,7 @@ class XrefToolkit:
  
         text = self.fixNeedsCategories(text, the_params, categories, class_param_map)
 
-        skill_param_map = { u'level': u'Needs Information', #u'Needs Skill Level',
+        skill_param_map = {u'level': u'Needs Information', #u'Needs Skill Level',
                            u'effect': u'Needs Information', #u'Needs Skill Effect',
                            u'cost': u'Needs Information', #u'Needs Skill Cost',
                            u'time': u'Needs Information'} #u'Needs Skill Time'}
@@ -847,11 +847,10 @@ class XrefToolkit:
             if template == u'Skill':
                 level = utils.paramFromParams(params, u'level')
                 if level != None:
-                    if level == old_level and level != 1:
-                        wikipedia.output("copy-paste error for skill level %s ?" % level)
+                    if (level == old_level) and (level != u'1'):
+                        wikipedia.output("copy-paste error for skill level %s (%s) ?" % (level, params))
                     old_level = level
                 missing_params |= missingParams(params, skill_param_map.keys())
-        wikipedia.output("Set of missing skill parameters is %s" % missing_params)
         # Ensure the Needs categories are correct
         text = self.fixNeedsCats(text, missing_params, categories, skill_param_map)
 

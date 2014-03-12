@@ -340,7 +340,7 @@ def fortress_rows(name, text, row_template, the_dict):
             unlock = u'Level %d [[%s]] and ' % (count-1, name) + unlock
         row = u'{{%s|name=%s|count=%d|income=%s|unlock=%s|cost=%d}}' % (row_template, name, count, income, unlock, cost)
         rows.append(row)
-    rows.sort()
+    #rows.sort()
     return rows
 
 def page_to_row(page, row_template):

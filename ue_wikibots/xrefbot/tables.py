@@ -580,10 +580,10 @@ class XrefBot:
             self.update_or_create_page(old_page, new_text);
 
     def run(self):
-        #self.update_most_tables()
+        self.update_most_tables()
         self.update_properties_table()
-        #self.update_jobs_table()
-        #self.update_lt_rarity_table()
+        self.update_jobs_table()
+        self.update_lt_rarity_table()
 
 def main():
     #logging.basicConfig()

@@ -1030,7 +1030,7 @@ class XrefToolkit:
 
         # Do special checks for any Epic Research Items
         if is_tech_lab_item:
-            text = self.fixTechLabItem(name, text, the_params, categories, ingredients)
+            text = self.fixTechLabItem(name, text, the_params, categories, ingredients, False)
 
         # Validate items parameter, if present
         items_param = utils.paramFromParams(the_params, u'items')
@@ -1541,10 +1541,11 @@ class XrefToolkit:
 
         return text
 
-    def fixTechLabItem(self, name, text, params, categories, lab_params):
+    def fixTechLabItem(self, name, text, params, categories, lab_params, check_image=True):
         """
         Check that it is listed as made in the same way on its page and the Tech Lab page.
-        Check that the parts drop where its page says they drop.
+        Check that atk and def match what the Tech Lab page says.
+        If check_image is True, also check that the image matches the one on the Tech Lab page.
         """
         # Find the recipe on the Tech Lab page
         found = False
@@ -1561,31 +1562,20 @@ class XrefToolkit:
             wikipedia.output("Tech Lab item not on the Tech Lab page")
 
         # Now we can cross-check between the two
+        # Page template has atk, def, image, and description
         # Lab template has time, num_parts, part_1..part_n
         # Recipe template has time, atk, def, description, image, part_1..part_n
-        # Note that recipe description usually differs from item description
+        # Recipe description is not expected to match item description
         lab_dict = utils.paramsToDict(lab_params)
 
         # Compare image
-        # TODO Skip this check for Lts, where the base image is too big for the Tech Lab page
-        img_param = utils.paramFromParams(params, u'image')
-        if img_param != None and img_param != recipe_dict[u'image']:
-            wikipedia.output("Image parameter mismatch - %s in page, %s on Tech Lab page" % (img_param, recipe_dict[u'image']))
-        time_param = utils.paramFromParams(lab_params, u'time')
-        if time_param == None:
-            if not self.catInCategories(u'Needs Build Time', categories):
-                text = self.appendCategory(text, u'Needs Build Time')
-            if u'time' in recipe_dict:
-                # Add a time parameter, with appropriate value
-                # Note that this just finds the first instance of params...
-                start = text.find(lab_params)
-                if start != -1:
-                    text = text[0:start] + u'|time=' + recipe_dict[u'time'] + text[start:]
-                else:
-                    assert 0, "Failed to find params %s" % lab_params
-        else:
-            if not timeParamsMatch(time_param, recipe_dict[u'time']):
-                wikipedia.output("Time parameter mismatch - %s in page, %s on Tech Lab page" % (time_param, recipe_dict[u'time']))
+        if check_image:
+            img_param = utils.paramFromParams(params, u'image')
+            # TODO Insert missing image
+            if img_param != None and img_param != recipe_dict[u'image']:
+                wikipedia.output("Image parameter mismatch - %s in page, %s on Tech Lab page" % (img_param, recipe_dict[u'image']))
+
+        # TODO Add Needs Build Time category if appropriate
 
         # Compare atk
         atk_param = utils.paramFromParams(params, u'atk')
@@ -1637,6 +1627,8 @@ class XrefToolkit:
                                   ur'\1\n|%s=%s' % (key, recipe_dict[key]),
                                   text,
                                   1)
+
+        # TODO Check any Lab "from" parameters are correct
 
         return text
 

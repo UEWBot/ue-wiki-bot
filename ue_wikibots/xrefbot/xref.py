@@ -156,6 +156,14 @@ def oneCap(string):
     """
     return string[0].upper() + string[1:]
 
+def escapeParens(string):
+    """
+    Returns text with any ( or ) characters preceded with \ characters.
+    Useful if you want to include it in a regex.
+    """
+    string = re.sub(ur'\(', u'\(', string)
+    return re.sub(ur'\)', u'\)', string)
+
 class XrefToolkit:
     def __init__(self, site, specificNeeds, debug = False):
         self.site = site
@@ -545,7 +553,7 @@ class XrefToolkit:
                 return True
         return False
 
-    def imageForItem(self, itemName):
+    def imageForItemOrIngredient(self, itemName):
         """
         Finds the image for the specified item.
         """
@@ -553,12 +561,9 @@ class XrefToolkit:
         item = wikipedia.Page(wikipedia.getSite(), itemName)
         templatesWithParams = item.templatesWithParams()
         for (template, params) in templatesWithParams:
-            if template.find(u'Item') != -1:
-                for param in params:
-                    match = re.search(r'image\s*=\s*\[\[\s*(.*?)\s*\]\]', param)
-                    if match:
-                        return match.expand(r'\1')
-        return u''
+            if template.find(u'Item') != -1 or template == u'Ingredient':
+                return utils.paramFromParams(params, u'image')
+        return None
 
     def replaceImageInTemplate(self, text, template, param, new_image):
         """
@@ -781,8 +786,7 @@ class XrefToolkit:
                             u'atk': u'Needs Stats',
                             u'def': u'Needs Stats',
                             u'time': u'Needs Build Time',
-                            u'part_1': u'Needs Information', #u'Needs Ingredient',
-                            u'part_2': u'Needs Information'} #u'Needs Ingredient'}
+                            u'part_1': u'Needs Information'} #u'Needs Ingredient'}
         old_recipe_map = {u'available' : u'Needs Information'}
         missing_params = set()
         for template, params in templatesWithParams:
@@ -790,10 +794,32 @@ class XrefToolkit:
                 missing_params |= missingParams(params, recipe_param_map.keys())
                 # Find this item on the page
                 name = utils.paramFromParams(params, u'name')
+                # This can take a while, so reassure the user
+                wikipedia.output("Checking %s" % name)
                 # Is it a historical recipe ?
-                if text.find(name) > start:
+                recipe_start = text.find(name)
+                if recipe_start > start:
                     missing_params |= missingParams(params, old_recipe_map.keys())
                 # TODO Cross-reference against item page
+                # Check images for ingredients
+                for n in range(1,7):
+                    part_str = u'part_%s' % n
+                    part = utils.paramFromParams(params, part_str)
+                    if part != None:
+                        part_img_str = part_str + u'_img'
+                        part_img = utils.paramFromParams(params, part_img_str)
+                        image = self.imageForItemOrIngredient(part)
+                        if image != None:
+                            if part_img == None:
+                                # Insert an appropriate part_img parameter
+                                new_part = re.sub(ur'(\|\W*%s\W*=\W*%s)' % (part_str, escapeParens(part)),
+                                                  ur'\1\n|%s=%s' % (part_img_str, image),
+                                                  text[recipe_start:],
+                                                  1)
+                                text = text[:recipe_start] + new_part
+                            elif image != part_img:
+                                # TODO Replace the image with the one from the ingredient page
+                                wikipedia.output("Image mismatch. %s has %s, %s has %s" % (name, part_img, part, image))
         wikipedia.output("Set of missing recipe parameters is %s" % missing_params)
         # Ensure the Needs categories are correct
         text = self.fixNeedsCats(text, missing_params, categories, recipe_param_map)
@@ -1593,7 +1619,7 @@ class XrefToolkit:
         # Now we can cross-check between the two
         # Lab template has time, num_parts, part_1..part_n
         # Recipe template has time, atk, def, description, image, part_1..part_n
-        # Note that recipe description may differ from item description
+        # Note that recipe description usually differs from item description
         img_param = utils.paramFromParams(params, u'image')
         if img_param != None and img_param != recipe_params[u'image']:
             wikipedia.output("Image parameter mismatch - %s in page, %s on Tech Lab page" % (img_param, recipe_params[u'image']))
@@ -1621,6 +1647,7 @@ class XrefToolkit:
         if def_param != None and def_param != recipe_params[u'def']:
             wikipedia.output("Defence parameter mismatch - %s in page, %s on Tech Lab page" % (def_param, recipe_params[u'atk']))
         # Check that num_parts is right
+        # TODO: Need better support for recipes with multiples of one ingredient
         num_parts = utils.paramFromParams(lab_params, u'num_parts')
         for i in range(1,7):
             part_param = utils.paramFromParams(lab_params, u'part_%d' % i)
@@ -1631,6 +1658,7 @@ class XrefToolkit:
                 else:
                     recipe_param = recipe_params[u'part_%d' % i]
                     self.checkIngredient(name, i, part_param, recipe_param)
+                    # TODO Check part image
             elif i > int(num_parts) and part_param != None:
                 wikipedia.output("num_parts is %s, but part_%d param is present" % (num_parts, i))
 

@@ -790,7 +790,7 @@ class XrefToolkit:
         old_recipe_map = {u'available' : u'Needs Information'}
         missing_params = set()
         for template, params in templatesWithParams:
-            if template == u'Recipe':
+            if template.find(u'Recipe') != -1:
                 missing_params |= missingParams(params, recipe_param_map.keys())
                 # Find this item on the page
                 name = utils.paramFromParams(params, u'name')
@@ -975,7 +975,7 @@ class XrefToolkit:
             if template == u'Lieutenant':
                 wikipedia.output("Directly uses Lieutenant template")
 
-            if template == u'Lab':
+            if template.find(u'Lab') != -1:
                 is_tech_lab_item = True
                 ingredients = params
 
@@ -1123,7 +1123,7 @@ class XrefToolkit:
             if template == u'Item':
                 wikipedia.output("Directly uses Item template")
 
-            if template == u'Lab':
+            if template.find(u'Lab') != -1:
                 is_tech_lab_item = True
                 ingredients = params
 
@@ -1607,7 +1607,7 @@ class XrefToolkit:
         tl_page = wikipedia.Page(wikipedia.getSite(), u'Tech Lab')
         templatesWithParams = tl_page.templatesWithParams()
         for template,params in templatesWithParams:
-            if template == u'Recipe':
+            if template.find(u'Recipe') != -1:
                 recipe_params = utils.paramsToDict(params)
                 if recipe_params[u'name'] == name:
                     # This is the one we're interested in

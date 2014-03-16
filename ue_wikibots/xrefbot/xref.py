@@ -1546,57 +1546,6 @@ class XrefToolkit:
 
         return text
 
-    def checkIngredient(self, name, i, lab_param, recipe_param):
-        """
-        Compare one ingredient listed on an item page with the corresponding one on the Tech Lab page.
-        Check that the ingredient does drop where the page claims it does (and nowhere else).
-        Check that the ingredient lists this item as something it is "for".
-        """
-        # Check that the ingredients match
-        # Lab ingredients are links, and often say where they drop
-        # Recipe ingredients are just the item name
-        # TODO This doesn't work when multiple sources are listed e.g. Apache: Gun
-        r = Ringredient.search(lab_param)
-        if r:
-            item = r.group('ingredient')
-            source = r.group('source')
-        else:
-            r = Rlink.search(lab_param)
-            item = r.group('page')
-            source = None
-        if item != recipe_param:
-            wikipedia.output("part_%d parameter mismatch - %s in page, %s on Tech Lab page" % (i, item, recipe_param))
-        #wikipedia.output("%s from %s." % (item, source))
-
-        # Check that the part lists this item as "for"
-        page = wikipedia.Page(wikipedia.getSite(), item)
-        templatesWithParams = page.templatesWithParams()
-        for template,params in templatesWithParams:
-            for_param = utils.paramFromParams(params, u'for')
-            if for_param != None:
-                if name not in for_param:
-                    wikipedia.output("%s is an ingredient, but doesn't list this page as somethign it is for" % item)
-
-        # Check drop location for the part
-        # TODO Some of this should be in fixBoss, where we can fix it
-        if source != None:
-            found = False
-            page = wikipedia.Page(wikipedia.getSite(), source)
-            templatesWithParams = page.templatesWithParams()
-            for template,params in templatesWithParams:
-                if template == u'Drop':
-                    name_param = utils.paramFromParams(params, u'name')
-                    if name_param == item:
-                        for_param = utils.paramFromParams(params, u'for')
-                        found = True
-                        break
-            if not found:
-                wikipedia.output("Ingredient %s is listed as dropping from %s, but that page disagrees" % (item, source))
-            elif for_param == None:
-                wikipedia.output("Ingredient %s drops from %s, but that page doesn't say that it makes %s" % (item, source, name))
-            elif for_param != name:
-                wikipedia.output("Ingredient %s drops from %s, but that page says that it makes %s" % (item, source, for_param))
-
     def fixTechLabItem(self, name, text, params, categories, lab_params):
         """
         Check that it is listed as made in the same way on its page and the Tech Lab page.
@@ -1606,10 +1555,10 @@ class XrefToolkit:
         found = False
         tl_page = wikipedia.Page(wikipedia.getSite(), u'Tech Lab')
         templatesWithParams = tl_page.templatesWithParams()
-        for template,params in templatesWithParams:
+        for template,pg_params in templatesWithParams:
             if template.find(u'Recipe') != -1:
-                recipe_params = utils.paramsToDict(params)
-                if recipe_params[u'name'] == name:
+                recipe_dict = utils.paramsToDict(pg_params)
+                if recipe_dict[u'name'] == name:
                     # This is the one we're interested in
                     found = True
                     break
@@ -1620,47 +1569,76 @@ class XrefToolkit:
         # Lab template has time, num_parts, part_1..part_n
         # Recipe template has time, atk, def, description, image, part_1..part_n
         # Note that recipe description usually differs from item description
+        lab_dict = utils.paramsToDict(lab_params)
+
+        # Compare image
         img_param = utils.paramFromParams(params, u'image')
-        if img_param != None and img_param != recipe_params[u'image']:
-            wikipedia.output("Image parameter mismatch - %s in page, %s on Tech Lab page" % (img_param, recipe_params[u'image']))
+        if img_param != None and img_param != recipe_dict[u'image']:
+            wikipedia.output("Image parameter mismatch - %s in page, %s on Tech Lab page" % (img_param, recipe_dict[u'image']))
         time_param = utils.paramFromParams(lab_params, u'time')
         if time_param == None:
             if not self.catInCategories(u'Needs Build Time', categories):
                 text = self.appendCategory(text, u'Needs Build Time')
-            if recipe_params[u'time'] != None:
+            if u'time' in recipe_dict:
                 # Add a time parameter, with appropriate value
                 # Note that this just finds the first instance of params...
                 start = text.find(lab_params)
                 if start != -1:
-                    text = text[0:start] + u'|time=' + recipe_params[u'time'] + text[start:]
+                    text = text[0:start] + u'|time=' + recipe_dict[u'time'] + text[start:]
                 else:
                     assert 0, "Failed to find params %s" % lab_params
         else:
-            if not timeParamsMatch(time_param, recipe_params[u'time']):
-                wikipedia.output("Time parameter mismatch - %s in page, %s on Tech Lab page" % (time_param, recipe_params[u'time']))
+            if not timeParamsMatch(time_param, recipe_dict[u'time']):
+                wikipedia.output("Time parameter mismatch - %s in page, %s on Tech Lab page" % (time_param, recipe_dict[u'time']))
+
         # Compare atk
         atk_param = utils.paramFromParams(params, u'atk')
-        if atk_param != None and atk_param != recipe_params[u'atk']:
-            wikipedia.output("Attack parameter mismatch - %s in page, %s on Tech Lab page" % (atk_param, recipe_params[u'atk']))
+        if atk_param != None and atk_param != recipe_dict[u'atk']:
+            wikipedia.output("Attack parameter mismatch - %s in page, %s on Tech Lab page" % (atk_param, recipe_dict[u'atk']))
+
         # Compare def
         def_param = utils.paramFromParams(params, u'def')
-        if def_param != None and def_param != recipe_params[u'def']:
-            wikipedia.output("Defence parameter mismatch - %s in page, %s on Tech Lab page" % (def_param, recipe_params[u'atk']))
-        # Check that num_parts is right
-        # TODO: Need better support for recipes with multiples of one ingredient
+        if def_param != None and def_param != recipe_dict[u'def']:
+            wikipedia.output("Defence parameter mismatch - %s in page, %s on Tech Lab page" % (def_param, recipe_dict[u'atk']))
+
+        # Check that num_parts is right, if present
         num_parts = utils.paramFromParams(lab_params, u'num_parts')
+        # For some Lab templates, num_parts is optional. Those should all have 5 parts
+        if num_parts == None:
+            num_parts = 5
+        else:
+            num_parts = int(num_parts)
+        total = 0
         for i in range(1,7):
-            part_param = utils.paramFromParams(lab_params, u'part_%d' % i)
-            if i <= int(num_parts):
-                # Check part_n
-                if part_param == None:
-                    wikipedia.output("num_parts is %s, but part_%d param is missing" % (num_parts, i))
+            part_str = u'part_%d' % i
+            if part_str in lab_dict:
+                part = lab_dict[part_str]
+                num_str = part_str + u'_count'
+                if num_str in lab_dict:
+                    part_num = int(lab_dict[num_str])
                 else:
-                    recipe_param = recipe_params[u'part_%d' % i]
-                    self.checkIngredient(name, i, part_param, recipe_param)
-                    # TODO Check part image
-            elif i > int(num_parts) and part_param != None:
-                wikipedia.output("num_parts is %s, but part_%d param is present" % (num_parts, i))
+                    part_num = 1
+                total += part_num
+        if total != num_parts:
+            # TODO Fix num_parts, if present, else flag missing ingredient(s)
+            wikipedia.output("Calculated %d parts. num_parts is %d" % (total, num_parts))
+
+        # Check the Lab parameters against the Recipe parameters
+        lab_keys = set(lab_dict.keys())
+        lab_keys -= {u'in_list', u'num_parts'}
+        recipe_keys = set(recipe_dict.keys())
+        recipe_keys -= {u'description', u'image', u'atk', u'def', u'name'}
+        for key in recipe_keys:
+            if key in lab_keys:
+                if recipe_dict[key] != lab_dict[key]:
+                    # TODO Fix up this page to match Tech Lab, because recipes are found there
+                    wikipedia.output("%s parameter is %s in Recipe but %s in Lab" % (key, recipe_dict[key], lab_dict[key]))
+            else:
+                # Insert the missing parameter
+                text = re.sub(ur'(\|\W*%s\W*=[^|}]*)' % re.sub(ur'(part_\d)_\w*', ur'\1', key),
+                                  ur'\1\n|%s=%s' % (key, recipe_dict[key]),
+                                  text,
+                                  1)
 
         return text
 

@@ -156,13 +156,16 @@ def oneCap(string):
     """
     return string[0].upper() + string[1:]
 
-def escapeParens(string):
+def escapeStr(string):
     """
-    Returns text with any ( or ) characters preceded with \ characters.
+    Returns text with any |, (, ), [, or ] characters preceded with \ characters.
     Useful if you want to include it in a regex.
     """
+    string = re.sub(ur'\|', u'\|', string)
     string = re.sub(ur'\(', u'\(', string)
-    return re.sub(ur'\)', u'\)', string)
+    string = re.sub(ur'\)', u'\)', string)
+    string = re.sub(ur'\[', u'\[', string)
+    return re.sub(ur'\]', u'\]', string)
 
 class XrefToolkit:
     def __init__(self, site, specificNeeds, debug = False):
@@ -219,14 +222,6 @@ class XrefToolkit:
         return text
 
     # Now a load of utility methods
-
-    def escapeParentheses(self, text):
-        """
-        Returns text with every ( and ) preceeded by a \.
-        """
-        retval = re.sub(r'\(', r'\(', text)
-        retval = re.sub(r'\)', r'\)', retval)
-        return retval
 
     def prependNowysiwygIfNeeded(self, text):
         """
@@ -812,7 +807,7 @@ class XrefToolkit:
                         if image != None:
                             if part_img == None:
                                 # Insert an appropriate part_img parameter
-                                new_part = re.sub(ur'(\|\W*%s\W*=\W*%s)' % (part_str, escapeParens(part)),
+                                new_part = re.sub(ur'(\|\W*%s\W*=\W*%s)' % (part_str, escapeStr(part)),
                                                   ur'\1\n|%s=%s' % (part_img_str, image),
                                                   text[recipe_start:],
                                                   1)
@@ -1572,6 +1567,7 @@ class XrefToolkit:
         lab_dict = utils.paramsToDict(lab_params)
 
         # Compare image
+        # TODO Skip this check for Lts, where the base image is too big for the Tech Lab page
         img_param = utils.paramFromParams(params, u'image')
         if img_param != None and img_param != recipe_dict[u'image']:
             wikipedia.output("Image parameter mismatch - %s in page, %s on Tech Lab page" % (img_param, recipe_dict[u'image']))
@@ -1631,8 +1627,10 @@ class XrefToolkit:
         for key in recipe_keys:
             if key in lab_keys:
                 if recipe_dict[key] != lab_dict[key]:
-                    # TODO Fix up this page to match Tech Lab, because recipes are found there
-                    wikipedia.output("%s parameter is %s in Recipe but %s in Lab" % (key, recipe_dict[key], lab_dict[key]))
+                    # Fix up this page to match Tech Lab, because recipes are found there
+                    text = re.sub(ur'(\|\W*%s\W*=\W*)%s' % (key, escapeStr(lab_dict[key])),
+                                  ur'\g<1>%s' % recipe_dict[key],
+                                  text)
             else:
                 # Insert the missing parameter
                 text = re.sub(ur'(\|\W*%s\W*=[^|}]*)' % re.sub(ur'(part_\d)_\w*', ur'\1', key),

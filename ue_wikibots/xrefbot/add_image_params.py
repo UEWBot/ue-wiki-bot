@@ -69,17 +69,22 @@ class ImgBot:
         if new_param == None:
             new_param = param + u'_img'
 
+        offset = 0
+
         for m in strRe.finditer(text):
             # Full string we matched
             old_param = ur'%s%s' % (m.group('prefix'), m.group('value'))
             wikipedia.output("Adding image for %s" % old_param)
             # New string to insert
-            new_str = u'|%s=%s' % (new_param, self.image_map[m.group('value')])
+            new_str = u'\n|%s=%s' % (new_param, self.image_map[m.group('value')])
             # Replace the old with old+new, just where we found the match
             # TODO Need to allow for the fact that these additions move other matches
-            before = text[:m.start()] 
-            after = text[m.end():]
-            middle = re.sub(old_param, u'%s\n%s' % (old_param, new_str), text[m.start():m.end()])
+            start = m.start() + offset
+            end = m.end() + offset
+            offset += len(new_str)
+            before = text[:start] 
+            after = text[end:]
+            middle = re.sub(old_param, u'%s%s' % (old_param, new_str), text[start:end])
             text = before + middle + after
 
         return text

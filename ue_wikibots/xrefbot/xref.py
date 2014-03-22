@@ -146,7 +146,7 @@ def missingParams(all_params, mandatory_list):
     ret = set(mandatory_list)
     for p in all_params:
         m = utils.Rparam.match(p)
-        if m != None and m.group('name') in ret:
+        if m is not None and m.group('name') in ret:
             ret.remove(m.group('name'))
     return ret
 
@@ -800,11 +800,11 @@ class XrefToolkit:
                 for n in range(1,7):
                     part_str = u'part_%s' % n
                     part = utils.paramFromParams(params, part_str)
-                    if part != None:
+                    if part is not None:
                         part_img_str = part_str + u'_img'
                         part_img = utils.paramFromParams(params, part_img_str)
                         image = self.imageForItemOrIngredient(part)
-                        if image != None:
+                        if image is not None:
                             if part_img == None:
                                 # Insert an appropriate part_img parameter
                                 new_part = re.sub(ur'(\|\W*%s\W*=\W*%s)' % (part_str, escapeStr(part)),
@@ -867,7 +867,7 @@ class XrefToolkit:
         for template,params in templatesWithParams:
             if template == u'Skill':
                 level = utils.paramFromParams(params, u'level')
-                if level != None:
+                if level is not None:
                     if (level == old_level) and (level != u'1'):
                         wikipedia.output("copy-paste error for skill level %s (%s) ?" % (level, params))
                     old_level = level
@@ -1039,7 +1039,7 @@ class XrefToolkit:
         for r in refs:
             for template,params in r.templatesWithParams():
                 powerParam = utils.paramFromParams(params, u'power')
-                if powerParam != None and name in powerParam:
+                if powerParam is not None and name in powerParam:
                     powerText = "[[%s]] gives %s" % (r.titleWithoutNamespace(), powerParam)
                     itemList.append(powerText)
         if len(itemList) > 0:
@@ -1053,7 +1053,7 @@ class XrefToolkit:
             else:
                 # TODO check that it contains all the items it should
                 pass
-        elif items_param != None:
+        elif items_param is not None:
             wikipedia.output("Page claims item bonus of %s, but no items found that give bonusus" % items_param)
 
         return text
@@ -1163,7 +1163,7 @@ class XrefToolkit:
         # (Mystery) Gift Item template uses from with a different meaning
         if template != u'Gift Item' and template != u'Mystery Gift Item' and not is_tech_lab_item:
             from_param = utils.paramFromParams(the_params, u'from')
-            if from_param != None:
+            if from_param is not None:
                 text = self.fixDrop(name, text, from_param, refs)
 
         # Do more detailed checks for specific sub-types
@@ -1448,7 +1448,7 @@ class XrefToolkit:
                 if not self.catInCategories(u'Needs Unlock Criterion', categories):
                     text = self.appendCategory(text, u'Needs Unlock Criterion')
         else:
-            if district_param != None:
+            if district_param is not None:
                 wikipedia.output("Both level and district parameters are present")
 
         # Ensure that daily items are specified with parameter, not explicit category
@@ -1572,19 +1572,19 @@ class XrefToolkit:
         if check_image:
             img_param = utils.paramFromParams(params, u'image')
             # TODO Insert missing image
-            if img_param != None and img_param != recipe_dict[u'image']:
+            if img_param is not None and img_param != recipe_dict[u'image']:
                 wikipedia.output("Image parameter mismatch - %s in page, %s on Tech Lab page" % (img_param, recipe_dict[u'image']))
 
         # TODO Add Needs Build Time category if appropriate
 
         # Compare atk
         atk_param = utils.paramFromParams(params, u'atk')
-        if atk_param != None and atk_param != recipe_dict[u'atk']:
+        if atk_param is not None and atk_param != recipe_dict[u'atk']:
             wikipedia.output("Attack parameter mismatch - %s in page, %s on Tech Lab page" % (atk_param, recipe_dict[u'atk']))
 
         # Compare def
         def_param = utils.paramFromParams(params, u'def')
-        if def_param != None and def_param != recipe_dict[u'def']:
+        if def_param is not None and def_param != recipe_dict[u'def']:
             wikipedia.output("Defence parameter mismatch - %s in page, %s on Tech Lab page" % (def_param, recipe_dict[u'atk']))
 
         # Check that num_parts is right, if present

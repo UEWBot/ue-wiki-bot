@@ -9,6 +9,7 @@ sys.path.append(os.environ['HOME'] + '/ue/ue_wikibots/pywikipedia')
 
 import wikipedia, pagegenerators, catlib
 import re, difflib
+import utils
 
 # Stuff for the wikipedia help system
 parameterHelp = pagegenerators.parameterHelp + """\
@@ -66,13 +67,15 @@ class ImgBot:
             new_param = param + u'_img'
 
         offset = 0
+        old_text = text
 
-        for m in strRe.finditer(text):
+        for m in strRe.finditer(old_text):
             # Full string we matched
-            old_param = ur'%s%s' % (m.group('prefix'), m.group('value'))
+            key = m.group('value')
+            old_param = ur'%s%s' % (m.group('prefix'), key)
             wikipedia.output("Adding image for %s" % old_param)
             # New string to insert
-            new_str = u'\n|%s=%s' % (new_param, self.image_map[m.group('value')])
+            new_str = u'\n|%s=%s' % (new_param, self.image_map[key])
             # Replace the old with old+new, just where we found the match
             # Need to allow for the fact that these additions move other matches
             start = m.start() + offset
@@ -80,7 +83,7 @@ class ImgBot:
             offset += len(new_str)
             before = text[:start] 
             after = text[end:]
-            middle = re.sub(old_param, u'%s%s' % (old_param, new_str), text[start:end])
+            middle = re.sub(utils.escapeStr(old_param), u'%s%s' % (old_param, new_str), old_middle)
             text = before + middle + after
 
         return text

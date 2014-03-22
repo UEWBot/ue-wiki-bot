@@ -95,7 +95,6 @@ class GearBot:
         for page in cat.articlesList(recurse=False):
             text = page.get()
             for n in range(len(gearRe)):
-                wikipedia.output("replacement[%d] = %s" % (n, self.replacement[n]))
                 text = gearRe[n].sub(self.replacement[n], text)
             # Update the page
             wikipedia.output(u"\n\n>>> \03{lightpurple}%s\03{default} <<<" % page.title())

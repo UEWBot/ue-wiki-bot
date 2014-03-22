@@ -156,17 +156,6 @@ def oneCap(string):
     """
     return string[0].upper() + string[1:]
 
-def escapeStr(string):
-    """
-    Returns text with any |, (, ), [, or ] characters preceded with \ characters.
-    Useful if you want to include it in a regex.
-    """
-    string = re.sub(ur'\|', u'\|', string)
-    string = re.sub(ur'\(', u'\(', string)
-    string = re.sub(ur'\)', u'\)', string)
-    string = re.sub(ur'\[', u'\[', string)
-    return re.sub(ur'\]', u'\]', string)
-
 class XrefToolkit:
     def __init__(self, site, specificNeeds, debug = False):
         self.site = site
@@ -807,7 +796,7 @@ class XrefToolkit:
                         if image is not None:
                             if part_img == None:
                                 # Insert an appropriate part_img parameter
-                                new_part = re.sub(ur'(\|\W*%s\W*=\W*%s)' % (part_str, escapeStr(part)),
+                                new_part = re.sub(ur'(\|\W*%s\W*=\W*%s)' % (part_str, utils.escapeStr(part)),
                                                   ur'\1\n|%s=%s' % (part_img_str, image),
                                                   text[recipe_start:],
                                                   1)
@@ -1618,7 +1607,7 @@ class XrefToolkit:
             if key in lab_keys:
                 if recipe_dict[key] != lab_dict[key]:
                     # Fix up this page to match Tech Lab, because recipes are found there
-                    text = re.sub(ur'(\|\W*%s\W*=\W*)%s' % (key, escapeStr(lab_dict[key])),
+                    text = re.sub(ur'(\|\W*%s\W*=\W*)%s' % (key, utils.escapeStr(lab_dict[key])),
                                   ur'\g<1>%s' % recipe_dict[key],
                                   text)
             else:

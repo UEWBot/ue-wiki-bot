@@ -149,6 +149,21 @@ def summary_header(row_template):
         text += u'!span="col" data-sort-type="currency" | Cash/energy\n'
         # XP/energy Column
         text += u'!span="col" data-sort-type="number" | XP/energy\n'
+    elif row_template == u'Challenge Job Row':
+        # District column
+        text += u'!span="col" | District\n'
+        # Job name column
+        text += u'!span="col" | Job\n'
+        # Energy columns
+        text += u'!span="col" data-sort-type="number" | Energy\n'
+        text += u'!span="col" data-sort-type="number" | Total Energy\n'
+        # Lieutenants
+        text += u'!span="col" | Lt 1\n'
+        text += u'!span="col" | Lt 2\n'
+        text += u'!span="col" | Lt 3\n'
+        text += u'!span="col" | Lt 4\n'
+        # Recombinator
+        text += u'!span="col" | Recombinator\n'
     elif row_template == u'Lieutenant Row':
         # Name column
         text += u'!span="col" rowspan="2" | Name\n'
@@ -345,13 +360,16 @@ def fortress_rows(name, text, row_template, the_dict):
 
 def page_to_row(page, row_template):
     """
-    Creates a table row for the item described in page.
+    Creates a table row for the item or challenge job described in page.
     """
+    # Where to put the page name
+    mapping = {u'Challenge Job Row': u'district',
+               u'Item Row' : u'name'}
     templatesWithParams = page.templatesWithParams()
-    row = u'{{%s|name=%s' % (row_template, page.title())
+    row = u'{{%s|%s=%s' % (row_template, mapping[row_template], page.title())
     for (template, params) in templatesWithParams:
         # We're only interested in certain templates
-        if item_templates.search(template):
+        if item_templates.search(template) or template == u'Challenge Job':
             # Pass all the item template parameters
             for param in params:
                 row += u'|%s' % param
@@ -485,29 +503,38 @@ class XrefBot:
         # Upload it
         self.update_or_create_page(old_page, new_text);
 
-    def update_jobs_table(self):
+    def update_jobs_tables(self):
         """
-        Creates or updates page Jobs Table from the
+        Creates or updates page Jobs Table and Callenge Jobs Table from the
         content of the Districts category.
         """
-        # Categories we're interested in
-        row_template = u'Job Row'
+        # Templates to use
+        job_row_template = u'Job Row'
+        dice_row_template = u'Challenge Job Row'
 
-        old_page = wikipedia.Page(wikipedia.getSite(), u'Jobs Table')
-        rows = []
+        job_page = wikipedia.Page(wikipedia.getSite(), u'Jobs Table')
+        dice_job_page = wikipedia.Page(wikipedia.getSite(), u'Challenge Jobs Table')
+        job_rows = []
+        dice_rows = []
         cat = catlib.Category(wikipedia.getSite(), u'Districts')
         # One row per use of the template on a page in category
         for page in cat.articlesList():
-            rows += page_to_rows(page, row_template)
+            job_rows += page_to_rows(page, job_row_template)
+            dice_rows.append(page_to_row(page, dice_row_template))
         # Start the new page text
-        new_text = summary_header(row_template)
+        new_job_text = summary_header(job_row_template)
+        new_dice_text = summary_header(dice_row_template)
         # TODO: Sort rows into some sensible order
-        for row in rows:
-            new_text += row + u'\n'
+        for row in job_rows:
+            new_job_text += row + u'\n'
+        for row in dice_rows:
+            new_dice_text += row + u'\n'
         # Finish with a footer
-        new_text += summary_footer(row_template)
+        new_job_text += summary_footer(job_row_template)
+        new_dice_text += summary_footer(dice_row_template)
         # Upload it
-        self.update_or_create_page(old_page, new_text);
+        self.update_or_create_page(job_page, new_job_text);
+        self.update_or_create_page(dice_job_page, new_dice_text);
 
     def update_lt_rarity_table(self):
         """
@@ -582,7 +609,7 @@ class XrefBot:
     def run(self):
         self.update_most_tables()
         self.update_properties_table()
-        self.update_jobs_table()
+        self.update_jobs_tables()
         self.update_lt_rarity_table()
 
 def main():

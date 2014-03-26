@@ -710,6 +710,7 @@ class XrefToolkit:
         Ensures that __NOWYSIWYG__ is present.
         Checks for mandatory template parameters or corresponding Needs category.
         """
+        # TODO This method needs updating to handle template changes (gear, rewards)
         # Drop out if it isn't a district page
         if not self.catInCategories(u'Districts', categories):
             return text
@@ -1022,6 +1023,7 @@ class XrefToolkit:
             text = self.fixTechLabItem(name, text, the_params, categories, ingredients, False)
 
         # Validate items parameter, if present
+        # TODO This needs updating to reflect changes to the template (items)
         items_param = utils.paramFromParams(the_params, u'items')
         # Check for any items that have a power that affects this Lt
         itemList = []
@@ -1043,7 +1045,7 @@ class XrefToolkit:
                 # TODO check that it contains all the items it should
                 pass
         elif items_param is not None:
-            wikipedia.output("Page claims item bonus of %s, but no items found that give bonusus" % items_param)
+            wikipedia.output("Page claims item bonus of %s, but no items found that give bonuses" % items_param)
 
         return text
 

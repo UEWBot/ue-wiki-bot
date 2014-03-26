@@ -364,6 +364,7 @@ def page_to_row(page, row_template):
     """
     # Where to put the page name
     mapping = {u'Challenge Job Row': u'district',
+               u'Lieutenant Row' : u'name',
                u'Item Row' : u'name'}
     templatesWithParams = page.templatesWithParams()
     row = u'{{%s|%s=%s' % (row_template, mapping[row_template], page.title())

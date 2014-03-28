@@ -409,11 +409,17 @@ def page_to_rows(page, row_template, high_cost_ratios={}):
         elif property_templates.search(template):
             d = utils.paramsToDict(params)
             # Figure out how many rows we need
-            if u'fp_prop'in d:
+            if u'max' in d:
+                # Exlplicit max has priority
+                max = int(d[u'max'])
+            elif u'fp_prop'in d:
+                # All FP properties so far you just get 5 of
                 max = 5
             elif template == u'Income Property':
+                # Can get 20 of income properties with Fortress level 10
                 max = 20
             else:
+                # Upgrade properties (and Safe House) are limited to 10
                 max = 10
             for count in range(1, max + 1):
                 rows.append(property_row(page.title(), d, count, high_cost_ratios))
@@ -553,11 +559,14 @@ class XrefBot:
 	    lt_cat = catlib.Category(wikipedia.getSite(), u'%s Lieutenants' % rarity)
             for lt in lt_cat.articlesList():
                 name = lt.title()
+                wikipedia.output("Lt %s" % name)
                 templatesWithParams = lt.templatesWithParams()
                 for (template, params) in templatesWithParams:
+                    wikipedia.output("Template %s" % template)
                     match = lieutenant_templates.search(template)
                     if match:
                         faction = oneParam(params, u'faction')
+                        wikipedia.output("Faction %s" % faction)
                         if faction not in lieutenants:
                             lieutenants[faction] = []
                         lieutenants[faction].append(name)

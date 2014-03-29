@@ -42,25 +42,36 @@ class ImgBot:
         wikipedia.setAction(wikipedia.translate(wikipedia.getSite(), msg_standalone))
         # Populate image_map
         self.image_map = {}
+        # Don't populate it now - do it on-demand
+        return
         # Loop through every item, property, and ingredient
         cats = [u'Items', u'Properties', u'Ingredients']
         for c in cats:
             cat = catlib.Category(wikipedia.getSite(), u'Category:%s' % c)
             for pg in cat.articles(recurse=True):
-                key = pg.titleWithoutNamespace()
-                if not key in self.image_map:
-                    wikipedia.output("Looking up image for %s" % key)
-                    # Retrieve the text of page 'key'
-                    text = pg.get()
+                self.image_for(pg.titleWithoutNamespace())
 
-                    # Extract the image parameter
-                    m = imgRe.search(text)
-                    if m != None:
-                        self.image_map[key] = m.group('image')
+    def image_for(self, name):
+        """
+        Returns the image for the specified item, property, or ingredient.
+        Caches results for speed.
+        """
+        if name not in self.image_map:
+            pg = wikipedia.Page(wikipedia.getSite(), name)
+            # Retrieve the text of the specified page
+            text = pg.get()
+            # Extract the image parameter
+            m = imgRe.search(text)
+            if m != None:
+                self.image_map[name] = m.group('image')
+        return self.image_map[name]
 
     def add_img_param(self, text, param, new_param=None):
+        """
+        Adds a new image parameter for the specified parameter.
+        """
         # TODO Don't add it if the image parameter is already there
-        strRe = re.compile(ur'\|(?P<prefix>\W*%s\W*=\W*)(?P<value>[^\r]*)' % param)
+        strRe = re.compile(ur'\|(?P<prefix>\W*%s\W*=\s*)(?P<value>[^\r]*)' % param)
 
         # If new_param not provided, use old_param plus "_img"
         if new_param == None:
@@ -74,17 +85,22 @@ class ImgBot:
             key = m.group('value')
             old_param = ur'%s%s' % (m.group('prefix'), key)
             wikipedia.output("Adding image for %s" % old_param)
-            # New string to insert
-            new_str = u'\n|%s=%s' % (new_param, self.image_map[key])
-            # Replace the old with old+new, just where we found the match
-            # Need to allow for the fact that these additions move other matches
-            start = m.start() + offset
-            end = m.end() + offset
-            offset += len(new_str)
-            before = text[:start] 
-            after = text[end:]
-            middle = re.sub(utils.escapeStr(old_param), u'%s%s' % (old_param, new_str), text[start:end])
-            text = before + middle + after
+            try:
+                # New string to insert
+                new_str = u'\n|%s=%s' % (new_param, self.image_for(key))
+                # Replace the old with old+new, just where we found the match
+                # Need to allow for the fact that these additions move other matches
+                start = m.start() + offset
+                end = m.end() + offset
+                offset += len(new_str)
+                before = text[:start] 
+                after = text[end:]
+                middle = re.sub(utils.escapeStr(old_param), u'%s%s' % (old_param, new_str), text[start:end])
+                text = before + middle + after
+            except wikipedia.NoPage:
+                wikipedia.output("Page %s does not exist?!" % key)
+            except wikipedia.LockedPage:
+                wikipedia.output("Page %s is locked?!" % key)
 
         return text
 

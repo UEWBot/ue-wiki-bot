@@ -32,7 +32,7 @@ msg_append = {
 
 imgRe = re.compile(ur'\|W*image\W*=\W*(?P<image>.*)')
 
-params = [u'gear_1', u'gear_2', u'gear_3', u'gear_4', u'item_1', u'item_2', u'item_3']
+params = [u'gear_1', u'gear_2', u'gear_3', u'gear_4', u'item_1', u'item_2', u'item_3', u'item_4', u'item_5']
 
 class ImgBot:
     def __init__(self, generator, acceptall = False):

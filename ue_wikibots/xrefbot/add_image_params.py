@@ -32,7 +32,7 @@ msg_append = {
 
 imgRe = re.compile(ur'\|W*image\W*=\W*(?P<image>.*)')
 
-params = [u'gear_1', u'gear_2', u'gear_3', u'gear_4']
+params = [u'gear_1', u'gear_2', u'gear_3', u'gear_4', u'item_1', u'item_2', u'item_3']
 
 class ImgBot:
     def __init__(self, generator, acceptall = False):
@@ -83,7 +83,7 @@ class ImgBot:
             offset += len(new_str)
             before = text[:start] 
             after = text[end:]
-            middle = re.sub(utils.escapeStr(old_param), u'%s%s' % (old_param, new_str), old_middle)
+            middle = re.sub(utils.escapeStr(old_param), u'%s%s' % (old_param, new_str), text[start:end])
             text = before + middle + after
 
         return text

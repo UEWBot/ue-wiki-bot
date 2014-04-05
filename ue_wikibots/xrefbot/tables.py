@@ -559,14 +559,11 @@ class XrefBot:
 	    lt_cat = catlib.Category(wikipedia.getSite(), u'%s Lieutenants' % rarity)
             for lt in lt_cat.articlesList():
                 name = lt.title()
-                wikipedia.output("Lt %s" % name)
                 templatesWithParams = lt.templatesWithParams()
                 for (template, params) in templatesWithParams:
-                    wikipedia.output("Template %s" % template)
                     match = lieutenant_templates.search(template)
                     if match:
                         faction = oneParam(params, u'faction')
-                        wikipedia.output("Faction %s" % faction)
                         if faction not in lieutenants:
                             lieutenants[faction] = []
                         lieutenants[faction].append(name)

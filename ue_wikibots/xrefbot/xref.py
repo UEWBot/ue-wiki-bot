@@ -1073,7 +1073,7 @@ class XrefToolkit:
                 #assert temp != None, "Unable to find template %s in page" % the_template
                 # TODO There must be a better way to do this...
                 the_tuple = (i, key, i, refItems[key][0], i, refItems[key][1])
-                new_params = u'item_%d=%s\nitem_%d_pwr=%s\nitem_%d_img=%s' % the_tuple
+                new_params = u'|item_%d=%s\nitem_%d_pwr=%s\nitem_%d_img=%s' % the_tuple
                 text = re.sub(the_template, u'%s\n%s' % (the_template, new_params), text)
         # TODO Deal with any that are in the items list but not in refItems
         pass

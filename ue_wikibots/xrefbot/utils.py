@@ -11,13 +11,14 @@ Rparam = re.compile(ur'\s*(?P<name>\S+)\s*=\s*(?P<value>.*)', re.DOTALL)
 
 def escapeStr(string):
     """
-    Returns text with any |, (, ), [, or ] characters preceded with \ characters.
+    Returns text with any |, +, (, ), [, or ] characters preceded with \ characters.
     Useful if you want to include it in a regex.
     """
     string = re.sub(ur'\|', u'\|', string)
     string = re.sub(ur'\(', u'\(', string)
     string = re.sub(ur'\)', u'\)', string)
     string = re.sub(ur'\[', u'\[', string)
+    string = re.sub(ur'\+', u'\+', string)
     return re.sub(ur'\]', u'\]', string)
 
 def paramFromParams(params, param):

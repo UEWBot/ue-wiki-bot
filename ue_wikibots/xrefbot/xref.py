@@ -1022,30 +1022,61 @@ class XrefToolkit:
         if is_tech_lab_item:
             text = self.fixTechLabItem(name, text, the_params, categories, ingredients, False)
 
-        # Validate items parameter, if present
-        # TODO This needs updating to reflect changes to the template (items)
+        # Flag any pages that still have a items parameter
         items_param = utils.paramFromParams(the_params, u'items')
+        if items_param:
+            wikipedia.output("Page has an items parameter")
+            # Remove it
+            (start, end) = self.findTemplateParam(text, the_template, u'items')
+            # TODO Fix this - Victoria Venderbilt gives (-1, -1)
+            wikipedia.output("start = %d, end = %d\n" % (start, end))
+            text = text[:start] + text[end:]
+
+        # Validate items parameters, if present
         # Check for any items that have a power that affects this Lt
-        itemList = []
+        refItems = {}
         for r in refs:
             for template,params in r.templatesWithParams():
                 powerParam = utils.paramFromParams(params, u'power')
+                imageParam = utils.paramFromParams(params, u'image')
+                # Does the item have a power that affects this Lt ?
                 if powerParam is not None and name in powerParam:
-                    powerText = "[[%s]] gives %s" % (r.titleWithoutNamespace(), powerParam)
-                    itemList.append(powerText)
-        if len(itemList) > 0:
-            if items_param == None:
-                # Create new items param from scratch
-                itemsText = '|items='
-                if len(itemList) > 1:
-                    itemsText += u'<br\>\n*'
-                itemsText += u'\n*'.join(itemList)
-                text = text.replace(the_template, the_template + '\n' + itemsText, 1)
+                    refItems[r.titleWithoutNamespace()] = (powerParam, imageParam)
+        items = {}
+        for i in range(1,6):
+            name_str = u'item_%d' % i
+            power_str = u'item_%d_pwr' % i
+            image_str = u'item_%d_img' % i
+            nameParam = utils.paramFromParams(the_params, name_str)
+            powerParam = utils.paramFromParams(the_params, power_str)
+            imageParam = utils.paramFromParams(the_params, image_str)
+            if nameParam:
+                items[nameParam] = (powerParam, imageParam)
+        i = len(items)
+        # compare the two lists and address any mismatches
+        for key in refItems.keys():
+            if key in items:
+                # Compare the details
+                if refItems[key][0] != items[key][0]:
+                    wikipedia.output("Mismatch in power for %s - %s vs %s" % (key, refItems[key][0], items[key][0]))
+                    pattern = utils.escapeStr(items[key][0])
+                    text = re.sub(pattern, refItems[key][0], text)
+                if refItems[key][1] != items[key][1]:
+                    wikipedia.output("Mismatch in image for %s - %s vs %s" % (key, refItems[key][1], items[key][1]))
+                    pattern = utils.escapeStr(items[key][1])
+                    text = re.sub(pattern, refItems[key][1], text)
             else:
-                # TODO check that it contains all the items it should
-                pass
-        elif items_param is not None:
-            wikipedia.output("Page claims item bonus of %s, but no items found that give bonuses" % items_param)
+                wikipedia.output("Missing item %s which gives %s" % (key, refItems[key][0]))
+                # Add the item. No way to determine which item should be which
+                i += 1
+                #(temp, start, end) = self.findTemplate(text, the_template)
+                #assert temp != None, "Unable to find template %s in page" % the_template
+                # TODO There must be a better way to do this...
+                the_tuple = (i, key, i, refItems[key][0], i, refItems[key][1])
+                new_params = u'item_%d=%s\nitem_%d_pwr=%s\nitem_%d_img=%s' % the_tuple
+                text = re.sub(the_template, u'%s\n%s' % (the_template, new_params), text)
+        # TODO Deal with any that are in the items list but not in refItems
+        pass
 
         return text
 

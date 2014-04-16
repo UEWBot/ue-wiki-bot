@@ -129,6 +129,8 @@ def summary_header(row_template):
         text += u'!span="col" data-sort-type="number" | Hrs to recoup\n'
         # Unlock criteria
         text += u'!span="col" | Prerequisite(s)\n'
+        # Build Time
+        text += u'!span="col" | Build Time\n'
     elif row_template == u'Job Row':
         # District column
         text += u'!span="col" | District\n'
@@ -226,6 +228,17 @@ def property_row(name, d, count, high_cost_ratios):
         row += u'|income=%s' % d[u'income']
     else:
         row += u'|income=1000'
+    # Add in the build time parameter
+    if u'time' in d:
+        time = d[u'time']
+        # If no units, assume hours
+        if time.isdigit():
+            time += u'hr'
+            if time != u'1hr':
+                time += u's'
+        row += u'|time=%s' % time
+    else:
+        row += u'|time=Unknown'
     # Unlock we need to construct from a number of things
     unlock = u''
     if count == 1 and u'unlock_area' in d:
@@ -279,16 +292,22 @@ def safe_house_rows(name, text, row_template):
     else:
         unlock = match.group(1)
     # Find a table of costs
-    for match in re.finditer(ur'\|\W*(?P<count>\d+)\W*\|\|\W*(?P<cost>.*)\W*\|\|.*\|\|',
-                             text, re.IGNORECASE):
+    for match in re.finditer(ur'\|\s*(?P<count>\d+)\s*\|\|[\s$]*(?P<cost>.*?)\s*\|\|[\s$]*(?P<max>.*?)\s*\|\|[ \t]*(?P<time>.*)',
+                             text):
         d = match.groupdict()
         count = int(d['count'])
+        if 'time' in d:
+            time = d['time']
+            if time == u'':
+                time = u'Unknown'
+        else:
+            time = u'Unknown'
         # This assumes that rows are in numerical order, which should be true
         if count > 1:
             unlock = u'Level %d [[%s]]' % (count-1, name)
         # Don't bother with the "level 0" one
         if count > 0:
-            row = u'{{%s|name=%s|count=%d|income=%s|unlock=%s|cost=%s}}' % (row_template, name, count, income, unlock, d['cost'])
+            row = u'{{%s|name=%s|count=%d|income=%s|unlock=%s|cost=%s|time=%s}}' % (row_template, name, count, income, unlock, d['cost'], time)
             rows.append(row)
     
     return rows
@@ -348,12 +367,19 @@ def fortress_rows(name, text, row_template, the_dict):
         income = u'Unknown'
     else:
         income = match.group(1)
+    # Look for a "Build Time" line
+    match = re.search(ur'Build Time: (.*)hrs per level', text)
+    if match == None:
+        wikipedia.output("Failed to find Build Time for %s" % name)
+        time = 0
+    else:
+        time = int(match.group(1))
     # Work through the table of cost and unlock criteria dict
     for (count, (cost, prop, lvl)) in the_dict.items():
         unlock = u'level %d [[%s]]' % (lvl, prop)
         if count > 1:
             unlock = u'Level %d [[%s]] and ' % (count-1, name) + unlock
-        row = u'{{%s|name=%s|count=%d|income=%s|unlock=%s|cost=%d}}' % (row_template, name, count, income, unlock, cost)
+        row = u'{{%s|name=%s|count=%d|income=%s|unlock=%s|cost=%d|time=%shrs}}' % (row_template, name, count, income, unlock, cost, time*count)
         rows.append(row)
     #rows.sort()
     return rows

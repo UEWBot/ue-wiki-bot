@@ -337,11 +337,12 @@ class XrefToolkit:
         Find a template in text.
         If name is specified, find the named template.
         Returns a tuple - (template name (or None), index where the template starts, index where the template ends)
+        Buggy - doesn't work with nested templates
         """
         # Does the page use any templates ?
         for match in Rtemplate.finditer(text):
             found_name = match.expand(r'\g<name>')
-            if (name == None) or (found_name.find(name) != -1):
+            if (name == None) or (found_name == name):
                 return (found_name, match.start(), match.end())
         return (None, -1, -1)
 
@@ -985,7 +986,7 @@ class XrefToolkit:
         # __NOWYSIWYG__
         text = self.prependNowysiwygIfNeeded(text)
 
-        # Now nuke any empty stat or power parameters
+        # Now nuke any empty stat or power parameters, and any items parameters
         to_nuke = []
         for param in the_params:
             p = param.rstrip()
@@ -994,6 +995,11 @@ class XrefToolkit:
                     wikipedia.output("Nuking empty parameter %s" % param)
                     text = text.replace(u'|%s' % p, '')
                     to_nuke.append(param)
+            elif u'items' in p:
+                wikipedia.output("Page has an items parameter")
+                wikipedia.output("%s" % (u'|%s' % p))
+                text = text.replace(u'|%s' % p, '')
+                to_nuke.append(param)
         for i in to_nuke:
             the_params.remove(i)
 
@@ -1021,16 +1027,6 @@ class XrefToolkit:
         # Do special checks for any Epic Research Items
         if is_tech_lab_item:
             text = self.fixTechLabItem(name, text, the_params, categories, ingredients, False)
-
-        # Flag any pages that still have a items parameter
-        items_param = utils.paramFromParams(the_params, u'items')
-        if items_param:
-            wikipedia.output("Page has an items parameter")
-            # Remove it
-            (start, end) = self.findTemplateParam(text, the_template, u'items')
-            # TODO Fix this - Victoria Venderbilt gives (-1, -1)
-            wikipedia.output("start = %d, end = %d\n" % (start, end))
-            text = text[:start] + text[end:]
 
         # Validate items parameters, if present
         # Check for any items that have a power that affects this Lt

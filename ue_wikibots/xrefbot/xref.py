@@ -729,6 +729,14 @@ class XrefToolkit:
         job_param_map = {u'lieutenant': u'Needs Information', #u'Needs Job Lieutenant',
                          # Special code for XP below
                          u'xp': u'Needs Information', #u'Needs Job XP',
+                         u'gear_1': u'Needs Information',
+                         u'gear_1_img': u'Needs Information',
+                         u'gear_2': u'Needs Information',
+                         u'gear_2_img': u'Needs Information',
+                         u'gear_3': u'Needs Information',
+                         u'gear_3_img': u'Needs Information',
+                         u'gear_4': u'Needs Information',
+                         u'gear_4_img': u'Needs Information',
                          u'faction': u'Needs Information'} #u'Needs Job Faction'}
         xp_pair_param_map = {u'xp_min': u'Needs Information', #u'Needs Job XP',
                              u'xp_max': u'Needs Information'} #u'Needs Job XP'}
@@ -745,18 +753,29 @@ class XrefToolkit:
         for template, params in templatesWithParams:
             if template == u'Job':
                 missing_params |= missingParams(params, common_param_map.keys() + job_param_map.keys())
+                # xp_min and xp_max will do instead of xp
                 if u'xp' in missing_params:
-                    # xp_min and xp_max will do instead
                     missing_params.remove(u'xp')
                     missing_params |= missingParams(params, xp_pair_param_map.keys())
+                # Special case for missing gear_n and gear_n_img parameters
+                got_gear = False
+                for i in range(4,0,-1):
+                    root = u'gear_%d' % i
+                    if root in missing_params:
+                        # Shouldn't have higher number without lower
+                        if not got_gear:
+                            missing_params.remove(root)
+                            img_param = root + u'_img'
+                            if img_param in missing_params:
+                                missing_params.remove(img_param)
+                    else:
+                        got_gear = True
             elif template == u'Challenge Job':
                 missing_params |= missingParams(params, common_param_map.keys() + xp_pair_param_map.keys() + challenge_param_map.keys())
-        # TODO Check for missing gear_n, gear_n_count, and gear_n_img parameters (variable number)
+                # TODO Check the LT rarities
         wikipedia.output("Set of missing job parameters is %s" % missing_params)
         # Ensure the Needs categories are correct
         text = self.fixNeedsCats(text, missing_params, categories, dict(common_param_map.items() + job_param_map.items() + challenge_param_map.items()))
-
-        # TODO Check the LT rarities
 
         return text
 

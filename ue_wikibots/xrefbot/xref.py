@@ -711,7 +711,6 @@ class XrefToolkit:
         Ensures that __NOWYSIWYG__ is present.
         Checks for mandatory template parameters or corresponding Needs category.
         """
-        # TODO This method needs updating to handle template changes (gear, rewards)
         # Drop out if it isn't a district page
         if not self.catInCategories(u'Districts', categories):
             return text
@@ -728,13 +727,20 @@ class XrefToolkit:
                             u'cash_min': u'Needs Information', #u'Needs Job Cash',
                             u'cash_max': u'Needs Information'} #u'Needs Job Cash'}
         job_param_map = {u'lieutenant': u'Needs Information', #u'Needs Job Lieutenant',
-                         u'gear': u'Needs Information', #u'Needs Job Gear',
                          # Special code for XP below
                          u'xp': u'Needs Information', #u'Needs Job XP',
                          u'faction': u'Needs Information'} #u'Needs Job Faction'}
         xp_pair_param_map = {u'xp_min': u'Needs Information', #u'Needs Job XP',
                              u'xp_max': u'Needs Information'} #u'Needs Job XP'}
-        challenge_param_map = dict(xp_pair_param_map.items() + [(u'rewards', u'Needs Information')]) #u'Needs Job Rewards'}
+        challenge_param_map = {u'lt_1': u'Needs Information',
+                               u'lt_1_rarity': u'Needs Information',
+                               u'lt_2': u'Needs Information',
+                               u'lt_2_rarity': u'Needs Information',
+                               u'lt_3': u'Needs Information',
+                               u'lt_3_rarity': u'Needs Information',
+                               u'lt_4': u'Needs Information',
+                               u'lt_4_rarity': u'Needs Information',
+                               u'recombinator': u'Needs Information'}
         missing_params = set()
         for template, params in templatesWithParams:
             if template == u'Job':
@@ -744,10 +750,13 @@ class XrefToolkit:
                     missing_params.remove(u'xp')
                     missing_params |= missingParams(params, xp_pair_param_map.keys())
             elif template == u'Challenge Job':
-                missing_params |= missingParams(params, common_param_map.keys() + challenge_param_map.keys())
+                missing_params |= missingParams(params, common_param_map.keys() + xp_pair_param_map.keys() + challenge_param_map.keys())
+        # TODO Check for missing gear_n, gear_n_count, and gear_n_img parameters (variable number)
         wikipedia.output("Set of missing job parameters is %s" % missing_params)
         # Ensure the Needs categories are correct
         text = self.fixNeedsCats(text, missing_params, categories, dict(common_param_map.items() + job_param_map.items() + challenge_param_map.items()))
+
+        # TODO Check the LT rarities
 
         return text
 

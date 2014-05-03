@@ -1023,7 +1023,7 @@ class XrefToolkit:
                     wikipedia.output("Nuking empty parameter %s" % param)
                     text = text.replace(u'|%s' % p, '')
                     to_nuke.append(param)
-            elif u'items' in p:
+            elif p.startswith(u'items'):
                 wikipedia.output("Page has an items parameter")
                 wikipedia.output("%s" % (u'|%s' % p))
                 text = text.replace(u'|%s' % p, '')
@@ -1051,6 +1051,35 @@ class XrefToolkit:
             lt_param_map[u'from'] = u'Needs Source'
  
         text = self.fixNeedsCategories(text, the_params, categories, lt_param_map)
+
+        if not is_tech_lab_item:
+            fromParam = utils.paramFromParams(the_params, u'from')
+            # Check where the Lt can be obtained from
+            # TODO Ones that can be bought are listed on [[Category:Lieutenants]]
+            sources = []
+            for r in refs:
+                if self.catInCategories(u'Crates', r.categories()):
+                    sources.append(u'[[%s]]' % r.titleWithoutNamespace())
+                elif self.catInCategories(u'Events', r.categories()):
+                    sources.append(u'[[%s]]' % r.titleWithoutNamespace())
+                for template,params in r.templatesWithParams():
+                    if template == u'Challenge Job':
+                        district = r.titleWithoutNamespace()
+                        job = utils.paramFromParams(params, u'name')
+                        for p in params:
+                            if p.startswith(u'lt_') and name in p:
+                                sources.append(u'{{Job Link|district=%s|job=%s}}' % (district, job))
+                    elif template == u'FP Item Row':
+                        if name == utils.paramFromParams(params, u'lieutenant'):
+                            sources.append(u'[[Black Market]]')
+            for s in sources:
+                if s not in fromParam:
+                    wikipedia.output("***Need to add %s" % s)
+                    # First convert a single item to a list
+                    if not u'\n' in fromParam:
+                        text = text.replace(fromParam, u'<br/>\n*' + fromParam)
+                    text = text.replace(fromParam, fromParam + u'\n*%s' % s)
+            # TODO Also check for wrongly-listed sources
 
         # Do special checks for any Epic Research Items
         if is_tech_lab_item:
@@ -1097,7 +1126,7 @@ class XrefToolkit:
                 #assert temp != None, "Unable to find template %s in page" % the_template
                 # TODO There must be a better way to do this...
                 the_tuple = (i, key, i, refItems[key][0], i, refItems[key][1])
-                new_params = u'|item_%d=%s\nitem_%d_pwr=%s\nitem_%d_img=%s' % the_tuple
+                new_params = u'|item_%d=%s\n|item_%d_pwr=%s\n|item_%d_img=%s' % the_tuple
                 text = re.sub(the_template, u'%s\n%s' % (the_template, new_params), text)
         # TODO Deal with any that are in the items list but not in refItems
         pass

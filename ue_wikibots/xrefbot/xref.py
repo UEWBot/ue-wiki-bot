@@ -962,12 +962,20 @@ class XrefToolkit:
         # Check mandatory parameters
         prop_param_map = {u'description': u'Needs Description',
                           u'cost': u'Needs Initial Cost',
-                          u'time': u'Needs Build Time',
                           u'image': u'Needs Improvement'} #u'Needs Image'}
         if the_template == u'Upgrade Property':
             prop_param_map[u'power'] = u'Needs Power'
         else:
             prop_param_map[u'income'] = u'Needs Income'
+
+        # Build time is required for non-FP properties only
+        fp_prop = utils.paramFromParams(the_params, u'fp_prop')
+        if fp_prop:
+            build_time = utils.paramFromParams(the_params, u'time')
+            if build_time:
+                wikipedia.output("FP property has build time!")
+        else:
+            prop_param_map[u'time'] = u'Needs Build Time'
  
         text = self.fixNeedsCategories(text, the_params, categories, prop_param_map)
 

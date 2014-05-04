@@ -157,10 +157,12 @@ def oneCap(string):
     return string[0].upper() + string[1:]
 
 class XrefToolkit:
+
     def __init__(self, site, specificNeeds, debug = False):
         self.site = site
         self.specificNeeds = specificNeeds
         self.debug = debug
+        self.image_map = utils.ImageMap()
 
     def change(self, text, page):
         """
@@ -542,13 +544,7 @@ class XrefToolkit:
         """
         Finds the image for the specified item.
         """
-        # Retrieve the item page
-        item = wikipedia.Page(wikipedia.getSite(), itemName)
-        templatesWithParams = item.templatesWithParams()
-        for (template, params) in templatesWithParams:
-            if template.find(u'Item') != -1 or template == u'Ingredient':
-                return utils.paramFromParams(params, u'image')
-        return None
+        return self.image_map.image_for(itemName)
 
     def replaceImageInTemplate(self, text, template, param, new_image):
         """

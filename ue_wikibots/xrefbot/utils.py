@@ -4,6 +4,10 @@
 Utility functions for UEW wikibots
 """
 
+import sys, os
+sys.path.append(os.environ['HOME'] + '/ue/ue_wikibots/pywikipedia')
+
+import wikipedia
 import re
 
 # Separate the name and value for a template parameter
@@ -44,4 +48,26 @@ def paramsToDict(params):
         if m != None:
             result[m.group('name')] = m.group('value')
     return result
+
+class ImageMap:
+    imgRe = re.compile(ur'\|W*image\W*=\W*(?P<image>.*)')
+
+    def __init__(self):
+        # Populate image_map
+        self.mapping = {}
+
+    def image_for(self, name):
+        """
+        Returns the image for the specified item, property, or ingredient.
+        Caches results for speed.
+        """
+        if name not in self.mapping:
+            pg = wikipedia.Page(wikipedia.getSite(), name)
+            # Retrieve the text of the specified page
+            text = pg.get()
+            # Extract the image parameter
+            m = self.imgRe.search(text)
+            if m != None:
+                self.mapping[name] = m.group('image')
+        return self.mapping[name]
 

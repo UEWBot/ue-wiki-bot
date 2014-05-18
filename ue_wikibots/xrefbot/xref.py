@@ -984,6 +984,9 @@ class XrefToolkit:
         Ensures that __NOWYSIWYG__ is present.
         Checks that the page doesn't explictly list any categories that should be
         assigned by the template.
+        Removes any empty stat or power parameters, and any (old) item parameters.
+        Adds missing sources.
+        Checks items and adds missing ones.
         """
         # Does the page use a lieutenant template ?
         the_params = None
@@ -1098,6 +1101,17 @@ class XrefToolkit:
                 imageParam = utils.paramFromParams(params, u'image')
                 # Does the item have a power that affects this Lt ?
                 if powerParam is not None and name in powerParam:
+                    refItems[r.titleWithoutNamespace()] = (powerParam, imageParam)
+        # Add in any that affect the entire faction
+        factionParam = utils.paramFromParams(the_params, u'faction')
+        factionPage = wikipedia.Page(wikipedia.getSite(), u'Category:%s Lieutenants' % factionParam)
+        refs = factionPage.getReferences()
+        for r in refs:
+            for template,params in r.templatesWithParams():
+                if (template.find(u'Item') != -1):
+                    powerParam = utils.paramFromParams(params, u'power')
+                    imageParam = utils.paramFromParams(params, u'image')
+                    # The only items that reference Faction Lts have a power that helps them
                     refItems[r.titleWithoutNamespace()] = (powerParam, imageParam)
         items = {}
         for i in range(1,6):

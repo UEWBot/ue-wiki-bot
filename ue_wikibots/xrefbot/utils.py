@@ -49,6 +49,7 @@ def paramsToDict(params):
             result[m.group('name')] = m.group('value')
     return result
 
+# TODO It seems possible to have a generic cache class, with these as sub-classes
 class ImageMap:
     imgRe = re.compile(ur'\|W*image\W*=\W*(?P<image>.*)')
 
@@ -71,3 +72,21 @@ class ImageMap:
                 self.mapping[name] = m.group('image')
         return self.mapping[name]
 
+class FactionLtRefs:
+    def __init__(self):
+        self.mapping = {}
+
+    def refs_for(self, faction):
+        """
+        Returns a list of pages that reference the category page for lts
+        in the specified faction.
+        Caches the result, and returns from the cache in preference.
+        """
+        try:
+            return self.mapping[faction]
+        except KeyError:
+            pass
+        factionPage = wikipedia.Page(wikipedia.getSite(), u'Category:%s Lieutenants' % faction)
+        refs = list(factionPage.getReferences())
+        self.mapping[faction] = refs
+        return refs

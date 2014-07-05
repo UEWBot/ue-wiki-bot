@@ -56,6 +56,9 @@ category_re = ur'\[\[\s*Category:\s*%s\s*\]\]'
 #TODO fix this so it doesn't coalesce multiple categories
 Rcategory = re.compile(ur'\[\[\s*Category:.*\]\]')
 
+# Cache to speed up fixLieutenant()
+faction_lts_map = utils.FactionLtRefs()
+
 def listFromSection(text, section_name, whole_lines=False):
     """
     Extract a list from a section of text.
@@ -1086,8 +1089,7 @@ class XrefToolkit:
                     refItems[r.titleWithoutNamespace()] = (powerParam, imageParam)
         # Add in any that affect the entire faction
         factionParam = utils.paramFromParams(the_params, u'faction')
-        factionPage = wikipedia.Page(wikipedia.getSite(), u'Category:%s Lieutenants' % factionParam)
-        refs = factionPage.getReferences()
+        refs = faction_lts_map.refs_for(factionParam)
         for r in refs:
             for template,params in r.templatesWithParams():
                 if (template.find(u'Item') != -1):

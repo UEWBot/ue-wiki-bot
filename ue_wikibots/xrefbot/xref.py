@@ -59,6 +59,9 @@ Rcategory = re.compile(ur'\[\[\s*Category:.*\]\]')
 # Cache to speed up fixLieutenant()
 faction_lts_map = utils.FactionLtRefs()
 
+# Image cache
+image_map = utils.ImageMap()
+
 def listFromSection(text, section_name, whole_lines=False):
     """
     Extract a list from a section of text.
@@ -165,7 +168,6 @@ class XrefToolkit:
         self.site = site
         self.specificNeeds = specificNeeds
         self.debug = debug
-        self.image_map = utils.ImageMap()
 
     def change(self, text, page):
         """
@@ -523,7 +525,7 @@ class XrefToolkit:
         """
         Finds the image for the specified item.
         """
-        return self.image_map.image_for(itemName)
+        return image_map.image_for(itemName)
 
     def replaceImageInTemplate(self, text, template, param, new_image):
         """

@@ -34,37 +34,14 @@ imgRe = re.compile(ur'\|W*image\W*=\W*(?P<image>.*)')
 
 params = [u'gear_1', u'gear_2', u'gear_3', u'gear_4', u'item_1', u'item_2', u'item_3', u'item_4', u'item_5']
 
+image_map = utils.ImageMap()
+
 class ImgBot:
     def __init__(self, generator, acceptall = False):
         self.generator = generator
         self.acceptall = acceptall
         # Load default summary message.
         wikipedia.setAction(wikipedia.translate(wikipedia.getSite(), msg_standalone))
-        # Populate image_map
-        self.image_map = {}
-        # Don't populate it now - do it on-demand
-        return
-        # Loop through every item, property, and ingredient
-        cats = [u'Items', u'Properties', u'Ingredients']
-        for c in cats:
-            cat = catlib.Category(wikipedia.getSite(), u'Category:%s' % c)
-            for pg in cat.articles(recurse=True):
-                self.image_for(pg.titleWithoutNamespace())
-
-    def image_for(self, name):
-        """
-        Returns the image for the specified item, property, or ingredient.
-        Caches results for speed.
-        """
-        if name not in self.image_map:
-            pg = wikipedia.Page(wikipedia.getSite(), name)
-            # Retrieve the text of the specified page
-            text = pg.get()
-            # Extract the image parameter
-            m = imgRe.search(text)
-            if m != None:
-                self.image_map[name] = m.group('image')
-        return self.image_map[name]
 
     def add_img_param(self, text, param, new_param=None):
         """
@@ -87,7 +64,7 @@ class ImgBot:
             wikipedia.output("Adding image for %s" % old_param)
             try:
                 # New string to insert
-                new_str = u'\n|%s=%s' % (new_param, self.image_for(key))
+                new_str = u'\n|%s=%s' % (new_param, image_map.image_for(key))
                 # Replace the old with old+new, just where we found the match
                 # Need to allow for the fact that these additions move other matches
                 start = m.start() + offset

@@ -468,30 +468,6 @@ class XrefToolkit:
             return (list_start, list_end)
         return (-1, -1)
 
-    def findSectionOld(self, text):
-        """
-        Find a section in text, starting with a header,
-        and ending with a header, template, or category.
-        Returns a tuple - (section name (or u''), index where the section starts, index where the section ends)
-        """
-        # Does the page have a section header ?
-        header = re.search(ur'==(.+)==', text)
-        if header:
-            section = header.expand(r'\1').strip()
-            list_start = header.start()
-            # List ends at a template, header or category
-            # Skip the header for the section of interest itself
-            match = re.search(r'{{|==.*==|\[\[Category', text[list_start+2:])
-            if match:
-                list_end = list_start+2+match.start()
-            else:
-                list_end = len(text)
-            # Shift list_end back to exactly the end of the list
-            while text[list_end-1] in u'\n\r':
-                list_end -= 1
-            return (section, list_start, list_end)
-        return (u'', -1, -1)
-
     def findSection(self, text, title=u'',level=-1):
         """
         Find a section in text, starting with a header,
@@ -669,7 +645,13 @@ class XrefToolkit:
             if not tl_boss:
                 text = self.appendCategory(text, u'Needs Completion Dialogue')
 
-        (dummy, start, end, level) = self.findSection(text, u'Rewards')
+        # We should find a section called Rewards that links to the Boss Drops page
+        (dummy, start, end, level) = self.findSection(text, u'[[Boss Drops|Rewards]]')
+        # If we don't find one, maybe there's just a 'Rewards' section...
+        if (start == -1):
+            (dummy, start, end, level) = self.findSection(text, u'Rewards')
+            #TODO Replace the header
+            wikipedia.output("***Found Rewards section that doesn't link to Boss Drops page")
         if self.catInCategories(u'Needs Rewards', categories):
             if start != -1:
                 # There is a Rewards section

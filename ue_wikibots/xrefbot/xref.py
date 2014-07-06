@@ -655,8 +655,9 @@ class XrefToolkit:
         # If we don't find one, maybe there's just a 'Rewards' section...
         if (start == -1):
             (dummy, start, end, level) = self.findSection(text, u'Rewards')
-            #TODO Replace the header
-            wikipedia.output("***Found Rewards section that doesn't link to Boss Drops page")
+            # Replace the header
+            text = text.replace(u'=Rewards=', u'=[[Boss Drops|Rewards]]=')
+            (dummy, start, end, level) = self.findSection(text, u'[[Boss Drops|Rewards]]')
         if self.catInCategories(u'Needs Rewards', categories):
             if start != -1:
                 # There is a Rewards section

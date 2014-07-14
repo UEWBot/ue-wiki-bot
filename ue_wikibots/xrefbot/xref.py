@@ -552,11 +552,12 @@ class XrefToolkit:
                 return text
         assert 0, "Failed to find template %s" % template
 
-    def checkItemParams(self, source, drop_params):
+    def checkItemParams(self, text, source, drop_params):
         """
         Checks that the parameters for a drop match the item page.
         params is a dictionary of the drop's parameters.
         Also checks that the drop lists the source.
+        Returns modified text with missing parameters added.
         """
         item_name = drop_params[u'name']
         item = wikipedia.Page(wikipedia.getSite(), item_name)
@@ -578,13 +579,13 @@ class XrefToolkit:
                 # Then check for any that may be missing
                 for key in [u'name', u'image', u'atk', u'def', u'type']:
                     if key not in drop_params and key in item_params:
-                        wikipedia.output("Drop parameter %s not provided for %s, but should be %s" % (key, item_name, item_params[key]))
+                        text = text.replace(ur'name=%s' % item_name, u'name=%s|%s=%s' % (item_name, key, item_params[key]))
                 key = u'for'
                 if key not in drop_params and key in item_params:
                     # "for" parameter only needed where the item is a Tech Lab ingredient
                     # TODO There should be a better way to do this...
                     if item_name != u'Steel Beam' and item_name != u'Concrete Block' and not self.catInCategories(u'Recombinators', item.categories()):
-                        wikipedia.output("Drop parameter %s not provided for %s, but should be %s" % (key, item_name, item_params[key]))
+                        text = text.replace(ur'name=%s' % item_name, u'name=%s|%s=%s' % (item_name, key, item_params[key]))
                 if source not in item_params['from']:
                     wikipedia.output("Boss claims to drop %s, but is not listed on that page" % item_name)
             elif template.find(u'Lieutenant') != -1:
@@ -607,6 +608,7 @@ class XrefToolkit:
                     wikipedia.output("Boss claims to drop %s, but is not listed on that page" % item_name)
             elif (template != u'Job Link') and (template != u'For') and (template != u'Sic'):
                 wikipedia.output("Ignoring template %s" % template)
+        return text
 
     def fixEventBoss(self, name, text, categories, templatesWithParams):
         """
@@ -630,7 +632,7 @@ class XrefToolkit:
         for (template, params) in templatesWithParams:
             if template == u'Drop':
                 drop_params = utils.paramsToDict(params)
-                self.checkItemParams(name, drop_params)
+                text = self.checkItemParams(text, name, drop_params)
 
         return text
 
@@ -663,7 +665,7 @@ class XrefToolkit:
         for (template, params) in templatesWithParams:
             if template == u'Drop':
                 drop_params = utils.paramsToDict(params)
-                self.checkItemParams(name, drop_params)
+                text = self.checkItemParams(text, name, drop_params)
 
         # Check Needs categories
         (dummy, start, end, level) = self.findSection(text, u'Completion Dialogue')

@@ -102,12 +102,15 @@ def listFromSection(text, section_name, whole_lines=False):
 def dropParamsMatch(param1, param2):
     """
     Compares two drop parameters.
-    Ignores case of first character, and reports a match if one is a link
-    and the other isn't.
+    Ignores case of first character, matches spaces with underscores,
+    and reports a match if one is a link and the other isn't.
     """
     # Direct match first
     if param1 == param2:
         return True
+    # Convert spaces to underscores in both
+    param1 = param1.replace(' ', '_')
+    param2 = param2.replace(' ', '_')
     # Match link with non-link equivalent
     if param1[0:2] == u'[[':
         return param1[2:-2] == param2
@@ -193,6 +196,7 @@ class XrefToolkit:
         #wikipedia.output("******\nIn text:\n%s" % text)
         # Note that these are effectively independent. Although the text gets changed,
         # the categories, templates, and parameters are not re-generated after each call
+        text = self.fixEventBoss(titleWithoutNamespace, text, categories, templatesWithParams)
         text = self.fixBoss(titleWithoutNamespace, text, categories, templatesWithParams)
         text = self.fixItem(titleWithoutNamespace, text, categories, templatesWithParams, refs)
         text = self.fixLieutenant(titleWithoutNamespace, text, categories, templatesWithParams, refs)
@@ -603,6 +607,32 @@ class XrefToolkit:
                     wikipedia.output("Boss claims to drop %s, but is not listed on that page" % item_name)
             elif (template != u'Job Link') and (template != u'For') and (template != u'Sic'):
                 wikipedia.output("Ignoring template %s" % template)
+
+    def fixEventBoss(self, name, text, categories, templatesWithParams):
+        """
+        If the page is in both the Bosses and Events categories:
+        Ensures that __NOWYSIWYG__ is present.
+        Checks each drop's image, type, attack, and defence.
+        """
+        boss = self.catInCategories(u'Bosses', categories)
+        event = self.catInCategories(u'Events', categories)
+        # Drop out early if not an event boss page
+        # TODO Is there a better test ?
+        if not boss or not event:
+            return text
+
+        drop_params = [u'image', u'type', u'atk', u'def']
+
+        # __NOWYSISYG__
+        text = self.prependNowysiwygIfNeeded(text)
+
+        # Check each drop
+        for (template, params) in templatesWithParams:
+            if template == u'Drop':
+                drop_params = utils.paramsToDict(params)
+                self.checkItemParams(name, drop_params)
+
+        return text
 
     def fixBoss(self, name, text, categories, templatesWithParams):
         """

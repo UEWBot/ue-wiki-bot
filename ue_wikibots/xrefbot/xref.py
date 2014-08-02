@@ -1383,9 +1383,9 @@ class XrefToolkit:
         if type_param == None:
             # Add a type parameter, with value Needs Type
             # Note that this just finds the first instance of params...
-            start = text.find(params)
+            start = text.find(params[0])
             if start != -1:
-                text = text[0:start] + u'|type=' + cat + text[start:]
+                text = text[0:start] + u'type=' + cat + u'\n|' + text[start:]
             else:
                 assert 0, "Failed to find params %s" % params
         else:

@@ -122,7 +122,7 @@ def summary_header(row_template):
         # Name column
         text += u'!span="col" | Name\n'
         # Cost column, sorted as currency
-        text += u'!span="col" data-sort-type="currency" | Cost\n'
+        text += u'!span="col" data-sort-type="currency" | Cost (with no discount)\n'
         # Income column, sorted as currency
         text += u'!span="col" data-sort-type="currency" | Income\n'
         # Time to recoup cost column

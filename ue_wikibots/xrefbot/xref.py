@@ -739,21 +739,21 @@ class XrefToolkit:
                             u'image': u'Needs Improvement', #u'Needs Image',
                             u'description': u'Needs Information', #u'Needs Job Description',
                             u'energy': u'Needs Information', #u'Needs Job Energy',
-                            u'total_energy': u'Needs Information', #u'Needs Job Total Energy',
+                            u'total_energy': u'Needs Total Energy',
                             u'cash_min': u'Needs Information', #u'Needs Job Cash',
                             u'cash_max': u'Needs Information'} #u'Needs Job Cash'}
         job_param_map = {u'lieutenant': u'Needs Information', #u'Needs Job Lieutenant',
                          # Special code for XP below
                          u'xp': u'Needs Information', #u'Needs Job XP',
-                         u'gear_1': u'Needs Information',
+                         u'gear_1': u'Needs Item Requirements',
                          u'gear_1_img': u'Needs Information',
-                         u'gear_2': u'Needs Information',
+                         u'gear_2': u'Needs Item Requirements',
                          u'gear_2_img': u'Needs Information',
-                         u'gear_3': u'Needs Information',
+                         u'gear_3': u'Needs Item Requirements',
                          u'gear_3_img': u'Needs Information',
-                         u'gear_4': u'Needs Information',
+                         u'gear_4': u'Needs Item Requirements',
                          u'gear_4_img': u'Needs Information',
-                         u'faction': u'Needs Information'} #u'Needs Job Faction'}
+                         u'faction': u'Needs Job Faction'}
         xp_pair_param_map = {u'xp_min': u'Needs Information', #u'Needs Job XP',
                              u'xp_max': u'Needs Information'} #u'Needs Job XP'}
         challenge_param_map = {u'lt_1': u'Needs Information',

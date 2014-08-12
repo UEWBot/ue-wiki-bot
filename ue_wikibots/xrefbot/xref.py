@@ -947,6 +947,45 @@ class XrefToolkit:
 
         return text
 
+    def fixSafeHouse(self, text, categories):
+        """
+        Checks that the page includes appropriate information (like Upgrade properties).
+        Checks that the cost table matches the template for upgrade properties.
+        """
+        # TODO implement this function
+        return text
+
+    def fixFortress(self, text, categories):
+        """
+        Checks that the page includes appropriate information (like Upgrade properties).
+        Checks that the cost table matches the template for upgrade properties.
+        """
+        # TODO implement this function
+        # First, retrieve the expected cost ratios from the template
+        Rrow = re.compile(ur'\|\s*(?P<level>\d+).*cost}}}\*(?P<ratio>[\d.]+)')
+        table_page = wikipedia.Page(wikipedia.getSite(), u'Template:Property Cost Table')
+        table_text = table_page.get()
+        iterator = Rrow.finditer(table_text)
+        ratios = {1:1.0}
+        for m in iterator:
+            level = m.group('level')
+            ratio = m.group('ratio')
+            ratios[int(level)] = float(ratio)
+        # Now we can check the cost table
+        Rrow2 = re.compile(ur'\|\s*(?P<level>\d+).*formatnum:\s*(?P<cost>\d+)')
+        iterator = Rrow2.finditer(text)
+        costs = {}
+        for m in iterator:
+            level = int(m.group('level'))
+            cost = int(m.group('cost'))
+            costs[level] = cost
+        base_cost = costs[1]
+        for level,cost in costs.iteritems():
+            expected_cost = base_cost * ratios[level]
+            if cost != expected_cost:
+                wikipedia.output("Level %d cost of %d != expected %d" % (level, cost, expected_cost))
+        return text
+
     def fixProperty(self, name, text, categories, templatesWithParams):
         """
         If the page uses either of the templates 'Income Property' or 'Upgrade Property':
@@ -965,7 +1004,11 @@ class XrefToolkit:
                 the_template = template
                 the_params = params
 
-        # TODO Check Safe House
+        # Fortress and Safe House are special
+        if name ==u'Safe House':
+            return self.fixSafeHouse(text, categories)
+        elif name ==u'Fortress':
+            return self.fixFortress(text, categories)
 
         # Drop out early if not a property page
         # TODO Is there a better test ?

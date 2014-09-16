@@ -132,8 +132,8 @@ def summary_header(row_template):
         # Build Time
         text += u'!span="col" | Build Time\n'
     elif row_template == u'Job Row':
-        # District column
-        text += u'!span="col" | District\n'
+        # Area column
+        text += u'!span="col" | Area\n'
         # Job name column
         text += u'!span="col" | Job\n'
         # Faction column
@@ -152,8 +152,8 @@ def summary_header(row_template):
         # XP/energy Column
         text += u'!span="col" data-sort-type="number" | XP/energy\n'
     elif row_template == u'Challenge Job Row':
-        # District column
-        text += u'!span="col" | District\n'
+        # Area column
+        text += u'!span="col" | Area\n'
         # Job name column
         text += u'!span="col" | Job\n'
         # Energy columns
@@ -539,7 +539,7 @@ class XrefBot:
     def update_jobs_tables(self):
         """
         Creates or updates page Jobs Table and Callenge Jobs Table from the
-        content of the Districts category.
+        content of the Areas category.
         """
         # Templates to use
         job_row_template = u'Job Row'
@@ -549,7 +549,7 @@ class XrefBot:
         dice_job_page = wikipedia.Page(wikipedia.getSite(), u'Challenge Jobs Table')
         job_rows = []
         dice_rows = []
-        cat = catlib.Category(wikipedia.getSite(), u'Districts')
+        cat = catlib.Category(wikipedia.getSite(), u'Areas')
         # One row per use of the template on a page in category
         for page in cat.articlesList():
             job_rows += page_to_rows(page, job_row_template)

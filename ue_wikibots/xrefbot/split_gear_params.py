@@ -1,7 +1,7 @@
 #! /usr//bin/python
 
 """
-Script to split the gear parameter on Districts pages on Underworld Empire Wiki
+Script to split the gear parameter on Areas pages on Underworld Empire Wiki
 """
 
 import sys, os, operator
@@ -84,12 +84,12 @@ class GearBot:
                 # Write out the new version
                 old_page.put(new_text)
 
-    def update_districts(self):
+    def update_areas(self):
         """
-        Creates or updates each page in the Districts category.
+        Creates or updates each page in the Areas category.
         """
-        # Update every page in the Districts category
-        cat = catlib.Category(wikipedia.getSite(), u'Districts')
+        # Update every page in the Areas category
+        cat = catlib.Category(wikipedia.getSite(), u'Areas')
 
         #for page in cat.articlesList(recurse=True):
         for page in cat.articlesList(recurse=False):
@@ -101,7 +101,7 @@ class GearBot:
             self.update_or_create_page(page, text);
 
     def run(self):
-        self.update_districts()
+        self.update_areas()
 
 def main():
     #logging.basicConfig()

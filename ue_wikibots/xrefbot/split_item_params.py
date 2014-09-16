@@ -1,7 +1,7 @@
 #! /usr//bin/python
 
 """
-Script to split the item parameter on Districts pages on Underworld Empire Wiki
+Script to split the item parameter on Areas pages on Underworld Empire Wiki
 """
 
 import sys, os, operator

@@ -204,7 +204,7 @@ class XrefToolkit:
         text = self.fixExecutionMethod(text, categories, templatesWithParams)
         text = self.fixClass(text, categories, templatesWithParams)
         text = self.fixTechLab(titleWithoutNamespace, text, categories, templatesWithParams)
-        text = self.fixDistrict(titleWithoutNamespace, text, categories, templatesWithParams)
+        text = self.fixArea(titleWithoutNamespace, text, categories, templatesWithParams)
         #wikipedia.output("******\nOld text:\n%s" % oldText)
         #wikipedia.output("******\nIn text:\n%s" % text)
         # Just comparing oldText with text wasn't sufficient
@@ -721,14 +721,14 @@ class XrefToolkit:
 
         return text
 
-    def fixDistrict(self, name, text, categories, templatesWithParams):
+    def fixArea(self, name, text, categories, templatesWithParams):
         """
-        Fixes a District page.
+        Fixes an Area page.
         Ensures that __NOWYSIWYG__ is present.
         Checks for mandatory template parameters or corresponding Needs category.
         """
-        # Drop out if it isn't a district page
-        if not self.catInCategories(u'Districts', categories):
+        # Drop out if it isn't an area page
+        if not self.catInCategories(u'Areas', categories):
             return text
 
         # __NOWYSIWYG__
@@ -1134,11 +1134,11 @@ class XrefToolkit:
                     sources.append(u'[[%s]]' % r.titleWithoutNamespace())
                 for template,params in r.templatesWithParams():
                     if template == u'Challenge Job':
-                        district = r.titleWithoutNamespace()
+                        area = r.titleWithoutNamespace()
                         job = utils.paramFromParams(params, u'name')
                         for p in params:
                             if p.startswith(u'lt_') and name in p:
-                                sources.append(u'{{Job Link|district=%s|job=%s}}' % (district, job))
+                                sources.append(u'{{Job Link|district=%s|job=%s}}' % (area, job))
                     elif template == u'FP Item Row':
                         if name == utils.paramFromParams(params, u'lieutenant'):
                             sources.append(u'[[Black Market]]')
@@ -1578,7 +1578,7 @@ class XrefToolkit:
         """
         Ensures that basic items have description, image, atk, def, cost, rarity, quote
         and time params or appropriate "Needs" category.
-        Checks that either level or district is specified.
+        Checks that either level or area is specified.
         Checks that it not explicitly in Daily Rewards category.
         Assumes that the page uses the Basic Item template.
         """
@@ -1596,14 +1596,14 @@ class XrefToolkit:
 
         # Check that we have either level or district but not both
         level_param = utils.paramFromParams(params, u'level')
-        district_param = utils.paramFromParams(params, u'district')
+        area_param = utils.paramFromParams(params, u'district')
         if level_param == None:
-            if district_param == None:
+            if area_param == None:
                 wikipedia.output("Missing both level and district parameters")
                 if not self.catInCategories(u'Needs Unlock Criterion', categories):
                     text = self.appendCategory(text, u'Needs Unlock Criterion')
         else:
-            if district_param is not None:
+            if area_param is not None:
                 wikipedia.output("Both level and district parameters are present")
 
         # Ensure that daily items are specified with parameter, not explicit category

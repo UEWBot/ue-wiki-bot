@@ -584,7 +584,7 @@ class XrefToolkit:
                 if key not in drop_params and key in item_params:
                     # "for" parameter only needed where the item is a Tech Lab ingredient
                     # TODO There should be a better way to do this...
-                    if item_name != u'Steel Beam' and item_name != u'Concrete Block' and not self.catInCategories(u'Recombinators', item.categories()):
+                    if item_name != u'Steel Beam' and item_name != u'Concrete Block' and item_name != u'Bronze Shadow Token' and item_name != u'Silver Shadow Token' and item_name != u'Laundered Donation Money (I)' and item_name != u'Laundered Donation Money (II)' and item_name != u'Laundered Donation Money (III)' and not self.catInCategories(u'Recombinators', item.categories()):
                         text = text.replace(ur'name=%s' % item_name, u'name=%s|%s=%s' % (item_name, key, item_params[key]))
                 if source not in item_params['from']:
                     wikipedia.output("Boss claims to drop %s, but is not listed on that page" % item_name)
@@ -1350,28 +1350,28 @@ class XrefToolkit:
         """
         # First, find pages that list this item as a drop
         # Starting with the list of pages that link here
-        source_list = []
+        source_set = set()
         for r in refs:
             for template,params in r.templatesWithParams():
                 if template == u'Drop':
                     if utils.paramFromParams(params, u'name') == name:
-                        source_list.append(r.titleWithoutNamespace())
+                        source_set.add(r.titleWithoutNamespace())
                 elif template == u'Mystery Gift Item':
                     gift_params = utils.paramsToDict(params)
                     if name in gift_params.values():
-                        source_list.append(r.titleWithoutNamespace())
+                        source_set.add(r.titleWithoutNamespace())
                 elif template == u'Execution Method':
                     if name in utils.paramFromParams(params, u'bonus'):
-                        source_list.append(r.titleWithoutNamespace())
+                        source_set.add(r.titleWithoutNamespace())
             # Assume any page liked to from the Favor Point page is available from the Black Market
             if r.titleWithoutNamespace() == u'Favor Point':
-                source_list.append(u'Black Market')
+                source_set.add(u'Black Market')
             # Don't call r.categories() for redirects
             elif r.isRedirectPage():
                 pass
             # If it's linked to from an event page, assume it's an event reward
             elif self.catInCategories(u'Events', r.categories()):
-                source_list.append(r.titleWithoutNamespace())
+                source_set.add(r.titleWithoutNamespace())
         # Then, find the places listed as sources in this page
         # Remove any that match from the source list, leaving missing sources
         # Count the number of sources already in the list as we go
@@ -1383,8 +1383,8 @@ class XrefToolkit:
             # Find the end of that line
             start = m.end('page')
             eol = from_param.find('\n', start)
-            if src in source_list:
-                source_list.remove(src)
+            if src in source_set:
+                source_set.remove(src)
             elif u'before' in from_param[start:eol]:
                 # We don't expect the item to be present on that page any more
                 pass
@@ -1401,10 +1401,10 @@ class XrefToolkit:
                 # Note that this is not necessarily an error, but is worth investigating
                 wikipedia.output("Page lists %s as a source, but that page doesn't list it as a drop" % src)
         # Convert from single source to a list if necessary
-        if len(source_list) > 0 and src_count == 1:
+        if len(source_set) > 0 and src_count == 1:
             text = text.replace(from_param, u'<br/>\n*' + from_param)
         # Add missing sources to the page
-        for src in source_list:
+        for src in source_set:
             text = text.replace(from_param, from_param + u'\n*[[%s]]' % src)
         return text
 

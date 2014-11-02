@@ -21,6 +21,8 @@ class Family(wikia_family.Family):
         self.namespaces[113] = { '_default': u'Mini talk', }
         self.namespaces[700] = { '_default': u'Top 10 list', }
         self.namespaces[701] = { '_default': u'Top 10 list talk', }
+        self.namespaces[828] = { '_default': u'Module', }
+        self.namespaces[829] = { '_default': u'Module talk', }
         del(self.namespaces[100]['_default'])
         del(self.namespaces[101]['_default'])
         del(self.namespaces[112]['_default'])

@@ -238,7 +238,11 @@ class XrefToolkit:
         category should be the name of the category itself.
         This function will do all the wiki markup and return the new text.
         """
-        return text + u'\n[[Category:%s]]' % category
+        str = u'\n[[Category:%s]]' % category
+        if str in text:
+            # Don't add it if it's already there
+            return text
+        return text + str
 
     def removeCategory(self, text, category):
         """
@@ -1130,8 +1134,16 @@ class XrefToolkit:
             for r in refs:
                 if self.catInCategories(u'Crates', r.categories()):
                     sources.append(u'[[%s]]' % r.titleWithoutNamespace())
+                    # Check that it's in Crate Lieutenants
+                    c = u'Crate Lieutenants'
+                    if not self.catInCategories(c, categories):
+                        text = self.appendCategory(text, c)
                 elif self.catInCategories(u'Events', r.categories()):
                     sources.append(u'[[%s]]' % r.titleWithoutNamespace())
+                    # Check that it's in Event Lieutenants
+                    c = u'Event Lieutenants'
+                    if not self.catInCategories(c, categories):
+                        text = self.appendCategory(text, c)
                 for template,params in r.templatesWithParams():
                     if template == u'Challenge Job':
                         area = r.titleWithoutNamespace()
@@ -1142,6 +1154,10 @@ class XrefToolkit:
                     elif template == u'FP Item Row':
                         if name == utils.paramFromParams(params, u'lieutenant'):
                             sources.append(u'[[Black Market]]')
+                            c = u'Favor Point Lieutenants'
+                            # Check that it's in Favor Point Lieutenants
+                            if not self.catInCategories(c, categories):
+                                text = self.appendCategory(text, c)
             for s in sources:
                 if s not in fromParam:
                     wikipedia.output("***Need to add %s" % s)

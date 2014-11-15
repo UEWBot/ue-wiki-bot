@@ -1179,6 +1179,7 @@ class XrefToolkit:
                 powerParam = utils.paramFromParams(params, u'power')
                 imageParam = utils.paramFromParams(params, u'image')
                 # Does the item have a power that affects this Lt ?
+                # TODO This is too inclusive e.g. Golden Gloves
                 if powerParam is not None and name in powerParam:
                     refItems[r.titleWithoutNamespace()] = (powerParam, imageParam)
         # Add in any that affect the entire faction

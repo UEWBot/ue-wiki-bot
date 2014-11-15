@@ -1653,6 +1653,7 @@ class XrefToolkit:
                             u'def': u'Needs Stats',
                             u'cost': u'Needs Cost',
                             u'rarity': u'Needs Rarity',
+                            u'time': u'Needs Build Time',
                             u'image': u'Needs Improvement'} #u'Needs Image'}
  
         text = self.fixNeedsCategories(text, params, categories, battle_param_map)

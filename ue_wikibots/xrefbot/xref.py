@@ -198,7 +198,7 @@ class XrefToolkit:
             if template == u'Stub':
                 pywikibot.output("Not touching stub page %s" % titleWithoutNamespace)
                 return text
-        refs = page.getReferences()
+        refs = list(page.getReferences())
         oldText = text
         #pywikibot.output("******\nIn text:\n%s" % text)
         # Note that these are effectively independent. Although the text gets changed,
@@ -1202,9 +1202,12 @@ class XrefToolkit:
                     powerParam = utils.paramFromParams(params, u'power')
                     imageParam = utils.paramFromParams(params, u'image')
                     # The only items that reference Faction Lts have a power that helps them
+                    # TODO that's no longer true (e.g. John's Gun)
                     refItems[r.title(withNamespace=False)] = (powerParam, imageParam)
         items = {}
-        for i in range(1,6):
+        i = 0
+        while True:
+            i += 1
             name_str = u'item_%d' % i
             power_str = u'item_%d_pwr' % i
             image_str = u'item_%d_img' % i
@@ -1213,6 +1216,8 @@ class XrefToolkit:
             imageParam = utils.paramFromParams(the_params, image_str)
             if nameParam:
                 items[nameParam] = (powerParam, imageParam)
+            else:
+                break
         i = len(items)
         # compare the two lists and address any mismatches
         for key in refItems.keys():

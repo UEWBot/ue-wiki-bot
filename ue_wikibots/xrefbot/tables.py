@@ -21,15 +21,7 @@ docuReplacements = {
 }
 
 # Summary message when using this module as a stand-alone script
-msg_standalone = {
-    'en': u'Robot: Create/update item summary tables',
-}
-
-# Summary message  that will be appended to the normal message when
-# cosmetic changes are made on the fly
-msg_append = {
-    'en': u'; create/update item summary tables',
-}
+summary = u'Robot: Create/update item summary tables'
 
 # Handy regular expressions
 item_templates = re.compile(u'.*\WItem')
@@ -459,15 +451,13 @@ def rarities():
     """
     # TODO Dynamically create the list from the rarity page
     rarities = []
-    page = pywikibot.Page(pywikibot.getSite(), u'Rarity')
+    page = pywikibot.Page(pywikibot.Site(), u'Rarity')
     return [u'Common', u'Uncommon', u'Rare', u'Epic', u'Legendary']
 
 class XrefBot:
     def __init__(self, generator, acceptall = False):
         self.generator = generator
         self.acceptall = acceptall
-        # Load default summary message.
-        pywikibot.setAction(pywikibot.translate(pywikibot.getSite(), msg_standalone))
 
     def update_or_create_page(self, old_page, new_text):
         """
@@ -490,12 +480,12 @@ class XrefBot:
             pywikibot.output(u'No changes necessary to %s' % old_page.title());
         else:
             if not self.acceptall:
-                choice = pywikibot.inputChoice(prompt, ['Yes', 'No', 'All'], ['y', 'N', 'a'], 'N')
+                choice = pywikibot.input_choice(u'Do you want to accept these changes?',  [('Yes', 'Y'), ('No', 'n'), ('All', 'a')], 'N')
                 if choice == 'a':
                     self.acceptall = True
             if self.acceptall or choice == 'y':
                 # Write out the new version
-                old_page.put(new_text)
+                old_page.put(new_text, summary)
 
     def update_properties_table(self):
         """
@@ -503,7 +493,7 @@ class XrefBot:
         content of the Properties category.
         """
         # Extract cost ratio table from the Fortress page
-        fortress_page = pywikibot.Page(pywikibot.getSite(), u'Fortress')
+        fortress_page = pywikibot.Page(pywikibot.Site(), u'Fortress')
         fortress_text = fortress_page.get()
         fortress_dict = parsed_fortress_table(fortress_text)
         lvl_to_ratio = fortress_cost_ratios(fortress_dict)
@@ -512,11 +502,11 @@ class XrefBot:
         # Template we're going to use
         row_template = u'Property Row'
 
-        old_page = pywikibot.Page(pywikibot.getSite(), u'Properties Table')
+        old_page = pywikibot.Page(pywikibot.Site(), u'Properties Table')
 
         rows = []
-        cat = pywikibot.Category(pywikibot.getSite(), the_cat)
-        for page in cat.articlesList(recurse=True):
+        cat = pywikibot.Category(pywikibot.Site(), the_cat)
+        for page in set(cat.articles(recurse=True)):
             new_rows = page_to_rows(page, row_template, lvl_to_ratio)
             if len(new_rows):
                 rows += new_rows
@@ -547,13 +537,13 @@ class XrefBot:
         job_row_template = u'Job Row'
         dice_row_template = u'Challenge Job Row'
 
-        job_page = pywikibot.Page(pywikibot.getSite(), u'Jobs Table')
-        dice_job_page = pywikibot.Page(pywikibot.getSite(), u'Challenge Jobs Table')
+        job_page = pywikibot.Page(pywikibot.Site(), u'Jobs Table')
+        dice_job_page = pywikibot.Page(pywikibot.Site(), u'Challenge Jobs Table')
         job_rows = []
         dice_rows = []
-        cat = pywikibot.Category(pywikibot.getSite(), u'Areas')
+        cat = pywikibot.Category(pywikibot.Site(), u'Areas')
         # One row per use of the template on a page in category
-        for page in cat.articlesList():
+        for page in list(cat.articles()):
             job_rows += page_to_rows(page, job_row_template)
             dice_rows.append(page_to_row(page, dice_row_template))
         # Start the new page text
@@ -576,16 +566,16 @@ class XrefBot:
         Creates or updates page Lieutenants Faction Rarity Table
         from the content of the Lieutenants category.
         """
-        old_page = pywikibot.Page(pywikibot.getSite(), u'Lieutenants Faction Rarity Table')
+        old_page = pywikibot.Page(pywikibot.Site(), u'Lieutenants Faction Rarity Table')
         factions = []
-        cat = pywikibot.Category(pywikibot.getSite(), u'Factions')
-        for faction in cat.articlesList():
+        cat = pywikibot.Category(pywikibot.Site(), u'Factions')
+        for faction in list(cat.articles()):
             factions.append(faction.title())
         new_text = lt_faction_rarity_header(factions)
         for rarity in rarities():
             lieutenants = {}
-	    lt_cat = pywikibot.Category(pywikibot.getSite(), u'%s Lieutenants' % rarity)
-            for lt in lt_cat.articlesList():
+	    lt_cat = pywikibot.Category(pywikibot.Site(), u'%s Lieutenants' % rarity)
+            for lt in list(lt_cat.articles()):
                 name = lt.title()
                 templatesWithParams = lt.templatesWithParams()
                 for (template, params) in templatesWithParams:
@@ -625,12 +615,12 @@ class XrefBot:
         # Go through cat_to_templ, and create/update summary page for each one
         for name, template in cat_to_templ.iteritems():
             # The current summary table page for this category
-            old_page = pywikibot.Page(pywikibot.getSite(), u'%s Table' % name)
+            old_page = pywikibot.Page(pywikibot.Site(), u'%s Table' % name)
             # The category of interest
-            cat = pywikibot.Category(pywikibot.getSite(), u'Category:%s' % name)
+            cat = pywikibot.Category(pywikibot.Site(), u'Category:%s' % name)
             # Create one row for each page in the category
             rows = {}
-            for page in cat.articlesList():
+            for page in list(cat.articles()):
                 rows[page.title()] = page_to_row(page, template)
             # Start the new page text
             new_text = summary_header(template)

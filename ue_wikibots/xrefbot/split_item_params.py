@@ -20,15 +20,7 @@ docuReplacements = {
 }
 
 # Summary message when using this module as a stand-alone script
-msg_standalone = {
-    'en': u'Robot: Split item parameter into separate items and counts',
-}
-
-# Summary message  that will be appended to the normal message when
-# cosmetic changes are made on the fly
-msg_append = {
-    'en': u'; split item parameter',
-}
+summary = u'Robot: Split item parameter into separate items and counts'
 
 # Set of REs to replace, from 3 items down to 1
 # TODO Can probably construct these in a similar way to replacement, below
@@ -43,8 +35,6 @@ class ItemBot:
     def __init__(self, generator, acceptall = False):
         self.generator = generator
         self.acceptall = acceptall
-        # Load default summary message.
-        pywikibot.setAction(pywikibot.translate(pywikibot.getSite(), msg_standalone))
         # Set of replacement strings, from 4 items down to 1
         self.replacement = []
         for n in range(1,4):
@@ -75,21 +65,21 @@ class ItemBot:
             pywikibot.output(u'No changes necessary to %s' % old_page.title());
         else:
             if not self.acceptall:
-                choice = pywikibot.inputChoice(prompt, ['Yes', 'No', 'All'], ['y', 'N', 'a'], 'N')
+                choice = pywikibot.input_choice(u'Do you want to accept these changes?',  [('Yes', 'Y'), ('No', 'n'), ('All', 'a')], 'N')
                 if choice == 'a':
                     self.acceptall = True
             if self.acceptall or choice == 'y':
                 # Write out the new version
-                old_page.put(new_text)
+                old_page.put(new_text, summary)
 
     def update_lts(self):
         """
         Creates or updates each page in the Lieutenants category.
         """
         # Update every page in the Lieutenants category
-        cat = pywikibot.Category(pywikibot.getSite(), u'Lieutenants')
+        cat = pywikibot.Category(pywikibot.Site(), u'Lieutenants')
 
-        for page in cat.articlesList(recurse=False):
+        for page in list(cat.articles(recurse=False)):
             text = page.get()
             for n in range(len(itemRe)):
                 pywikibot.output("Checking for %d item(s)\n" % (3-n))

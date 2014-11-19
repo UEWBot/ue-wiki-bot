@@ -20,15 +20,7 @@ docuReplacements = {
 }
 
 # Summary message when using this module as a stand-alone script
-msg_standalone = {
-    'en': u'Robot: Insert image parameters',
-}
-
-# Summary message  that will be appended to the normal message when
-# cosmetic changes are made on the fly
-msg_append = {
-    'en': u'; insert image parameters',
-}
+summary = u'Robot: Insert image parameters'
 
 imgRe = re.compile(ur'\|W*image\W*=\W*(?P<image>.*)')
 
@@ -40,8 +32,6 @@ class ImgBot:
     def __init__(self, generator, acceptall = False):
         self.generator = generator
         self.acceptall = acceptall
-        # Load default summary message.
-        pywikibot.setAction(pywikibot.translate(pywikibot.getSite(), msg_standalone))
 
     def add_img_param(self, text, param, new_param=None):
         """
@@ -104,11 +94,11 @@ class ImgBot:
                     break
             if changes:
                 if not self.acceptall:
-                    choice = pywikibot.inputChoice(u'Do you want to accept these changes?',  ['Yes', 'No', 'All'], ['y', 'N', 'a'], 'N')
+                    choice = pywikibot.input_choice(u'Do you want to accept these changes?',  [('Yes', 'Y'), ('No', 'n'), ('All', 'a')], 'N')
                     if choice == 'a':
                         self.acceptall = True
                 if self.acceptall or choice == 'y':
-                    page.put(text)
+                    page.put(text, summary)
             else:
                 pywikibot.output('No changes were necessary in %s' % page.title())
         except pywikibot.NoPage:
@@ -138,7 +128,7 @@ def main():
     gen = genFactory.getCombinedGenerator()
 
     if pageTitle:
-        page = pywikibot.Page(pywikibot.getSite(), ' '.join(pageTitle))
+        page = pywikibot.Page(pywikibot.Site(), ' '.join(pageTitle))
         gen = iter([page])
     if not gen:
         pywikibot.showHelp()

@@ -20,15 +20,7 @@ docuReplacements = {
 }
 
 # Summary message when using this module as a stand-alone script
-msg_standalone = {
-    'en': u'Robot: Fix cross-references and/or categories',
-}
-
-# Summary message  that will be appended to the normal message when
-# cosmetic changes are made on the fly
-msg_append = {
-    'en': u'; fix cross-references and/or categories',
-}
+summary = u'Robot: Fix cross-references and/or categories'
 
 # Copied from pywikibot.py
 Rtemplate = re.compile(ur'{{(msg:)?(?P<name>[^{\|]+?)(\|(?P<params>[^{]+?))?}}')
@@ -176,7 +168,7 @@ class XrefToolkit:
         """
         Given a wiki source code text, returns the cleaned up version.
         """
-        titleWithoutNamespace = page.titleWithoutNamespace()
+        titleWithoutNamespace = page.title(withNamespace=False)
         # Leave template pages alone
         # TODO Better to match title or category ?
         if titleWithoutNamespace.find(u'Template') != -1:
@@ -565,7 +557,7 @@ class XrefToolkit:
         Returns modified text with missing parameters added.
         """
         item_name = drop_params[u'name']
-        item = pywikibot.Page(pywikibot.getSite(), item_name)
+        item = pywikibot.Page(pywikibot.Site(), item_name)
         templatesWithParams = item.templatesWithParams()
         for (temp, params) in templatesWithParams:
             template = temp.title(withNamespace=False)
@@ -969,7 +961,7 @@ class XrefToolkit:
         # TODO implement this function
         # First, retrieve the expected cost ratios from the template
         Rrow = re.compile(ur'\|\s*(?P<level>\d+).*cost}}}\*(?P<ratio>[\d.]+)')
-        table_page = pywikibot.Page(pywikibot.getSite(), u'Template:Property Cost Table')
+        table_page = pywikibot.Page(pywikibot.Site(), u'Template:Property Cost Table')
         table_text = table_page.get()
         iterator = Rrow.finditer(table_text)
         ratios = {1:1.0}
@@ -1135,13 +1127,13 @@ class XrefToolkit:
             sources = []
             for r in refs:
                 if self.catInCategories(u'Crates', r.categories()):
-                    sources.append(u'[[%s]]' % r.titleWithoutNamespace())
+                    sources.append(u'[[%s]]' % r.title(withNamespace=False))
                     # Check that it's in Crate Lieutenants
                     c = u'Crate Lieutenants'
                     if not self.catInCategories(c, categories):
                         text = self.appendCategory(text, c)
                 elif self.catInCategories(u'Events', r.categories()):
-                    sources.append(u'[[%s]]' % r.titleWithoutNamespace())
+                    sources.append(u'[[%s]]' % r.title(withNamespace=False))
                     # Check that it's in Event Lieutenants
                     c = u'Event Lieutenants'
                     if not self.catInCategories(c, categories):
@@ -1149,7 +1141,7 @@ class XrefToolkit:
                 for temp,params in r.templatesWithParams():
                     template = temp.title(withNamespace=False)
                     if template == u'Challenge Job':
-                        area = r.titleWithoutNamespace()
+                        area = r.title(withNamespace=False)
                         job = utils.paramFromParams(params, u'name')
                         for p in params:
                             if p.startswith(u'lt_') and name in p:
@@ -1185,7 +1177,7 @@ class XrefToolkit:
                 # Does the item have a power that affects this Lt ?
                 # TODO This is too inclusive e.g. Golden Gloves
                 if powerParam is not None and name in powerParam:
-                    refItems[r.titleWithoutNamespace()] = (powerParam, imageParam)
+                    refItems[r.title(withNamespace=False)] = (powerParam, imageParam)
         # Add in any that affect the entire faction
         factionParam = utils.paramFromParams(the_params, u'faction')
         refs = faction_lts_map.refs_for(factionParam)
@@ -1196,7 +1188,7 @@ class XrefToolkit:
                     powerParam = utils.paramFromParams(params, u'power')
                     imageParam = utils.paramFromParams(params, u'image')
                     # The only items that reference Faction Lts have a power that helps them
-                    refItems[r.titleWithoutNamespace()] = (powerParam, imageParam)
+                    refItems[r.title(withNamespace=False)] = (powerParam, imageParam)
         items = {}
         for i in range(1,6):
             name_str = u'item_%d' % i
@@ -1378,23 +1370,23 @@ class XrefToolkit:
                 template = temp.title(withNamespace=False)
                 if template == u'Drop':
                     if utils.paramFromParams(params, u'name') == name:
-                        source_set.add(r.titleWithoutNamespace())
+                        source_set.add(r.title(withNamespace=False))
                 elif template == u'Mystery Gift Item':
                     gift_params = utils.paramsToDict(params)
                     if name in gift_params.values():
-                        source_set.add(r.titleWithoutNamespace())
+                        source_set.add(r.title(withNamespace=False))
                 elif template == u'Execution Method':
                     if name in utils.paramFromParams(params, u'bonus'):
-                        source_set.add(r.titleWithoutNamespace())
+                        source_set.add(r.title(withNamespace=False))
             # Assume any page liked to from the Favor Point page is available from the Black Market
-            if r.titleWithoutNamespace() == u'Favor Point':
+            if r.title(withNamespace=False) == u'Favor Point':
                 source_set.add(u'Black Market')
             # Don't call r.categories() for redirects
             elif r.isRedirectPage():
                 pass
             # If it's linked to from an event page, assume it's an event reward
             elif self.catInCategories(u'Events', r.categories()):
-                source_set.add(r.titleWithoutNamespace())
+                source_set.add(r.title(withNamespace=False))
         # Then, find the places listed as sources in this page
         # Remove any that match from the source list, leaving missing sources
         # Count the number of sources already in the list as we go
@@ -1477,7 +1469,7 @@ class XrefToolkit:
         else:
             if self.catInCategories(u'Needs Minimum Level', categories):
                 text = self.removeCategory(u'Needs Minimum Level')
-            gift_page = pywikibot.Page(pywikibot.getSite(), u'Gift')
+            gift_page = pywikibot.Page(pywikibot.Site(), u'Gift')
             iterator = Rgift.finditer(gift_page.get())
             for m in iterator:
                 if m.group('item') == name:
@@ -1558,7 +1550,7 @@ class XrefToolkit:
             if not self.catInCategories(u'Needs Unlock Criterion', categories):
                 text = self.appendCategory(text, u'Needs Unlock Criterion')
         else:
-            faction_page = pywikibot.Page(pywikibot.getSite(), faction_param)
+            faction_page = pywikibot.Page(pywikibot.Site(), faction_param)
             iterator = Rfaction.finditer(faction_page.get())
             for m in iterator:
                 if m.group('item') == name:
@@ -1673,7 +1665,7 @@ class XrefToolkit:
             if not self.catInCategories(u'Needs Unlock Criterion', categories):
                 text = self.appendCategory(text, u'Needs Unlock Criterion')
         else:
-            rank_page = pywikibot.Page(pywikibot.getSite(), u'Battle Rank')
+            rank_page = pywikibot.Page(pywikibot.Site(), u'Battle Rank')
             templatesWithParams = rank_page.templatesWithParams()
             for tmp,p in templatesWithParams:
                 t = tmp.title(withNamespace=False)
@@ -1731,7 +1723,7 @@ class XrefToolkit:
         """
         # Find the recipe on the Tech Lab page
         found = False
-        tl_page = pywikibot.Page(pywikibot.getSite(), u'Tech Lab')
+        tl_page = pywikibot.Page(pywikibot.Site(), u'Tech Lab')
         templatesWithParams = tl_page.templatesWithParams()
         for temp,pg_params in templatesWithParams:
             template = temp.title(withNamespace=False)
@@ -1819,11 +1811,9 @@ class XrefBot:
     def __init__(self, generator, acceptall = False):
         self.generator = generator
         self.acceptall = acceptall
-        # Load default summary message.
-        pywikibot.setAction(pywikibot.translate(pywikibot.getSite(), msg_standalone))
         # Find all the sub-categories of Needs Information
-        cat = pywikibot.Category(pywikibot.getSite(), u'Category:Needs Information')
-        self.specificNeeds = set(c.titleWithoutNamespace() for c in cat.subcategories(recurse=True))
+        cat = pywikibot.Category(pywikibot.Site(), u'Category:Needs Information')
+        self.specificNeeds = set(c.title(withNamespace=False) for c in cat.subcategories(recurse=True))
 
     def treat(self, page):
         try:
@@ -1841,11 +1831,11 @@ class XrefBot:
                     break
             if changes:
                 if not self.acceptall:
-                    choice = pywikibot.inputChoice(u'Do you want to accept these changes?',  ['Yes', 'No', 'All'], ['y', 'N', 'a'], 'N')
+                    choice = pywikibot.input_choice(u'Do you want to accept these changes?',  [('Yes', 'Y'), ('No', 'n'), ('All', 'a')], 'N')
                     if choice == 'a':
                         self.acceptall = True
                 if self.acceptall or choice == 'y':
-                    page.put(changedText)
+                    page.put(changedText, summary)
             else:
                 pywikibot.output('No changes were necessary in %s' % page.title())
         except pywikibot.NoPage:
@@ -1875,7 +1865,7 @@ def main():
     gen = genFactory.getCombinedGenerator()
 
     if pageTitle:
-        page = pywikibot.Page(pywikibot.getSite(), ' '.join(pageTitle))
+        page = pywikibot.Page(pywikibot.Site(), ' '.join(pageTitle))
         gen = iter([page])
 
     if not gen:

@@ -20,7 +20,7 @@ def paramFromParams(params, param):
                 return val
     return None
 
-c = pywikibot.Category(pywikibot.getSite(), u'Category:Areas')
+c = pywikibot.Category(pywikibot.Site(), u'Category:Areas')
 
 for d in c.articles():
  for t,p in d.templatesWithParams():
@@ -29,11 +29,11 @@ for d in c.articles():
    lt = paramFromParams(p,u'lieutenant')
    f = paramFromParams(p,u'faction')
    if lt != None and f != None:
-    pg = pywikibot.Page(pywikibot.getSite(), lt)
+    pg = pywikibot.Page(pywikibot.Site(), lt)
     for t1,p1 in pg.templatesWithParams():
      t1_name = t1.title(withNamespace=False)
      if u'Lieutenant' in t1_name:
       fact = paramFromParams(p1,u'faction')
       job = paramFromParams(p,u'name')
       if f != fact and f != u'None':
-       print "Job %s in area %s has lt %s and faction %s. Lt has faction %s" % (job, d.titleWithoutNamespace(), lt, f, fact)
+       print "Job %s in area %s has lt %s and faction %s. Lt has faction %s" % (job, d.title(withNamespace=False), lt, f, fact)

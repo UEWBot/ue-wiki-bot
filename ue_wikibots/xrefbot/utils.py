@@ -63,7 +63,7 @@ class ImageMap:
         Caches results for speed.
         """
         if name not in self.mapping:
-            pg = pywikibot.Page(pywikibot.getSite(), name)
+            pg = pywikibot.Page(pywikibot.Site(), name)
             # Retrieve the text of the specified page
             text = pg.get()
             # Extract the image parameter
@@ -86,7 +86,7 @@ class FactionLtRefs:
             return self.mapping[faction]
         except KeyError:
             pass
-        factionPage = pywikibot.Page(pywikibot.getSite(), u'Category:%s Lieutenants' % faction)
+        factionPage = pywikibot.Page(pywikibot.Site(), u'Category:%s Lieutenants' % faction)
         refs = list(factionPage.getReferences())
         self.mapping[faction] = refs
         return refs

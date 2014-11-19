@@ -1,18 +1,18 @@
-#! /usr//bin/python
+#! /usr/bin/python
 
 """
 Script to create useful tables on Underworld Empire Wiki
 """
 
 import sys, os, operator
-sys.path.append(os.environ['HOME'] + '/ue/ue_wikibots/pywikipedia')
+sys.path.append(os.environ['HOME'] + '/ue/ue_wikibots/core/pywikibot')
 
-import wikipedia, pagegenerators, catlib
+import pywikibot, pagegenerators
 import re, difflib
 import logging
 import utils
 
-# Stuff for the wikipedia help system
+# Stuff for the pywikibot help system
 parameterHelp = pagegenerators.parameterHelp + """\
 """
 
@@ -182,7 +182,7 @@ def summary_header(row_template):
             text += u'!span="col" data-sort-type="number" | Def\n'
             text += u'!span="col" class="unsortable" | Power\n'
     else:
-        wikipedia.output("Unexpected row template %s" % row_template)
+        pywikibot.output("Unexpected row template %s" % row_template)
 
     return text
 
@@ -280,14 +280,14 @@ def safe_house_rows(name, text, row_template):
     # Look for an "Income" line
     match = re.search(ur'Income: (.*)', text)
     if match == None:
-        wikipedia.output("Failed to find Income for %s" % name)
+        pywikibot.output("Failed to find Income for %s" % name)
         income = u'Unknown'
     else:
         income = match.group(1)
     # Look for an "Unlock" line
     match = re.search(ur'Unlocked when (.*)', text)
     if match == None:
-        wikipedia.output("Failed to find Unlock criteria for %s" % name)
+        pywikibot.output("Failed to find Unlock criteria for %s" % name)
         unlock = u'Unknown'
     else:
         unlock = match.group(1)
@@ -363,14 +363,14 @@ def fortress_rows(name, text, row_template, the_dict):
     # Look for an "Income" line
     match = re.search(ur'Income: (.*)', text)
     if match == None:
-        wikipedia.output("Failed to find Income for %s" % name)
+        pywikibot.output("Failed to find Income for %s" % name)
         income = u'Unknown'
     else:
         income = match.group(1)
     # Look for a "Build Time" line
     match = re.search(ur'Build Time: (.*)hrs per level', text)
     if match == None:
-        wikipedia.output("Failed to find Build Time for %s" % name)
+        pywikibot.output("Failed to find Build Time for %s" % name)
         time = 0
     else:
         time = int(match.group(1))
@@ -395,13 +395,14 @@ def page_to_row(page, row_template):
     templatesWithParams = page.templatesWithParams()
     row = u'{{%s|%s=%s' % (row_template, mapping[row_template], page.title())
     for (template, params) in templatesWithParams:
+        template_name = template.title(withNamespace=False)
         # We're only interested in certain templates
-        if item_templates.search(template) or template == u'Challenge Job':
+        if item_templates.search(template_name) or template_name == u'Challenge Job':
             # Pass all the item template parameters
             for param in params:
                 row += u'|%s' % param
         else:
-            match = lieutenant_templates.search(template)
+            match = lieutenant_templates.search(template_name)
             if match:
                 # Construct a rarity parameter from the template name
                 row += u'|rarity=%s' % match.group(1)
@@ -409,7 +410,7 @@ def page_to_row(page, row_template):
                 for param in params:
                     row += u'|%s' % param
     row += u'}}'
-    # wikipedia.output(u'Row is "%s"' % row)
+    # pywikibot.output(u'Row is "%s"' % row)
     return row
 
 def page_to_rows(page, row_template, high_cost_ratios={}):
@@ -420,8 +421,9 @@ def page_to_rows(page, row_template, high_cost_ratios={}):
     templatesWithParams = page.templatesWithParams()
     rows = []
     for (template, params) in templatesWithParams:
+        template_name = template.title(withNamespace=False)
         # We're only interested in certain templates
-        if job_templates.search(template):
+        if job_templates.search(template_name):
             row_stub = u'{{%s|district=%s' % (row_template, page.title())
             # Create a new row
             row = row_stub
@@ -429,10 +431,10 @@ def page_to_rows(page, row_template, high_cost_ratios={}):
             for param in params:
                 row += u'|%s' % param
             row += u'}}'
-            # wikipedia.output(u'Row is "%s"' % row)
+            # pywikibot.output(u'Row is "%s"' % row)
             # Add the new row to the list
             rows.append(row)
-        elif property_templates.search(template):
+        elif property_templates.search(template_name):
             d = utils.paramsToDict(params)
             # Figure out how many rows we need
             if u'max' in d:
@@ -441,7 +443,7 @@ def page_to_rows(page, row_template, high_cost_ratios={}):
             elif u'fp_prop'in d:
                 # All FP properties so far you just get 5 of
                 max = 5
-            elif template == u'Income Property':
+            elif template_name == u'Income Property':
                 # Can get 20 of income properties with Fortress level 10
                 max = 20
             else:
@@ -457,7 +459,7 @@ def rarities():
     """
     # TODO Dynamically create the list from the rarity page
     rarities = []
-    page = wikipedia.Page(wikipedia.getSite(), u'Rarity')
+    page = pywikibot.Page(pywikibot.getSite(), u'Rarity')
     return [u'Common', u'Uncommon', u'Rare', u'Epic', u'Legendary']
 
 class XrefBot:
@@ -465,7 +467,7 @@ class XrefBot:
         self.generator = generator
         self.acceptall = acceptall
         # Load default summary message.
-        wikipedia.setAction(wikipedia.translate(wikipedia.getSite(), msg_standalone))
+        pywikibot.setAction(pywikibot.translate(pywikibot.getSite(), msg_standalone))
 
     def update_or_create_page(self, old_page, new_text):
         """
@@ -476,19 +478,19 @@ class XrefBot:
         # Read the original content
         try:
             old_text = old_page.get()
-            wikipedia.showDiff(old_text, new_text)
+            pywikibot.showDiff(old_text, new_text)
             prompt = u'Modify this summary page ?'
-        except wikipedia.NoPage:
+        except pywikibot.NoPage:
             old_text = u''
-            wikipedia.output("Page %s does not exist" % old_page.title())
-            wikipedia.output(new_text)
+            pywikibot.output("Page %s does not exist" % old_page.title())
+            pywikibot.output(new_text)
             prompt = u'Create this summary page ?'
         # Did anything change ?
         if old_text == new_text:
-            wikipedia.output(u'No changes necessary to %s' % old_page.title());
+            pywikibot.output(u'No changes necessary to %s' % old_page.title());
         else:
             if not self.acceptall:
-                choice = wikipedia.inputChoice(prompt, ['Yes', 'No', 'All'], ['y', 'N', 'a'], 'N')
+                choice = pywikibot.inputChoice(prompt, ['Yes', 'No', 'All'], ['y', 'N', 'a'], 'N')
                 if choice == 'a':
                     self.acceptall = True
             if self.acceptall or choice == 'y':
@@ -501,7 +503,7 @@ class XrefBot:
         content of the Properties category.
         """
         # Extract cost ratio table from the Fortress page
-        fortress_page = wikipedia.Page(wikipedia.getSite(), u'Fortress')
+        fortress_page = pywikibot.Page(pywikibot.getSite(), u'Fortress')
         fortress_text = fortress_page.get()
         fortress_dict = parsed_fortress_table(fortress_text)
         lvl_to_ratio = fortress_cost_ratios(fortress_dict)
@@ -510,10 +512,10 @@ class XrefBot:
         # Template we're going to use
         row_template = u'Property Row'
 
-        old_page = wikipedia.Page(wikipedia.getSite(), u'Properties Table')
+        old_page = pywikibot.Page(pywikibot.getSite(), u'Properties Table')
 
         rows = []
-        cat = catlib.Category(wikipedia.getSite(), the_cat)
+        cat = pywikibot.Category(pywikibot.getSite(), the_cat)
         for page in cat.articlesList(recurse=True):
             new_rows = page_to_rows(page, row_template, lvl_to_ratio)
             if len(new_rows):
@@ -524,7 +526,7 @@ class XrefBot:
             elif page.title() == u'Safe House':
                 rows += safe_house_rows(page.title(), page.get(), row_template)
             else:
-                wikipedia.output("Unexpected non-template property page %s" % page.title())
+                pywikibot.output("Unexpected non-template property page %s" % page.title())
 
         # Start the new page text
         new_text = summary_header(row_template)
@@ -545,11 +547,11 @@ class XrefBot:
         job_row_template = u'Job Row'
         dice_row_template = u'Challenge Job Row'
 
-        job_page = wikipedia.Page(wikipedia.getSite(), u'Jobs Table')
-        dice_job_page = wikipedia.Page(wikipedia.getSite(), u'Challenge Jobs Table')
+        job_page = pywikibot.Page(pywikibot.getSite(), u'Jobs Table')
+        dice_job_page = pywikibot.Page(pywikibot.getSite(), u'Challenge Jobs Table')
         job_rows = []
         dice_rows = []
-        cat = catlib.Category(wikipedia.getSite(), u'Areas')
+        cat = pywikibot.Category(pywikibot.getSite(), u'Areas')
         # One row per use of the template on a page in category
         for page in cat.articlesList():
             job_rows += page_to_rows(page, job_row_template)
@@ -574,20 +576,21 @@ class XrefBot:
         Creates or updates page Lieutenants Faction Rarity Table
         from the content of the Lieutenants category.
         """
-        old_page = wikipedia.Page(wikipedia.getSite(), u'Lieutenants Faction Rarity Table')
+        old_page = pywikibot.Page(pywikibot.getSite(), u'Lieutenants Faction Rarity Table')
         factions = []
-        cat = catlib.Category(wikipedia.getSite(), u'Factions')
+        cat = pywikibot.Category(pywikibot.getSite(), u'Factions')
         for faction in cat.articlesList():
             factions.append(faction.title())
         new_text = lt_faction_rarity_header(factions)
         for rarity in rarities():
             lieutenants = {}
-	    lt_cat = catlib.Category(wikipedia.getSite(), u'%s Lieutenants' % rarity)
+	    lt_cat = pywikibot.Category(pywikibot.getSite(), u'%s Lieutenants' % rarity)
             for lt in lt_cat.articlesList():
                 name = lt.title()
                 templatesWithParams = lt.templatesWithParams()
                 for (template, params) in templatesWithParams:
-                    match = lieutenant_templates.search(template)
+                    template_name = template.title(withNamespace=False)
+                    match = lieutenant_templates.search(template_name)
                     if match:
                         faction = oneParam(params, u'faction')
                         if faction not in lieutenants:
@@ -622,9 +625,9 @@ class XrefBot:
         # Go through cat_to_templ, and create/update summary page for each one
         for name, template in cat_to_templ.iteritems():
             # The current summary table page for this category
-            old_page = wikipedia.Page(wikipedia.getSite(), u'%s Table' % name)
+            old_page = pywikibot.Page(pywikibot.getSite(), u'%s Table' % name)
             # The category of interest
-            cat = catlib.Category(wikipedia.getSite(), u'Category:%s' % name)
+            cat = pywikibot.Category(pywikibot.getSite(), u'Category:%s' % name)
             # Create one row for each page in the category
             rows = {}
             for page in cat.articlesList():
@@ -654,5 +657,5 @@ if __name__ == "__main__":
     try:
         main()
     finally:
-        wikipedia.stopme()
+        pywikibot.stopme()
 

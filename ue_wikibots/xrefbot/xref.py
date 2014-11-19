@@ -5,13 +5,13 @@ Script to fix up categories and cross-references between pages on UE Wiki.
 """
 
 import sys, os, operator
-sys.path.append(os.environ['HOME'] + '/ue/ue_wikibots/pywikipedia')
+sys.path.append(os.environ['HOME'] + '/ue/ue_wikibots/core/pywikibot')
 
-import wikipedia, pagegenerators, catlib
+import pywikibot, pagegenerators
 import re, difflib
 import utils
 
-# Stuff for the wikipedia help system
+# Stuff for the pywikibot help system
 parameterHelp = pagegenerators.parameterHelp + """\
 """
 
@@ -30,7 +30,7 @@ msg_append = {
     'en': u'; fix cross-references and/or categories',
 }
 
-# Copied from wikipedia.py
+# Copied from pywikibot.py
 Rtemplate = re.compile(ur'{{(msg:)?(?P<name>[^{\|]+?)(\|(?P<params>[^{]+?))?}}')
 # Modified from the above
 namedtemplate = (ur'{{(msg:)?(%s[^{\|]+?)(\|(?P<params>[^{]+?))?}}')
@@ -134,8 +134,8 @@ def timeParamsMatch(param1, param2):
     Rvalue = re.compile(ur'(?P<value>\d*)\s*(?P<unit>\w*)')
     g1 = Rvalue.match(param1)
     g2 = Rvalue.match(param2)
-    #wikipedia.output("%s %s" % (g1.group('value'), g1.group('unit')))
-    #wikipedia.output("%s %s" % (g2.group('value'), g2.group('unit')))
+    #pywikibot.output("%s %s" % (g1.group('value'), g1.group('unit')))
+    #pywikibot.output("%s %s" % (g2.group('value'), g2.group('unit')))
     if g1.group('value') != g2.group('value'):
         return False
     if g1.group('unit') == 'd' and 'day' in g2.group('unit'):
@@ -180,20 +180,21 @@ class XrefToolkit:
         # Leave template pages alone
         # TODO Better to match title or category ?
         if titleWithoutNamespace.find(u'Template') != -1:
-            wikipedia.output("Not touching template page %s" % titleWithoutNamespace)
+            pywikibot.output("Not touching template page %s" % titleWithoutNamespace)
             return text
         # Note that this only gets explicit categories written into the page text,
         # not those added by templates.
         categories = page.categories()
-        templatesWithParams = page.templatesWithParams()
+        tmp = page.templatesWithParams()
+        templatesWithParams = [(t.title(withNamespace=False),p) for (t,p) in tmp]
         # Don't do anything to stub pages
         for template,params in templatesWithParams:
             if template == u'Stub':
-                wikipedia.output("Not touching stub page %s" % titleWithoutNamespace)
+                pywikibot.output("Not touching stub page %s" % titleWithoutNamespace)
                 return text
         refs = page.getReferences()
         oldText = text
-        #wikipedia.output("******\nIn text:\n%s" % text)
+        #pywikibot.output("******\nIn text:\n%s" % text)
         # Note that these are effectively independent. Although the text gets changed,
         # the categories, templates, and parameters are not re-generated after each call
         text = self.fixEventBoss(titleWithoutNamespace, text, categories, templatesWithParams)
@@ -205,8 +206,8 @@ class XrefToolkit:
         text = self.fixClass(text, categories, templatesWithParams)
         text = self.fixTechLab(titleWithoutNamespace, text, categories, templatesWithParams)
         text = self.fixArea(titleWithoutNamespace, text, categories, templatesWithParams)
-        #wikipedia.output("******\nOld text:\n%s" % oldText)
-        #wikipedia.output("******\nIn text:\n%s" % text)
+        #pywikibot.output("******\nOld text:\n%s" % oldText)
+        #pywikibot.output("******\nIn text:\n%s" % text)
         # Just comparing oldText with text wasn't sufficient
         changes = False
         for diffline in difflib.ndiff(oldText.splitlines(), text.splitlines()):
@@ -215,10 +216,10 @@ class XrefToolkit:
                 break
         if changes:
             print
-            wikipedia.output(text)
+            pywikibot.output(text)
         if self.debug:
             print
-            wikipedia.showDiff(oldText, text)
+            pywikibot.showDiff(oldText, text)
         return text
 
     # Now a load of utility methods
@@ -364,7 +365,7 @@ class XrefToolkit:
     def parametersFromTemplate(self, templateText):
         """
         Returns the list of parameters in templateText.
-        This is copied extensively from wikipedia's templateWithParams()
+        This is copied extensively from pywikibot's templateWithParams()
         """
         params = []
         match = Rtemplate.search(templateText)
@@ -372,7 +373,7 @@ class XrefToolkit:
             paramString = match.group('params')
             if paramString:
                 Rlink = re.compile(ur'\[\[[^\]]+\]\]')
-                marker2 = wikipedia.findmarker(templateText,  u'##', u'#')
+                marker2 = pywikibot.findmarker(templateText,  u'##', u'#')
                 Rmarker2 = re.compile(ur'%s(\d+)%s' % (marker2, marker2))
                 # Replace links to markers
                 links = {}
@@ -423,11 +424,11 @@ class XrefToolkit:
         categoryR = re.compile(r'\[\[Category:.*', re.MULTILINE|re.DOTALL)
         match = categoryR.search(text)
         if match:
-            wikipedia.output("Adding block before categories")
+            pywikibot.output("Adding block before categories")
             # Page has categories, so add the Uses template before they start
             text = text[:match.start()] + block + u'\n' + text[match.start():]
         else:
-            wikipedia.output("Adding block at end of page")
+            pywikibot.output("Adding block at end of page")
             # Page has no categories, so just add Uses template to the end
             text += block
         return text
@@ -448,11 +449,11 @@ class XrefToolkit:
         cat_matches = self.catInCategories(category, categories)
         # Do the two agree ?
         if template_matches and (not cat_matches):
-            wikipedia.output("Page uses a %s template but isn't in category %s" % (template, category))
+            pywikibot.output("Page uses a %s template but isn't in category %s" % (template, category))
             # This is easy - just append a category line
             text = self.appendCategory(text, category)
         elif (not template_matches) and cat_matches:
-            wikipedia.output("Page does not use a %s template but is in category %s" % (template, category))
+            pywikibot.output("Page does not use a %s template but is in category %s" % (template, category))
             # Remove the category
             text = Rcat.sub('', text)
         return text
@@ -564,10 +565,11 @@ class XrefToolkit:
         Returns modified text with missing parameters added.
         """
         item_name = drop_params[u'name']
-        item = wikipedia.Page(wikipedia.getSite(), item_name)
+        item = pywikibot.Page(pywikibot.getSite(), item_name)
         templatesWithParams = item.templatesWithParams()
-        for (template, params) in templatesWithParams:
-            #wikipedia.output("Template %s" % template)
+        for (temp, params) in templatesWithParams:
+            template = temp.title(withNamespace=False)
+            #pywikibot.output("Template %s" % template)
             # TODO Clean this code up
             if (template.find(u'Item') != -1) or (template == u'Ingredient'):
                 item_params = utils.paramsToDict(params)
@@ -579,7 +581,7 @@ class XrefToolkit:
                         continue
                     elif not dropParamsMatch(drop_params[key], item_params[key]):
                         # TODO Should be able to fix some of them at least...
-                        wikipedia.output("Drop parameter mismatch for %s parameter of item %s (%s vs %s)" % (key, item_name, item_params[key], drop_params[key]))
+                        pywikibot.output("Drop parameter mismatch for %s parameter of item %s (%s vs %s)" % (key, item_name, item_params[key], drop_params[key]))
                 # Then check for any that may be missing
                 for key in [u'name', u'image', u'atk', u'def', u'type']:
                     if key not in drop_params and key in item_params:
@@ -591,7 +593,7 @@ class XrefToolkit:
                     if item_name != u'Steel Beam' and item_name != u'Concrete Block' and item_name != u'Bronze Shadow Token' and item_name != u'Silver Shadow Token' and item_name != u'Laundered Donation Money (I)' and item_name != u'Laundered Donation Money (II)' and item_name != u'Laundered Donation Money (III)' and not self.catInCategories(u'Recombinators', item.categories()):
                         text = text.replace(ur'name=%s' % item_name, u'name=%s|%s=%s' % (item_name, key, item_params[key]))
                 if source not in item_params['from']:
-                    wikipedia.output("Boss claims to drop %s, but is not listed on that page" % item_name)
+                    pywikibot.output("Boss claims to drop %s, but is not listed on that page" % item_name)
             elif template.find(u'Lieutenant') != -1:
                 item_params = utils.paramsToDict(params)
                 for key in drop_params.keys():
@@ -607,11 +609,11 @@ class XrefToolkit:
                     else:
                         ip = item_params[key]
                     if not dropParamsMatch(dp, ip):
-                        wikipedia.output("Drop parameter mismatch for %s parameter of item %s (%s vs %s)" % (key, item_name, dp, ip))
+                        pywikibot.output("Drop parameter mismatch for %s parameter of item %s (%s vs %s)" % (key, item_name, dp, ip))
                 if source not in item_params['from']:
-                    wikipedia.output("Boss claims to drop %s, but is not listed on that page" % item_name)
+                    pywikibot.output("Boss claims to drop %s, but is not listed on that page" % item_name)
             elif (template != u'Job Link') and (template != u'For') and (template != u'Sic'):
-                wikipedia.output("Ignoring template %s" % template)
+                pywikibot.output("Ignoring template %s" % template)
         return text
 
     def fixEventBoss(self, name, text, categories, templatesWithParams):
@@ -663,7 +665,7 @@ class XrefToolkit:
 
         # Check core category
         if job_boss == tl_boss:
-            wikipedia.output("Boss isn't in exactly one category of Job Bosses and Tech Lab Bosses")
+            pywikibot.output("Boss isn't in exactly one category of Job Bosses and Tech Lab Bosses")
 
         # Check each drop
         for (template, params) in templatesWithParams:
@@ -676,10 +678,10 @@ class XrefToolkit:
         length = len(text[start:end])
         if self.catInCategories(u'Needs Completion Dialogue', categories):
             if tl_boss:
-                wikipedia.output("Tech Lab bosses should never be categorised Needs Completion Dialogue")
+                pywikibot.output("Tech Lab bosses should never be categorised Needs Completion Dialogue")
                 text = self.removeCategory(text, u'Needs Completion Dialogue')
             elif (start != -1) and (length > 0):
-                wikipedia.output("Non-empty completion dialogue section found despite Needs Completion Dialogue category")
+                pywikibot.output("Non-empty completion dialogue section found despite Needs Completion Dialogue category")
                 text = self.removeCategory(text, u'Needs Completion Dialogue')
         elif (start == -1) or (length == 0):
             # Section not present or empty
@@ -698,7 +700,7 @@ class XrefToolkit:
             if start != -1:
                 # There is a Rewards section
                 # TODO Check for actual content - may just have sub-headers
-                wikipedia.output("Non-empty Rewards section found despite Needs Rewards category")
+                pywikibot.output("Non-empty Rewards section found despite Needs Rewards category")
         elif start == -1:
             # Section not present
             text = self.appendCategory(text, u'Needs Rewards')
@@ -708,7 +710,7 @@ class XrefToolkit:
             if start != -1:
                 # There is a Stages section
                 # TODO Check for actual content - may just have sub-headers
-                wikipedia.output("Non-empty Stages section found despite Needs Stages category")
+                pywikibot.output("Non-empty Stages section found despite Needs Stages category")
         elif start == -1:
             # Section not present
             text = self.appendCategory(text, u'Needs Stages')
@@ -718,7 +720,7 @@ class XrefToolkit:
             if start != -1:
                 # There is a Basic Information section
                 # TODO Check for the actual time limit line
-                wikipedia.output("Non-empty Basic Information section found despite Needs Time Limit category")
+                pywikibot.output("Non-empty Basic Information section found despite Needs Time Limit category")
         elif start == -1:
             # Section not present
             text = self.appendCategory(text, u'Needs Time Limit')
@@ -793,7 +795,7 @@ class XrefToolkit:
             elif template == u'Challenge Job':
                 missing_params |= missingParams(params, common_param_map.keys() + xp_pair_param_map.keys() + challenge_param_map.keys())
                 # TODO Check the LT rarities
-        wikipedia.output("Set of missing job parameters is %s" % missing_params)
+        pywikibot.output("Set of missing job parameters is %s" % missing_params)
         # Ensure the Needs categories are correct
         text = self.fixNeedsCats(text, missing_params, categories, dict(common_param_map.items() + job_param_map.items() + challenge_param_map.items()))
 
@@ -829,7 +831,7 @@ class XrefToolkit:
                 # Find this item on the page
                 name = utils.paramFromParams(params, u'name')
                 # This can take a while, so reassure the user
-                wikipedia.output("Checking %s" % name)
+                pywikibot.output("Checking %s" % name)
                 # Is it a historical recipe ?
                 recipe_start = text.find(name)
                 if recipe_start > start:
@@ -853,8 +855,8 @@ class XrefToolkit:
                                 text = text[:recipe_start] + new_part
                             elif image != part_img:
                                 # TODO Replace the image with the one from the ingredient page
-                                wikipedia.output("Image mismatch. %s has %s, %s has %s" % (name, part_img, part, image))
-        wikipedia.output("Set of missing recipe parameters is %s" % missing_params)
+                                pywikibot.output("Image mismatch. %s has %s, %s has %s" % (name, part_img, part, image))
+        pywikibot.output("Set of missing recipe parameters is %s" % missing_params)
         # Ensure the Needs categories are correct
         text = self.fixNeedsCats(text, missing_params, categories, recipe_param_map)
 
@@ -908,7 +910,7 @@ class XrefToolkit:
                 level = utils.paramFromParams(params, u'level')
                 if level is not None:
                     if (level == old_level) and (level != u'1'):
-                        wikipedia.output("copy-paste error for skill level %s (%s) ?" % (level, params))
+                        pywikibot.output("copy-paste error for skill level %s (%s) ?" % (level, params))
                     old_level = level
                 missing_params |= missingParams(params, skill_param_map.keys())
         # Ensure the Needs categories are correct
@@ -967,7 +969,7 @@ class XrefToolkit:
         # TODO implement this function
         # First, retrieve the expected cost ratios from the template
         Rrow = re.compile(ur'\|\s*(?P<level>\d+).*cost}}}\*(?P<ratio>[\d.]+)')
-        table_page = wikipedia.Page(wikipedia.getSite(), u'Template:Property Cost Table')
+        table_page = pywikibot.Page(pywikibot.getSite(), u'Template:Property Cost Table')
         table_text = table_page.get()
         iterator = Rrow.finditer(table_text)
         ratios = {1:1.0}
@@ -987,7 +989,7 @@ class XrefToolkit:
         for level,cost in costs.iteritems():
             expected_cost = base_cost * ratios[level]
             if cost != expected_cost:
-                wikipedia.output("Level %d cost of %d != expected %d" % (level, cost, expected_cost))
+                pywikibot.output("Level %d cost of %d != expected %d" % (level, cost, expected_cost))
         return text
 
     def fixProperty(self, name, text, categories, templatesWithParams):
@@ -1036,7 +1038,7 @@ class XrefToolkit:
         if fp_prop:
             build_time = utils.paramFromParams(the_params, u'time')
             if build_time:
-                wikipedia.output("FP property has build time!")
+                pywikibot.output("FP property has build time!")
         else:
             prop_param_map[u'time'] = u'Needs Build Time'
  
@@ -1061,7 +1063,7 @@ class XrefToolkit:
         for template,params in templatesWithParams:
             # Find the templates we're interested in
             if template == u'Lieutenant':
-                wikipedia.output("Directly uses Lieutenant template")
+                pywikibot.output("Directly uses Lieutenant template")
 
             if template.find(u'Lab') != -1:
                 is_tech_lab_item = True
@@ -1094,12 +1096,12 @@ class XrefToolkit:
             p = param.rstrip()
             if p[-1] == u'=':
                 if u'atk_' in p or u'def_' in p or u'pwr_' in p:
-                    wikipedia.output("Nuking empty parameter %s" % param)
+                    pywikibot.output("Nuking empty parameter %s" % param)
                     text = text.replace(u'|%s' % p, '')
                     to_nuke.append(param)
             elif p.startswith(u'items'):
-                wikipedia.output("Page has an items parameter")
-                wikipedia.output("%s" % (u'|%s' % p))
+                pywikibot.output("Page has an items parameter")
+                pywikibot.output("%s" % (u'|%s' % p))
                 text = text.replace(u'|%s' % p, '')
                 to_nuke.append(param)
         for i in to_nuke:
@@ -1144,7 +1146,8 @@ class XrefToolkit:
                     c = u'Event Lieutenants'
                     if not self.catInCategories(c, categories):
                         text = self.appendCategory(text, c)
-                for template,params in r.templatesWithParams():
+                for temp,params in r.templatesWithParams():
+                    template = temp.title(withNamespace=False)
                     if template == u'Challenge Job':
                         area = r.titleWithoutNamespace()
                         job = utils.paramFromParams(params, u'name')
@@ -1160,7 +1163,7 @@ class XrefToolkit:
                                 text = self.appendCategory(text, c)
             for s in sources:
                 if s not in fromParam:
-                    wikipedia.output("***Need to add %s" % s)
+                    pywikibot.output("***Need to add %s" % s)
                     # First convert a single item to a list
                     if not u'\n' in fromParam:
                         text = text.replace(fromParam, u'<br/>\n*' + fromParam)
@@ -1175,7 +1178,8 @@ class XrefToolkit:
         # Check for any items that have a power that affects this Lt
         refItems = {}
         for r in refs:
-            for template,params in r.templatesWithParams():
+            for temp,params in r.templatesWithParams():
+                template = temp.title(withNamespace=False)
                 powerParam = utils.paramFromParams(params, u'power')
                 imageParam = utils.paramFromParams(params, u'image')
                 # Does the item have a power that affects this Lt ?
@@ -1186,7 +1190,8 @@ class XrefToolkit:
         factionParam = utils.paramFromParams(the_params, u'faction')
         refs = faction_lts_map.refs_for(factionParam)
         for r in refs:
-            for template,params in r.templatesWithParams():
+            for temp,params in r.templatesWithParams():
+                template = temp.title(withNamespace=False)
                 if (template.find(u'Item') != -1):
                     powerParam = utils.paramFromParams(params, u'power')
                     imageParam = utils.paramFromParams(params, u'image')
@@ -1208,15 +1213,15 @@ class XrefToolkit:
             if key in items:
                 # Compare the details
                 if refItems[key][0] != items[key][0]:
-                    wikipedia.output("Mismatch in power for %s - %s vs %s" % (key, refItems[key][0], items[key][0]))
+                    pywikibot.output("Mismatch in power for %s - %s vs %s" % (key, refItems[key][0], items[key][0]))
                     pattern = utils.escapeStr(items[key][0])
                     text = re.sub(pattern, refItems[key][0], text)
                 if refItems[key][1] != items[key][1]:
-                    wikipedia.output("Mismatch in image for %s - %s vs %s" % (key, refItems[key][1], items[key][1]))
+                    pywikibot.output("Mismatch in image for %s - %s vs %s" % (key, refItems[key][1], items[key][1]))
                     pattern = utils.escapeStr(items[key][1])
                     text = re.sub(pattern, refItems[key][1], text)
             else:
-                wikipedia.output("Missing item %s which gives %s" % (key, refItems[key][0]))
+                pywikibot.output("Missing item %s which gives %s" % (key, refItems[key][0]))
                 # Add the item. No way to determine which item should be which
                 i += 1
                 #(temp, start, end) = self.findTemplate(text, the_template)
@@ -1288,7 +1293,7 @@ class XrefToolkit:
         for template,params in templatesWithParams:
             # Find the templates we're interested in
             if template == u'Item':
-                wikipedia.output("Directly uses Item template")
+                pywikibot.output("Directly uses Item template")
 
             if template.find(u'Lab') != -1:
                 is_tech_lab_item = True
@@ -1325,7 +1330,7 @@ class XrefToolkit:
         # Check for explicit categories that should be implicit
         for cat in implicit_categories:
             if self.catInCategories(cat, categories):
-                wikipedia.output("Explictly in implicit category %s" % cat)
+                pywikibot.output("Explictly in implicit category %s" % cat)
                 text = self.removeCategory(text, cat)
 
         # __NOWYSIWYG__
@@ -1369,7 +1374,8 @@ class XrefToolkit:
         # Starting with the list of pages that link here
         source_set = set()
         for r in refs:
-            for template,params in r.templatesWithParams():
+            for temp,params in r.templatesWithParams():
+                template = temp.title(withNamespace=False)
                 if template == u'Drop':
                     if utils.paramFromParams(params, u'name') == name:
                         source_set.add(r.titleWithoutNamespace())
@@ -1416,7 +1422,7 @@ class XrefToolkit:
                 pass
             else:
                 # Note that this is not necessarily an error, but is worth investigating
-                wikipedia.output("Page lists %s as a source, but that page doesn't list it as a drop" % src)
+                pywikibot.output("Page lists %s as a source, but that page doesn't list it as a drop" % src)
         # Convert from single source to a list if necessary
         if len(source_set) > 0 and src_count == 1:
             text = text.replace(from_param, u'<br/>\n*' + from_param)
@@ -1451,7 +1457,7 @@ class XrefToolkit:
         else:
             # Check that the type is one we expect
             if oneCap(type_param) not in types:
-                wikipedia.output("Unexpected type '%s'" % type_param)
+                pywikibot.output("Unexpected type '%s'" % type_param)
                 # Change it to Needs Type
                 # Note that this replaces every instance of the text in type_param...
                 text.replace(type_param, cat)
@@ -1471,12 +1477,12 @@ class XrefToolkit:
         else:
             if self.catInCategories(u'Needs Minimum Level', categories):
                 text = self.removeCategory(u'Needs Minimum Level')
-            gift_page = wikipedia.Page(wikipedia.getSite(), u'Gift')
+            gift_page = pywikibot.Page(pywikibot.getSite(), u'Gift')
             iterator = Rgift.finditer(gift_page.get())
             for m in iterator:
                 if m.group('item') == name:
                     if m.group('level') != from_param:
-                        wikipedia.output("Minimum level mismatch - Gift page says %s, this page says %s" % (m.group('level'), from_param))
+                        pywikibot.output("Minimum level mismatch - Gift page says %s, this page says %s" % (m.group('level'), from_param))
         return text
 
     def fixGiftItem(self, name, text, params, categories):
@@ -1552,7 +1558,7 @@ class XrefToolkit:
             if not self.catInCategories(u'Needs Unlock Criterion', categories):
                 text = self.appendCategory(text, u'Needs Unlock Criterion')
         else:
-            faction_page = wikipedia.Page(wikipedia.getSite(), faction_param)
+            faction_page = pywikibot.Page(pywikibot.getSite(), faction_param)
             iterator = Rfaction.finditer(faction_page.get())
             for m in iterator:
                 if m.group('item') == name:
@@ -1616,25 +1622,27 @@ class XrefToolkit:
         area_param = utils.paramFromParams(params, u'district')
         if level_param == None:
             if area_param == None:
-                wikipedia.output("Missing both level and district parameters")
+                pywikibot.output("Missing both level and district parameters")
                 if not self.catInCategories(u'Needs Unlock Criterion', categories):
                     text = self.appendCategory(text, u'Needs Unlock Criterion')
         else:
             if area_param is not None:
-                wikipedia.output("Both level and district parameters are present")
+                pywikibot.output("Both level and district parameters are present")
 
         # Ensure that daily items are specified with parameter, not explicit category
         cat = u'Daily Rewards'
         if self.catInCategories(cat, categories):
-            wikipedia.output("Explictly in implicit category %s" % cat)
+            pywikibot.output("Explictly in implicit category %s" % cat)
             text = self.removeCategory(text, cat)
-            # Add a daily parameter, with value yes
-            # Note that this just finds the first instance of params...
-            start = text.find(params)
-            if start != -1:
-                text = text[0:start] + u'|daily=yes' + text[start:]
-            else:
-                assert 0, "Failed to find params %s" % params
+            # Add a daily parameter, with value yes if not already present
+            daily_param = utils.paramFromParams(params, u'daily')
+            if daily_param == None:
+                # Note that this just finds the first instance of params[0]...
+                start = text.find(params[0])
+                if start != -1:
+                    text = text[0:start] + u'daily=yes|' + text[start:]
+                else:
+                    assert 0, "Failed to find params %s" % params
 
         # Check type param
         text = self.fixItemType(text, params, categories)
@@ -1665,14 +1673,15 @@ class XrefToolkit:
             if not self.catInCategories(u'Needs Unlock Criterion', categories):
                 text = self.appendCategory(text, u'Needs Unlock Criterion')
         else:
-            rank_page = wikipedia.Page(wikipedia.getSite(), u'Battle Rank')
+            rank_page = pywikibot.Page(pywikibot.getSite(), u'Battle Rank')
             templatesWithParams = rank_page.templatesWithParams()
-            for t,p in templatesWithParams:
+            for tmp,p in templatesWithParams:
+                t = tmp.title(withNamespace=False)
                 if t == u'Battle Rank List':
                     rank = utils.paramFromParams(u'number',p)
                     item = utils.paramFromParams(u'reward',p)
                     if item == u'[[%s]]' % name and rank != rank_param:
-                        wikipedia.output("Minimum battle rank mismatch - Battle Rank page says %s, this page says %s" % (rank, rank_param))
+                        pywikibot.output("Minimum battle rank mismatch - Battle Rank page says %s, this page says %s" % (rank, rank_param))
 
         # Check type param
         text = self.fixItemType(text, params, categories)
@@ -1722,9 +1731,10 @@ class XrefToolkit:
         """
         # Find the recipe on the Tech Lab page
         found = False
-        tl_page = wikipedia.Page(wikipedia.getSite(), u'Tech Lab')
+        tl_page = pywikibot.Page(pywikibot.getSite(), u'Tech Lab')
         templatesWithParams = tl_page.templatesWithParams()
-        for template,pg_params in templatesWithParams:
+        for temp,pg_params in templatesWithParams:
+            template = temp.title(withNamespace=False)
             if template.find(u'Recipe') != -1:
                 recipe_dict = utils.paramsToDict(pg_params)
                 if recipe_dict[u'name'] == name:
@@ -1732,7 +1742,7 @@ class XrefToolkit:
                     found = True
                     break
         if not found:
-            wikipedia.output("Tech Lab item not on the Tech Lab page")
+            pywikibot.output("Tech Lab item not on the Tech Lab page")
 
         # Now we can cross-check between the two
         # Page template has atk, def, image, and description
@@ -1746,19 +1756,19 @@ class XrefToolkit:
             img_param = utils.paramFromParams(params, u'image')
             # TODO Insert missing image
             if img_param is not None and img_param != recipe_dict[u'image']:
-                wikipedia.output("Image parameter mismatch - %s in page, %s on Tech Lab page" % (img_param, recipe_dict[u'image']))
+                pywikibot.output("Image parameter mismatch - %s in page, %s on Tech Lab page" % (img_param, recipe_dict[u'image']))
 
         # TODO Add Needs Build Time category if appropriate
 
         # Compare atk
         atk_param = utils.paramFromParams(params, u'atk')
         if atk_param is not None and atk_param != recipe_dict[u'atk']:
-            wikipedia.output("Attack parameter mismatch - %s in page, %s on Tech Lab page" % (atk_param, recipe_dict[u'atk']))
+            pywikibot.output("Attack parameter mismatch - %s in page, %s on Tech Lab page" % (atk_param, recipe_dict[u'atk']))
 
         # Compare def
         def_param = utils.paramFromParams(params, u'def')
         if def_param is not None and def_param != recipe_dict[u'def']:
-            wikipedia.output("Defence parameter mismatch - %s in page, %s on Tech Lab page" % (def_param, recipe_dict[u'atk']))
+            pywikibot.output("Defence parameter mismatch - %s in page, %s on Tech Lab page" % (def_param, recipe_dict[u'atk']))
 
         # Check that num_parts is right, if present
         num_parts = utils.paramFromParams(lab_params, u'num_parts')
@@ -1780,7 +1790,7 @@ class XrefToolkit:
                 total += part_num
         if total != num_parts:
             # TODO Fix num_parts, if present, else flag missing ingredient(s)
-            wikipedia.output("Calculated %d parts. num_parts is %d" % (total, num_parts))
+            pywikibot.output("Calculated %d parts. num_parts is %d" % (total, num_parts))
 
         # Check the Lab parameters against the Recipe parameters
         lab_keys = set(lab_dict.keys())
@@ -1810,17 +1820,17 @@ class XrefBot:
         self.generator = generator
         self.acceptall = acceptall
         # Load default summary message.
-        wikipedia.setAction(wikipedia.translate(wikipedia.getSite(), msg_standalone))
+        pywikibot.setAction(pywikibot.translate(pywikibot.getSite(), msg_standalone))
         # Find all the sub-categories of Needs Information
-        cat = catlib.Category(wikipedia.getSite(), u'Category:Needs Information')
+        cat = pywikibot.Category(pywikibot.getSite(), u'Category:Needs Information')
         self.specificNeeds = set(c.titleWithoutNamespace() for c in cat.subcategories(recurse=True))
 
     def treat(self, page):
         try:
             # Show the title of the page we're working on.
             # Highlight the title in purple.
-            wikipedia.output(u"\n\n>>> \03{lightpurple}%s\03{default} <<<" % page.title())
-            xrToolkit = XrefToolkit(page.site(), self.specificNeeds, debug = True)
+            pywikibot.output(u"\n\n>>> \03{lightpurple}%s\03{default} <<<" % page.title())
+            xrToolkit = XrefToolkit(page.site, self.specificNeeds, debug = True)
             changedText = xrToolkit.change(page.get(), page)
             # TODO Modify to treat just whitespace as unchanged
             # Just comparing changedText with page.get() wasn't sufficient
@@ -1831,19 +1841,19 @@ class XrefBot:
                     break
             if changes:
                 if not self.acceptall:
-                    choice = wikipedia.inputChoice(u'Do you want to accept these changes?',  ['Yes', 'No', 'All'], ['y', 'N', 'a'], 'N')
+                    choice = pywikibot.inputChoice(u'Do you want to accept these changes?',  ['Yes', 'No', 'All'], ['y', 'N', 'a'], 'N')
                     if choice == 'a':
                         self.acceptall = True
                 if self.acceptall or choice == 'y':
                     page.put(changedText)
             else:
-                wikipedia.output('No changes were necessary in %s' % page.title())
-        except wikipedia.NoPage:
-            wikipedia.output("Page %s does not exist?!" % page.aslink())
-        except wikipedia.IsRedirectPage:
-            wikipedia.output("Page %s is a redirect; skipping." % page.aslink())
-        except wikipedia.LockedPage:
-            wikipedia.output("Page %s is locked?!" % page.aslink())
+                pywikibot.output('No changes were necessary in %s' % page.title())
+        except pywikibot.NoPage:
+            pywikibot.output("Page %s does not exist?!" % page.aslink())
+        except pywikibot.IsRedirectPage:
+            pywikibot.output("Page %s is a redirect; skipping." % page.aslink())
+        except pywikibot.LockedPage:
+            pywikibot.output("Page %s is locked?!" % page.aslink())
 
     def run(self):
         for page in self.generator:
@@ -1858,18 +1868,18 @@ def main():
     # to work on.
     genFactory = pagegenerators.GeneratorFactory()
 
-    for arg in wikipedia.handleArgs():
-        generator = genFactory.handleArg(arg)
-        if generator:
-            gen = generator
-        else:
+    for arg in pywikibot.handleArgs():
+        if not genFactory.handleArg(arg):
             pageTitle.append(arg)
 
+    gen = genFactory.getCombinedGenerator()
+
     if pageTitle:
-        page = wikipedia.Page(wikipedia.getSite(), ' '.join(pageTitle))
+        page = pywikibot.Page(pywikibot.getSite(), ' '.join(pageTitle))
         gen = iter([page])
+
     if not gen:
-        wikipedia.showHelp()
+        pywikibot.showHelp()
     else:
         preloadingGen = pagegenerators.PreloadingGenerator(gen)
         bot = XrefBot(preloadingGen)
@@ -1879,5 +1889,5 @@ if __name__ == "__main__":
     try:
         main()
     finally:
-        wikipedia.stopme()
+        pywikibot.stopme()
 

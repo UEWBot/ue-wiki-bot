@@ -1,17 +1,17 @@
-#! /usr//bin/python
+#! /usr/bin/python
 
 """
-Script to split the item parameter on Areas pages on Underworld Empire Wiki
+Script to split the item parameter on Lieutenants pages on Underworld Empire Wiki
 """
 
 import sys, os, operator
-sys.path.append(os.environ['HOME'] + '/ue/ue_wikibots/pywikipedia')
+sys.path.append(os.environ['HOME'] + '/ue/ue_wikibots/core/pywikibot')
 
-import wikipedia, pagegenerators, catlib
+import pywikibot, pagegenerators
 import re, difflib
 import logging
 
-# Stuff for the wikipedia help system
+# Stuff for the pywikibot help system
 parameterHelp = pagegenerators.parameterHelp + """\
 """
 
@@ -44,7 +44,7 @@ class ItemBot:
         self.generator = generator
         self.acceptall = acceptall
         # Load default summary message.
-        wikipedia.setAction(wikipedia.translate(wikipedia.getSite(), msg_standalone))
+        pywikibot.setAction(pywikibot.translate(pywikibot.getSite(), msg_standalone))
         # Set of replacement strings, from 4 items down to 1
         self.replacement = []
         for n in range(1,4):
@@ -66,16 +66,16 @@ class ItemBot:
         old_text = old_page.get()
         # Give the user some context
         if old_text != new_text:
-            wikipedia.output(new_text)
-        wikipedia.showDiff(old_text, new_text)
+            pywikibot.output(new_text)
+        pywikibot.showDiff(old_text, new_text)
         # Get a decision
         prompt = u'Modify this page ?'
         # Did anything change ?
         if old_text == new_text:
-            wikipedia.output(u'No changes necessary to %s' % old_page.title());
+            pywikibot.output(u'No changes necessary to %s' % old_page.title());
         else:
             if not self.acceptall:
-                choice = wikipedia.inputChoice(prompt, ['Yes', 'No', 'All'], ['y', 'N', 'a'], 'N')
+                choice = pywikibot.inputChoice(prompt, ['Yes', 'No', 'All'], ['y', 'N', 'a'], 'N')
                 if choice == 'a':
                     self.acceptall = True
             if self.acceptall or choice == 'y':
@@ -87,18 +87,18 @@ class ItemBot:
         Creates or updates each page in the Lieutenants category.
         """
         # Update every page in the Lieutenants category
-        cat = catlib.Category(wikipedia.getSite(), u'Lieutenants')
+        cat = pywikibot.Category(pywikibot.getSite(), u'Lieutenants')
 
         for page in cat.articlesList(recurse=False):
             text = page.get()
             for n in range(len(itemRe)):
-                wikipedia.output("Checking for %d item(s)\n" % (3-n))
+                pywikibot.output("Checking for %d item(s)\n" % (3-n))
                 m = itemRe[n].search(text)
                 if m is not None:
-                    wikipedia.output("Found a match. item_1=%s, effect_1=%s" % (m.group(u'item_1'), m.group(u'effect_1')))
+                    pywikibot.output("Found a match. item_1=%s, effect_1=%s" % (m.group(u'item_1'), m.group(u'effect_1')))
                 text = itemRe[n].sub(self.replacement[n], text)
             # Update the page
-            wikipedia.output(u"\n\n>>> \03{lightpurple}%s\03{default} <<<" % page.title())
+            pywikibot.output(u"\n\n>>> \03{lightpurple}%s\03{default} <<<" % page.title())
             self.update_or_create_page(page, text);
 
     def run(self):
@@ -113,5 +113,5 @@ if __name__ == "__main__":
     try:
         main()
     finally:
-        wikipedia.stopme()
+        pywikibot.stopme()
 

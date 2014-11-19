@@ -5,9 +5,9 @@ Utility functions for UEW wikibots
 """
 
 import sys, os
-sys.path.append(os.environ['HOME'] + '/ue/ue_wikibots/pywikipedia')
+sys.path.append(os.environ['HOME'] + '/ue/ue_wikibots/core/pywikibot')
 
-import wikipedia
+import pywikibot
 import re
 
 # Separate the name and value for a template parameter
@@ -63,7 +63,7 @@ class ImageMap:
         Caches results for speed.
         """
         if name not in self.mapping:
-            pg = wikipedia.Page(wikipedia.getSite(), name)
+            pg = pywikibot.Page(pywikibot.getSite(), name)
             # Retrieve the text of the specified page
             text = pg.get()
             # Extract the image parameter
@@ -86,7 +86,7 @@ class FactionLtRefs:
             return self.mapping[faction]
         except KeyError:
             pass
-        factionPage = wikipedia.Page(wikipedia.getSite(), u'Category:%s Lieutenants' % faction)
+        factionPage = pywikibot.Page(pywikibot.getSite(), u'Category:%s Lieutenants' % faction)
         refs = list(factionPage.getReferences())
         self.mapping[faction] = refs
         return refs

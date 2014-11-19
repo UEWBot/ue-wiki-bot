@@ -5,13 +5,13 @@ Script to insert image parameters to pages on UE Wiki
 """
 
 import sys, os, operator
-sys.path.append(os.environ['HOME'] + '/ue/ue_wikibots/pywikipedia')
+sys.path.append(os.environ['HOME'] + '/ue/ue_wikibots/core/pywikibot')
 
-import wikipedia, pagegenerators, catlib
+import pywikibot, pagegenerators
 import re, difflib
 import utils
 
-# Stuff for the wikipedia help system
+# Stuff for the pywikibot help system
 parameterHelp = pagegenerators.parameterHelp + """\
 """
 
@@ -41,7 +41,7 @@ class ImgBot:
         self.generator = generator
         self.acceptall = acceptall
         # Load default summary message.
-        wikipedia.setAction(wikipedia.translate(wikipedia.getSite(), msg_standalone))
+        pywikibot.setAction(pywikibot.translate(pywikibot.getSite(), msg_standalone))
 
     def add_img_param(self, text, param, new_param=None):
         """
@@ -61,7 +61,7 @@ class ImgBot:
             # Full string we matched
             key = m.group('value')
             old_param = ur'%s%s' % (m.group('prefix'), key)
-            wikipedia.output("Adding image for %s" % old_param)
+            pywikibot.output("Adding image for %s" % old_param)
             try:
                 # New string to insert
                 new_str = u'\n|%s=%s' % (new_param, image_map.image_for(key))
@@ -74,10 +74,10 @@ class ImgBot:
                 after = text[end:]
                 middle = re.sub(utils.escapeStr(old_param), u'%s%s' % (old_param, new_str), text[start:end])
                 text = before + middle + after
-            except wikipedia.NoPage:
-                wikipedia.output("Page %s does not exist?!" % key)
-            except wikipedia.LockedPage:
-                wikipedia.output("Page %s is locked?!" % key)
+            except pywikibot.NoPage:
+                pywikibot.output("Page %s does not exist?!" % key)
+            except pywikibot.LockedPage:
+                pywikibot.output("Page %s is locked?!" % key)
 
         return text
 
@@ -85,7 +85,7 @@ class ImgBot:
         try:
             # Show the title of the page we're working on.
             # Highlight the title in purple.
-            wikipedia.output(u"\n\n>>> \03{lightpurple}%s\03{default} <<<" % page.title())
+            pywikibot.output(u"\n\n>>> \03{lightpurple}%s\03{default} <<<" % page.title())
             # TODO parameter to search for should be passed to the script
             text = page.get()
             old_text = text
@@ -93,8 +93,8 @@ class ImgBot:
                 text = self.add_img_param(text, param)
             # Give the user some context
             if old_text != text:
-                wikipedia.output(text)
-            wikipedia.showDiff(old_text, text)
+                pywikibot.output(text)
+            pywikibot.showDiff(old_text, text)
             # TODO Modify to treat just whitespace as unchanged
             # Just comparing text with page.get() wasn't sufficient
             changes = False
@@ -104,19 +104,19 @@ class ImgBot:
                     break
             if changes:
                 if not self.acceptall:
-                    choice = wikipedia.inputChoice(u'Do you want to accept these changes?',  ['Yes', 'No', 'All'], ['y', 'N', 'a'], 'N')
+                    choice = pywikibot.inputChoice(u'Do you want to accept these changes?',  ['Yes', 'No', 'All'], ['y', 'N', 'a'], 'N')
                     if choice == 'a':
                         self.acceptall = True
                 if self.acceptall or choice == 'y':
                     page.put(text)
             else:
-                wikipedia.output('No changes were necessary in %s' % page.title())
-        except wikipedia.NoPage:
-            wikipedia.output("Page %s does not exist?!" % page.aslink())
-        except wikipedia.IsRedirectPage:
-            wikipedia.output("Page %s is a redirect; skipping." % page.aslink())
-        except wikipedia.LockedPage:
-            wikipedia.output("Page %s is locked?!" % page.aslink())
+                pywikibot.output('No changes were necessary in %s' % page.title())
+        except pywikibot.NoPage:
+            pywikibot.output("Page %s does not exist?!" % page.aslink())
+        except pywikibot.IsRedirectPage:
+            pywikibot.output("Page %s is a redirect; skipping." % page.aslink())
+        except pywikibot.LockedPage:
+            pywikibot.output("Page %s is locked?!" % page.aslink())
 
     def run(self):
         for page in self.generator:
@@ -131,18 +131,17 @@ def main():
     # to work on.
     genFactory = pagegenerators.GeneratorFactory()
 
-    for arg in wikipedia.handleArgs():
-        generator = genFactory.handleArg(arg)
-        if generator:
-            gen = generator
-        else:
+    for arg in pywikibot.handleArgs():
+        if not genFactory.handleArg(arg):
             pageTitle.append(arg)
 
+    gen = genFactory.getCombinedGenerator()
+
     if pageTitle:
-        page = wikipedia.Page(wikipedia.getSite(), ' '.join(pageTitle))
+        page = pywikibot.Page(pywikibot.getSite(), ' '.join(pageTitle))
         gen = iter([page])
     if not gen:
-        wikipedia.showHelp()
+        pywikibot.showHelp()
     else:
         preloadingGen = pagegenerators.PreloadingGenerator(gen)
         bot = ImgBot(preloadingGen)
@@ -152,5 +151,5 @@ if __name__ == "__main__":
     try:
         main()
     finally:
-        wikipedia.stopme()
+        pywikibot.stopme()
 

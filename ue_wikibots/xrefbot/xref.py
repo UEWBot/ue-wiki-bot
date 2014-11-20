@@ -1121,16 +1121,29 @@ class XrefToolkit:
         Returns the modified text parameter.
         """
         # Validate items parameters, if present
-        # Check for any items that have a power that affects this Lt
+        # Check for items that affect every Lt
+        refs = cat_refs_map.refs_for(u'Lieutenants')
         refItems = self.itemsInRefs(refs)
+
+        # Check for any items that have a power that affects this Lt
+        refItems2 = self.itemsInRefs(refs)
         # Does the item have a power that affects this Lt ?
-        refItems = {k: v for k, v in refItems.iteritems() if v[0] is not None and name in v[0]}
-        # Add in any that affect the entire faction
+        x = {k: v for k, v in refItems2.iteritems() if v[0] is not None and name in v[0]}
+        refItems.update(x)
+
+        # Check for items that affect all Lts of this rarity
+        rarity = the_template.split()[1]
+        print rarity
+        refs = cat_refs_map.refs_for(u'%s Lieutenants' % rarity)
+        refItems.update(self.itemsInRefs(refs))
+
+        # Check for items that affect the entire faction
         factionParam = utils.paramFromParams(the_params, u'faction')
         refs = cat_refs_map.refs_for(u'%s Lieutenants' % factionParam)
         # The only items that reference Faction Lts have a power that helps them
         # TODO that's no longer true (e.g. John's Gun)
         refItems.update(self.itemsInRefs(refs))
+
         items = {}
         i = 0
         while True:

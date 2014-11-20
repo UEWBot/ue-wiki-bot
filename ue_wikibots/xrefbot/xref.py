@@ -1052,134 +1052,55 @@ class XrefToolkit:
 
         return text
 
-    def fixLieutenant(self, name, text, categories, templatesWithParams, refs):
+    def fixLtSources(self, name, text, categories, the_params, refs):
         """
-        If the page uses any of the templates 'Lieutenant Common', 'Lieutenant Uncommon',
-        'Lieutenant Rare, or 'Lieutenant Epic':
-        Ensures that __NOWYSIWYG__ is present.
-        Checks that the page doesn't explictly list any categories that should be
-        assigned by the template.
-        Removes any empty stat or power parameters, and any (old) item parameters.
-        Adds missing sources.
-        Checks items and adds missing ones.
+        Fix the list of sources on a Lieutenant page.
+        Returns the modified text parameter.
         """
-        # Does the page use a lieutenant template ?
-        the_params = None
-        is_tech_lab_item = False
-        for template,params in templatesWithParams:
-            # Find the templates we're interested in
-            if template == u'Lieutenant':
-                pywikibot.output("Directly uses Lieutenant template")
+        fromParam = utils.paramFromParams(the_params, u'from')
+        # Check where the Lt can be obtained from
+        # TODO Ones that can be bought are listed on [[Category:Lieutenants]]
+        sources = []
+        for r in refs:
+            if self.catInCategories(u'Crates', r.categories()):
+                sources.append(u'[[%s]]' % r.title(withNamespace=False))
+                # Check that it's in Crate Lieutenants
+                c = u'Crate Lieutenants'
+                if not self.catInCategories(c, categories):
+                    text = self.appendCategory(text, c)
+            elif self.catInCategories(u'Events', r.categories()):
+                sources.append(u'[[%s]]' % r.title(withNamespace=False))
+                # Check that it's in Event Lieutenants
+                c = u'Event Lieutenants'
+                if not self.catInCategories(c, categories):
+                    text = self.appendCategory(text, c)
+            for temp,params in r.templatesWithParams():
+                template = temp.title(withNamespace=False)
+                if template == u'Challenge Job':
+                    area = r.title(withNamespace=False)
+                    job = utils.paramFromParams(params, u'name')
+                    for p in params:
+                        if p.startswith(u'lt_') and name in p:
+                            sources.append(u'{{Job Link|district=%s|job=%s}}' % (area, job))
+                elif template == u'FP Item Row':
+                    if name == utils.paramFromParams(params, u'lieutenant'):
+                        sources.append(u'[[Black Market]]')
+                        c = u'Favor Point Lieutenants'
+                        # Check that it's in Favor Point Lieutenants
+                        if not self.catInCategories(c, categories):
+                            text = self.appendCategory(text, c)
+        for s in sources:
+            if s not in fromParam:
+                pywikibot.output("***Need to add %s" % s)
+                # First convert a single item to a list
+                if not u'\n' in fromParam:
+                    text = text.replace(fromParam, u'<br/>\n*' + fromParam)
+                text = text.replace(fromParam, fromParam + u'\n*%s' % s)
+        # TODO Also check for wrongly-listed sources
 
-            if template.find(u'Lab') != -1:
-                is_tech_lab_item = True
-                ingredients = params
+        return text
 
-            if template == u'Lieutenant Common':
-                the_template = template
-                the_params = params
-            elif template == u'Lieutenant Uncommon':
-                the_template = template
-                the_params = params
-            elif template == u'Lieutenant Rare':
-                the_template = template
-                the_params = params
-            elif template == u'Lieutenant Epic':
-                the_template = template
-                the_params = params
-
-        # Drop out early if not a lieutenant page
-        # TODO Is there a better test ?
-        if the_params == None:
-            return text
-
-        # __NOWYSIWYG__
-        text = self.prependNowysiwygIfNeeded(text)
-
-        # Now nuke any empty stat or power parameters, and any items parameters
-        to_nuke = []
-        for param in the_params:
-            p = param.rstrip()
-            if p[-1] == u'=':
-                if u'atk_' in p or u'def_' in p or u'pwr_' in p:
-                    pywikibot.output("Nuking empty parameter %s" % param)
-                    text = text.replace(u'|%s' % p, '')
-                    to_nuke.append(param)
-            elif p.startswith(u'items'):
-                pywikibot.output("Page has an items parameter")
-                pywikibot.output("%s" % (u'|%s' % p))
-                text = text.replace(u'|%s' % p, '')
-                to_nuke.append(param)
-        for i in to_nuke:
-            the_params.remove(i)
-
-        # Check mandatory parameters
-        lt_param_map = {u'description': u'Needs Description',
-                        u'quote': u'Needs Quote',
-                        u'ability': u'Needs Powers',
-                        u'image': u'Needs Improvement', #u'Needs Image',
-                        u'faction': u'Needs Information'} #u'Needs Faction'}
-        # Needs Powers is used for both ability and pwr_1..10
-        for i in range(1,10):
-            lt_param_map[u'pwr_%d' % i] = u'Needs Powers'
-        # Check for atk_1..10 and def_1..10
-        for i in range(1,10):
-            lt_param_map[u'atk_%d' % i] = u'Needs Stats'
-            lt_param_map[u'def_%d' % i] = u'Needs Stats'
-
-        # If it's a tech lab lieutenant, don't bother checking what it's made from.
-        # That will be done in fixTechLabItem.
-        if not is_tech_lab_item:
-            lt_param_map[u'from'] = u'Needs Source'
- 
-        text = self.fixNeedsCategories(text, the_params, categories, lt_param_map)
-
-        if not is_tech_lab_item:
-            fromParam = utils.paramFromParams(the_params, u'from')
-            # Check where the Lt can be obtained from
-            # TODO Ones that can be bought are listed on [[Category:Lieutenants]]
-            sources = []
-            for r in refs:
-                if self.catInCategories(u'Crates', r.categories()):
-                    sources.append(u'[[%s]]' % r.title(withNamespace=False))
-                    # Check that it's in Crate Lieutenants
-                    c = u'Crate Lieutenants'
-                    if not self.catInCategories(c, categories):
-                        text = self.appendCategory(text, c)
-                elif self.catInCategories(u'Events', r.categories()):
-                    sources.append(u'[[%s]]' % r.title(withNamespace=False))
-                    # Check that it's in Event Lieutenants
-                    c = u'Event Lieutenants'
-                    if not self.catInCategories(c, categories):
-                        text = self.appendCategory(text, c)
-                for temp,params in r.templatesWithParams():
-                    template = temp.title(withNamespace=False)
-                    if template == u'Challenge Job':
-                        area = r.title(withNamespace=False)
-                        job = utils.paramFromParams(params, u'name')
-                        for p in params:
-                            if p.startswith(u'lt_') and name in p:
-                                sources.append(u'{{Job Link|district=%s|job=%s}}' % (area, job))
-                    elif template == u'FP Item Row':
-                        if name == utils.paramFromParams(params, u'lieutenant'):
-                            sources.append(u'[[Black Market]]')
-                            c = u'Favor Point Lieutenants'
-                            # Check that it's in Favor Point Lieutenants
-                            if not self.catInCategories(c, categories):
-                                text = self.appendCategory(text, c)
-            for s in sources:
-                if s not in fromParam:
-                    pywikibot.output("***Need to add %s" % s)
-                    # First convert a single item to a list
-                    if not u'\n' in fromParam:
-                        text = text.replace(fromParam, u'<br/>\n*' + fromParam)
-                    text = text.replace(fromParam, fromParam + u'\n*%s' % s)
-            # TODO Also check for wrongly-listed sources
-
-        # Do special checks for any Epic Research Items
-        if is_tech_lab_item:
-            text = self.fixTechLabItem(name, text, the_params, categories, ingredients, False)
-
+    def fixLtItems(self, name, text, the_template, the_params, refs):
         # Validate items parameters, if present
         # Check for any items that have a power that affects this Lt
         refItems = {}
@@ -1243,6 +1164,106 @@ class XrefToolkit:
                 text = re.sub(the_template, u'%s\n%s' % (the_template, new_params), text)
         # TODO Deal with any that are in the items list but not in refItems
         pass
+        return text
+
+    def fixLtNeedsParams(self, text, the_params, categories, is_tech_lab_item):
+        """
+        Fix the "Needs" parameters on a Lieutenant page.
+        Returns modified version of text parameter.
+        """
+        # Check mandatory parameters
+        lt_param_map = {u'description': u'Needs Description',
+                        u'quote': u'Needs Quote',
+                        u'ability': u'Needs Powers',
+                        u'image': u'Needs Improvement', #u'Needs Image',
+                        u'faction': u'Needs Information'} #u'Needs Faction'}
+        # Needs Powers is used for both ability and pwr_1..10
+        for i in range(1,10):
+            lt_param_map[u'pwr_%d' % i] = u'Needs Powers'
+        # Check for atk_1..10 and def_1..10
+        for i in range(1,10):
+            lt_param_map[u'atk_%d' % i] = u'Needs Stats'
+            lt_param_map[u'def_%d' % i] = u'Needs Stats'
+
+        # If it's a tech lab lieutenant, don't bother checking what it's made from.
+        # That will be done in fixTechLabItem.
+        if not is_tech_lab_item:
+            lt_param_map[u'from'] = u'Needs Source'
+ 
+        return self.fixNeedsCategories(text, the_params, categories, lt_param_map)
+
+    def fixLieutenant(self, name, text, categories, templatesWithParams, refs):
+        """
+        If the page uses any of the templates 'Lieutenant Common', 'Lieutenant Uncommon',
+        'Lieutenant Rare, or 'Lieutenant Epic':
+        Ensures that __NOWYSIWYG__ is present.
+        Checks that the page doesn't explictly list any categories that should be
+        assigned by the template.
+        Removes any empty stat or power parameters, and any (old) item parameters.
+        Adds missing sources.
+        Checks items and adds missing ones.
+        """
+        # Does the page use a lieutenant template ?
+        the_params = None
+        is_tech_lab_item = False
+        for template,params in templatesWithParams:
+            # Find the templates we're interested in
+            if template == u'Lieutenant':
+                pywikibot.output("Directly uses Lieutenant template")
+
+            if template.find(u'Lab') != -1:
+                is_tech_lab_item = True
+                ingredients = params
+
+            if template == u'Lieutenant Common':
+                the_template = template
+                the_params = params
+            elif template == u'Lieutenant Uncommon':
+                the_template = template
+                the_params = params
+            elif template == u'Lieutenant Rare':
+                the_template = template
+                the_params = params
+            elif template == u'Lieutenant Epic':
+                the_template = template
+                the_params = params
+
+        # Drop out early if not a lieutenant page
+        # TODO Is there a better test ?
+        if the_params == None:
+            return text
+
+        # __NOWYSIWYG__
+        text = self.prependNowysiwygIfNeeded(text)
+
+        # Now nuke any empty stat or power parameters, and any items parameters
+        to_nuke = []
+        for param in the_params:
+            p = param.rstrip()
+            if p[-1] == u'=':
+                if u'atk_' in p or u'def_' in p or u'pwr_' in p:
+                    pywikibot.output("Nuking empty parameter %s" % param)
+                    text = text.replace(u'|%s' % p, '')
+                    to_nuke.append(param)
+            elif p.startswith(u'items'):
+                pywikibot.output("Page has an items parameter")
+                pywikibot.output("%s" % (u'|%s' % p))
+                text = text.replace(u'|%s' % p, '')
+                to_nuke.append(param)
+        for i in to_nuke:
+            the_params.remove(i)
+
+        text = self.fixLtNeedsParams(text, the_params, categories, is_tech_lab_item)
+
+        if not is_tech_lab_item:
+            text = self.fixLtSources(name, text, categories, the_params, refs)
+
+        # Do special checks for any Epic Research Items
+        if is_tech_lab_item:
+            text = self.fixTechLabItem(name, text, the_params, categories, ingredients, False)
+
+        # Validate items parameters, if present
+        text = self.fixLtItems(name, text, the_template, the_params, refs)
 
         return text
 

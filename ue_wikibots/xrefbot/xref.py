@@ -1100,31 +1100,37 @@ class XrefToolkit:
 
         return text
 
-    def fixLtItems(self, name, text, the_template, the_params, refs):
-        # Validate items parameters, if present
-        # Check for any items that have a power that affects this Lt
+    def itemsInRefs(self, refs):
+        """
+        Returns a dict with an entry for each item page in refs.
+        Key is the item name. Value is a (power, image) tuple.
+        """
         refItems = {}
-        for r in refs:
-            for temp,params in r.templatesWithParams():
-                template = temp.title(withNamespace=False)
-                powerParam = utils.paramFromParams(params, u'power')
-                imageParam = utils.paramFromParams(params, u'image')
-                # Does the item have a power that affects this Lt ?
-                # TODO This is too inclusive e.g. Golden Gloves
-                if powerParam is not None and name in powerParam:
-                    refItems[r.title(withNamespace=False)] = (powerParam, imageParam)
-        # Add in any that affect the entire faction
-        factionParam = utils.paramFromParams(the_params, u'faction')
-        refs = cat_refs_map.refs_for(u'%s Lieutenants' % factionParam)
         for r in refs:
             for temp,params in r.templatesWithParams():
                 template = temp.title(withNamespace=False)
                 if (template.find(u'Item') != -1):
                     powerParam = utils.paramFromParams(params, u'power')
                     imageParam = utils.paramFromParams(params, u'image')
-                    # The only items that reference Faction Lts have a power that helps them
-                    # TODO that's no longer true (e.g. John's Gun)
                     refItems[r.title(withNamespace=False)] = (powerParam, imageParam)
+        return refItems
+
+    def fixLtItems(self, name, text, the_template, the_params, refs):
+        """
+        Checks the list of items that affect this Lt.
+        Returns the modified text parameter.
+        """
+        # Validate items parameters, if present
+        # Check for any items that have a power that affects this Lt
+        refItems = self.itemsInRefs(refs)
+        # Does the item have a power that affects this Lt ?
+        refItems = {k: v for k, v in refItems.iteritems() if v[0] is not None and name in v[0]}
+        # Add in any that affect the entire faction
+        factionParam = utils.paramFromParams(the_params, u'faction')
+        refs = cat_refs_map.refs_for(u'%s Lieutenants' % factionParam)
+        # The only items that reference Faction Lts have a power that helps them
+        # TODO that's no longer true (e.g. John's Gun)
+        refItems.update(self.itemsInRefs(refs))
         items = {}
         i = 0
         while True:

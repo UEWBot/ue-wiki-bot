@@ -86,21 +86,20 @@ class ImageMap:
                 self.mapping[name] = m.group('image')
         return self.mapping[name]
 
-class FactionLtRefs:
+class CategoryRefs:
     def __init__(self):
         self.mapping = {}
 
-    def refs_for(self, faction):
+    def refs_for(self, category):
         """
-        Returns a list of pages that reference the category page for lts
-        in the specified faction.
+        Returns a list of pages that reference the specified category page.
         Caches the result, and returns from the cache in preference.
         """
         try:
-            return self.mapping[faction]
+            return self.mapping[category]
         except KeyError:
             pass
-        factionPage = pywikibot.Page(pywikibot.Site(), u'Category:%s Lieutenants' % faction)
-        refs = list(factionPage.getReferences())
-        self.mapping[faction] = refs
+        page = pywikibot.Page(pywikibot.Site(), u'Category:%s' % category)
+        refs = list(page.getReferences())
+        self.mapping[category] = refs
         return refs

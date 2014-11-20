@@ -63,7 +63,7 @@ category_re = ur'\[\[\s*Category:\s*%s\s*\]\]'
 Rcategory = re.compile(ur'\[\[\s*Category:.*\]\]')
 
 # Cache to speed up fixLieutenant()
-faction_lts_map = utils.FactionLtRefs()
+cat_refs_map = utils.CategoryRefs()
 
 # Image cache
 image_map = utils.ImageMap()
@@ -1115,7 +1115,7 @@ class XrefToolkit:
                     refItems[r.title(withNamespace=False)] = (powerParam, imageParam)
         # Add in any that affect the entire faction
         factionParam = utils.paramFromParams(the_params, u'faction')
-        refs = faction_lts_map.refs_for(factionParam)
+        refs = cat_refs_map.refs_for(u'%s Lieutenants' % factionParam)
         for r in refs:
             for temp,params in r.templatesWithParams():
                 template = temp.title(withNamespace=False)

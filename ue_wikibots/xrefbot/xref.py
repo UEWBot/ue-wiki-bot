@@ -844,24 +844,27 @@ class XrefToolkit:
                     missing_params |= missingParams(params, old_recipe_map.keys())
                 # TODO Cross-reference against item page
                 # Check images for ingredients
-                for n in range(1,7):
+                n = 0
+                while True:
+                    n += 1
                     part_str = u'part_%s' % n
                     part = utils.paramFromParams(params, part_str)
-                    if part is not None:
-                        part_img_str = part_str + u'_img'
-                        part_img = utils.paramFromParams(params, part_img_str)
-                        image = self.imageForItemOrIngredient(part)
-                        if image is not None:
-                            if part_img == None:
-                                # Insert an appropriate part_img parameter
-                                new_part = re.sub(ur'(\|\W*%s\W*=\W*%s)' % (part_str, utils.escapeStr(part)),
-                                                  ur'\1\n|%s=%s' % (part_img_str, image),
-                                                  text[recipe_start:],
-                                                  1)
-                                text = text[:recipe_start] + new_part
-                            elif image != part_img:
-                                # TODO Replace the image with the one from the ingredient page
-                                pywikibot.output("Image mismatch. %s has %s, %s has %s" % (name, part_img, part, image))
+                    if part is None:
+                        break
+                    part_img_str = part_str + u'_img'
+                    part_img = utils.paramFromParams(params, part_img_str)
+                    image = self.imageForItemOrIngredient(part)
+                    if image is not None:
+                        if part_img == None:
+                            # Insert an appropriate part_img parameter
+                            new_part = re.sub(ur'(\|\W*%s\W*=\W*%s)' % (part_str, utils.escapeStr(part)),
+                                              ur'\1\n|%s=%s' % (part_img_str, image),
+                                              text[recipe_start:],
+                                              1)
+                            text = text[:recipe_start] + new_part
+                        elif image != part_img:
+                            # TODO Replace the image with the one from the ingredient page
+                            pywikibot.output("Image mismatch. %s has %s, %s has %s" % (name, part_img, part, image))
         pywikibot.output("Set of missing recipe parameters is %s" % missing_params)
         # Ensure the Needs categories are correct
         text = self.fixNeedsCats(text, missing_params, categories, recipe_param_map)
@@ -1831,16 +1834,19 @@ class XrefToolkit:
         else:
             num_parts = int(num_parts)
         total = 0
-        for i in range(1,7):
+        i = 0
+        while True:
+            i += 1
             part_str = u'part_%d' % i
-            if part_str in lab_dict:
-                part = lab_dict[part_str]
-                num_str = part_str + u'_count'
-                if num_str in lab_dict:
-                    part_num = int(lab_dict[num_str])
-                else:
-                    part_num = 1
-                total += part_num
+            if part_str not in lab_dict:
+                break
+            part = lab_dict[part_str]
+            num_str = part_str + u'_count'
+            if num_str in lab_dict:
+                part_num = int(lab_dict[num_str])
+            else:
+                part_num = 1
+            total += part_num
         if total != num_parts:
             # TODO Fix num_parts, if present, else flag missing ingredient(s)
             pywikibot.output("Calculated %d parts. num_parts is %d" % (total, num_parts))

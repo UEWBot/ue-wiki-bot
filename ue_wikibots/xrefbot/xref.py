@@ -1794,6 +1794,8 @@ class XrefToolkit:
                     break
         if not found:
             pywikibot.output("Tech Lab item not on the Tech Lab page")
+            # TODO Check Tech Lab - Historic
+            return text
 
         # Now we can cross-check between the two
         # Page template has atk, def, image, and description

@@ -63,7 +63,6 @@ def paramsToDict(params):
             result[m.group('name')] = m.group('value')
     return result
 
-# TODO It seems possible to have a generic cache class, with these as sub-classes
 class ImageMap:
     imgRe = re.compile(ur'\|W*image\W*=\W*(?P<image>.*)')
     img2Re = re.compile(ur'\[\[File:(?P<image>.*\.png)\|.*\]\]')
@@ -107,3 +106,29 @@ class CategoryRefs:
         refs = list(page.getReferences())
         self.mapping[category] = refs
         return refs
+
+class RecipeCache:
+    def __init__(self):
+        self.initialised = False
+
+    def read_pages(self):
+        page_names = [u'Tech Lab', u'Tech Lab - Historic']
+        self.recipes = {}
+        for p in page_names:
+            page = pywikibot.Page(pywikibot.Site(), p)
+            for template, params in page.templatesWithParams():
+                template_name = template.title(withNamespace=False)
+                if template_name.find(u'Recipe') != -1:
+                    item = paramFromParams(params, u'name')
+                    self.recipes[item] = params
+
+    def recipe_for(self, item):
+        """
+        Returns the parameters to the Recipe template for the
+        specified item.
+        Caches results for speed.
+        """
+        if not self.initialised:
+            self.read_pages()
+            self.initialised = True
+        return self.recipes[item]

@@ -72,6 +72,9 @@ whenRe = re.compile(ur'(.*) when (.*)')
 # Cache to speed up fixLieutenant()
 cat_refs_map = utils.CategoryRefs()
 
+# Cache to speed up finding recipes
+recipe_cache = utils.RecipeCache()
+
 # Image cache
 image_map = utils.ImageMap()
 
@@ -217,6 +220,7 @@ class XrefToolkit:
         text = self.fixProperty(titleWithoutNamespace, text, categories, templatesWithParams)
         text = self.fixExecutionMethod(text, categories, templatesWithParams)
         text = self.fixClass(text, categories, templatesWithParams)
+        # TODO - don't we call this for appropriate pages anyway ?
         text = self.fixTechLab(titleWithoutNamespace, text, categories, templatesWithParams)
         text = self.fixArea(titleWithoutNamespace, text, categories, templatesWithParams)
         #pywikibot.output("******\nOld text:\n%s" % oldText)
@@ -1846,22 +1850,8 @@ class XrefToolkit:
         Check that atk and def match what the Tech Lab page says.
         If check_image is True, also check that the image matches the one on the Tech Lab page.
         """
-        # Find the recipe on the Tech Lab page
-        found = False
-        tl_page = pywikibot.Page(pywikibot.Site(), u'Tech Lab')
-        templatesWithParams = tl_page.templatesWithParams()
-        for temp,pg_params in templatesWithParams:
-            template = temp.title(withNamespace=False)
-            if template.find(u'Recipe') != -1:
-                recipe_dict = utils.paramsToDict(pg_params)
-                if recipe_dict[u'name'] == name:
-                    # This is the one we're interested in
-                    found = True
-                    break
-        if not found:
-            pywikibot.output("Tech Lab item not on the Tech Lab page")
-            # TODO Check Tech Lab - Historic
-            return text
+        # Find this recipe on one of the tech lab pages
+        recipe_dict = utils.paramsToDict(recipe_cache.recipe_for(name))
 
         # Now we can cross-check between the two
         # Page template has atk, def, image, and description

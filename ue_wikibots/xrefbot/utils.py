@@ -66,6 +66,7 @@ def paramsToDict(params):
 # TODO It seems possible to have a generic cache class, with these as sub-classes
 class ImageMap:
     imgRe = re.compile(ur'\|W*image\W*=\W*(?P<image>.*)')
+    img2Re = re.compile(ur'\[\[File:(?P<image>.*\.png)\|.*\]\]')
 
     def __init__(self):
         # Populate image_map
@@ -82,8 +83,11 @@ class ImageMap:
             text = pg.get()
             # Extract the image parameter
             m = self.imgRe.search(text)
-            if m != None:
-                self.mapping[name] = m.group('image')
+            if m is None:
+                m = self.img2Re.search(text)
+            if m is None:
+                print("Unable to find image for %s" % name)
+            self.mapping[name] = m.group('image')
         return self.mapping[name]
 
 class CategoryRefs:

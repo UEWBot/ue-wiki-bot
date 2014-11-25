@@ -59,8 +59,15 @@ Ringredient = re.compile(ur'\[\[\s*(?P<ingredient>.*)\s*.*\]\].*from\s*\[\[\s*(?
 
 # String used for category REs
 category_re = ur'\[\[\s*Category:\s*%s\s*\]\]'
-#TODO fix this so it doesn't coalesce multiple categories
-Rcategory = re.compile(ur'\[\[\s*Category:.*\]\]')
+Rcategory = re.compile(ur'\[\[\s*Category:[^]]*\]\]')
+
+# Regexes used for item powers
+noStackRe = re.compile(ur'\[no \[\[stack\]\]\]')
+# Separators are with, for, and to
+sepRe = re.compile(ur' with | for | to ')
+# Some follow a completely patterns
+allRe = re.compile(ur'[Aa]ll (.*) (count as .*)')
+whenRe = re.compile(ur'(.*) when (.*)')
 
 # Cache to speed up fixLieutenant()
 cat_refs_map = utils.CategoryRefs()
@@ -1118,6 +1125,62 @@ class XrefToolkit:
                     refItems[r.title(withNamespace=False)] = (powerParam, imageParam)
         return refItems
 
+    def affectsLt(self, lt, rarity, faction, beneficiary):
+        """
+        Returns True if the specified Lt matches the criteria in beneficiary.
+        """
+        # If the LT's name appears, that's an easy one
+        if lt in beneficiary:
+            return True
+
+        parseRe = re.compile(ur'\[\[\s*:(Category:[^]\|]*)(|[^]]*)\]\]')
+
+        # What categories of Lt does the item help ?
+        cats = parseRe.findall(beneficiary)
+        print("%s: %s" % (beneficiary, cats))
+
+        if len(cats) == 0:
+            return False
+
+        catStr = u'Category:%s Lieutenants'
+        lCat = u'Category:Lieutenants'
+        rCat = catStr % rarity
+        fCat = catStr % faction
+
+        # For this Lt to benefit, it must be in all the listed categories
+        for c in cats:
+            if lCat != c[0] and rCat != c[0] and fCat != c[0]:
+                return False
+        return True
+
+    def splitPower(self, power):
+        """
+        Returns a (effect, beneficiary, multiplier, stack) tuple for the power,
+        where multiplier may be None, and stack is a boolean.
+        """
+        # Does the power stack ?
+        stack = (None == noStackRe.search(power))
+        # Remove any "no stack" string
+        power = noStackRe.sub('', power)
+
+        # Try the "all" pattern
+        res = allRe.match(power)
+        if res is not None:
+            return (res.group(2), res.group(1), None, stack)
+
+        # And the "when" pattern
+        res = whenRe.match(power)
+        if res is not None:
+            return (res.group(1), res.group(2), None, stack)
+
+        # Split at our separators
+        res = sepRe.split(power)
+        if len(res) == 2:
+            return (res[0], res[1], None, stack)
+        elif len(res) == 3:
+            return (res[0], res[1], res[2], stack)
+        return (power, None, None, stack)
+
     def fixLtItems(self, name, text, the_template, the_params, refs):
         """
         Checks the list of items that affect this Lt.
@@ -1136,16 +1199,16 @@ class XrefToolkit:
 
         # Check for items that affect all Lts of this rarity
         rarity = the_template.split()[1]
-        print rarity
         refs = cat_refs_map.refs_for(u'%s Lieutenants' % rarity)
         refItems.update(self.itemsInRefs(refs))
 
         # Check for items that affect the entire faction
-        factionParam = utils.paramFromParams(the_params, u'faction')
-        refs = cat_refs_map.refs_for(u'%s Lieutenants' % factionParam)
-        # The only items that reference Faction Lts have a power that helps them
-        # TODO that's no longer true (e.g. John's Gun)
+        faction = utils.paramFromParams(the_params, u'faction')
+        refs = cat_refs_map.refs_for(u'%s Lieutenants' % faction)
         refItems.update(self.itemsInRefs(refs))
+
+        # TODO Filter out any items that don't affect this Lt
+        refItems = {k: v for k, v in refItems.iteritems() if self.affectsLt(name, rarity, faction, self.splitPower(v[0])[1])}
 
         items = {}
         i = 0

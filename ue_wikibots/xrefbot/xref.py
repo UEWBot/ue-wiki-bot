@@ -343,7 +343,7 @@ class XrefToolkit:
         """
         # Is it in the specified category ?
         for this_category in categories:
-            if re.search(category_re % category, this_category.title(asLink=True))
+            if re.search(category_re % category, this_category.title(asLink=True)):
                 return True
         return False
 

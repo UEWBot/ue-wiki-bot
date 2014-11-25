@@ -1451,7 +1451,6 @@ class XrefToolkit:
         # Check for explicit categories that should be implicit
         for cat in implicit_categories:
             if self.catInCategories(cat, categories):
-                pywikibot.output("Explictly in implicit category %s" % cat)
                 text = self.removeCategory(text, cat)
 
         # __NOWYSIWYG__
@@ -1753,7 +1752,6 @@ class XrefToolkit:
         # Ensure that daily items are specified with parameter, not explicit category
         cat = u'Daily Rewards'
         if self.catInCategories(cat, categories):
-            pywikibot.output("Explictly in implicit category %s" % cat)
             text = self.removeCategory(text, cat)
             # Add a daily parameter, with value yes if not already present
             daily_param = utils.paramFromParams(params, u'daily')

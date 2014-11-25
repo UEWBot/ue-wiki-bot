@@ -109,18 +109,30 @@ class CategoryRefs:
 
 class RecipeCache:
     def __init__(self):
-        self.initialised = False
+        self._initialised = False
 
-    def read_pages(self):
+    def _read_pages(self):
         page_names = [u'Tech Lab', u'Tech Lab - Historic']
-        self.recipes = {}
+        self._recipes = {}
         for p in page_names:
             page = pywikibot.Page(pywikibot.Site(), p)
             for template, params in page.templatesWithParams():
                 template_name = template.title(withNamespace=False)
                 if template_name.find(u'Recipe') != -1:
                     item = paramFromParams(params, u'name')
-                    self.recipes[item] = params
+                    self._recipes[item] = params
+
+    def _init_if_needed(self):
+        if not self._initialised:
+            self._read_pages()
+            self._initialised = True
+
+    def recipes(self):
+        """
+        Returns a list of items with recipes.
+        """
+        self._init_if_needed()
+        return self._recipes.keys()
 
     def recipe_for(self, item):
         """
@@ -128,7 +140,5 @@ class RecipeCache:
         specified item.
         Caches results for speed.
         """
-        if not self.initialised:
-            self.read_pages()
-            self.initialised = True
-        return self.recipes[item]
+        self._init_if_needed()
+        return self._recipes[item]

@@ -183,7 +183,6 @@ class XrefToolkit:
         text = self.fixProperty(titleWithoutNamespace, text, categories, templatesWithParams)
         text = self.fixExecutionMethod(text, categories, templatesWithParams)
         text = self.fixClass(text, categories, templatesWithParams)
-        # TODO - don't we call this for appropriate pages anyway ?
         text = self.fixTechLab(titleWithoutNamespace, text, categories, templatesWithParams)
         text = self.fixArea(titleWithoutNamespace, text, categories, templatesWithParams)
         #pywikibot.output("******\nOld text:\n%s" % oldText)
@@ -1074,7 +1073,8 @@ class XrefToolkit:
         """
         # Does the page use a lieutenant template ?
         the_params = None
-        is_tech_lab_item = False
+        ingredients = None
+        is_tech_lab_item = name in recipe_cache.recipes()
         for template,params in templatesWithParams:
             # Find the templates we're interested in
             if template == u'Lieutenant':
@@ -1190,7 +1190,8 @@ class XrefToolkit:
 
         # Does the page use an item template ?
         the_params = None
-        is_tech_lab_item = False
+        ingredients = None
+        is_tech_lab_item = name in recipe_cache.recipes()
         for template,params in templatesWithParams:
             # Find the templates we're interested in
             if template == u'Item':
@@ -1636,7 +1637,16 @@ class XrefToolkit:
         # Lab template has time, num_parts, part_1..part_n
         # Recipe template has time, atk, def, description, image, part_1..part_n
         # Recipe description is not expected to match item description
-        lab_dict = utils.paramsToDict(lab_params)
+        if lab_params is None:
+            lab_dict = {}
+            # Create an empty Lab template inclusion to add params to
+            # TODO May actually want Lab Four of a Kind or Lab Full House
+            if text.find(u'|from=') == -1:
+                text = text.replace(u'|image=', u'|from={{Lab}}\n|image=', 1)
+            else:
+                text = text.replace(u'|from=', u'|from=<br\\>\n*{{Lab|in_list=yes}}\n*', 1)
+        else:
+            lab_dict = utils.paramsToDict(lab_params)
 
         # Compare image
         if check_image:
@@ -1658,12 +1668,11 @@ class XrefToolkit:
             pywikibot.output("Defence parameter mismatch - %s in page, %s on Tech Lab page" % (def_param, recipe_dict[u'atk']))
 
         # Check that num_parts is right, if present
-        num_parts = utils.paramFromParams(lab_params, u'num_parts')
         # For some Lab templates, num_parts is optional. Those should all have 5 parts
-        if num_parts == None:
+        try:
+            num_parts = int(lab_dict[u'num_parts'])
+        except KeyError, TypeError:
             num_parts = 5
-        else:
-            num_parts = int(num_parts)
         total = 0
         i = 0
         while True:
@@ -1696,10 +1705,9 @@ class XrefToolkit:
                                   text)
             else:
                 # Insert the missing parameter
-                text = re.sub(ur'(\|\W*%s\W*=[^|}]*)' % re.sub(ur'(part_\d)_\w*', ur'\1', key),
-                                  ur'\1\n|%s=%s' % (key, recipe_dict[key]),
-                                  text,
-                                  1)
+                pywikibot.output("Missing param - %s" % recipe_dict[key])
+                # TODO this doesn't work for Lab Four of a Kind or Lab Full House
+                text = text.replace(u'Lab', u'Lab\n|%s=%s' % (key, recipe_dict[key]), 1)
 
         # TODO Check any Lab "from" parameters are correct
 

@@ -116,11 +116,11 @@ class ImgBot:
             else:
                 pywikibot.output('No changes were necessary in %s' % page.title())
         except pywikibot.NoPage:
-            pywikibot.output("Page %s does not exist?!" % page.aslink())
+            pywikibot.output("Page %s does not exist?!" % page.title(asLink=True))
         except pywikibot.IsRedirectPage:
-            pywikibot.output("Page %s is a redirect; skipping." % page.aslink())
+            pywikibot.output("Page %s is a redirect; skipping." % page.title(asLink=True))
         except pywikibot.LockedPage:
-            pywikibot.output("Page %s is locked?!" % page.aslink())
+            pywikibot.output("Page %s is locked?!" % page.title(asLink=True))
 
     def run(self):
         for page in self.generator:

@@ -343,7 +343,7 @@ class XrefToolkit:
         """
         # Is it in the specified category ?
         for this_category in categories:
-            if re.search(category_re % category, this_category.aslink()):
+            if re.search(category_re % category, this_category.title(asLink=True))
                 return True
         return False
 
@@ -1745,11 +1745,11 @@ class XrefBot:
             else:
                 pywikibot.output('No changes were necessary in %s' % page.title())
         except pywikibot.NoPage:
-            pywikibot.output("Page %s does not exist?!" % page.aslink())
+            pywikibot.output("Page %s does not exist?!" % page.title(asLink=True))
         except pywikibot.IsRedirectPage:
-            pywikibot.output("Page %s is a redirect; skipping." % page.aslink())
+            pywikibot.output("Page %s is a redirect; skipping." % page.title(asLink=True))
         except pywikibot.LockedPage:
-            pywikibot.output("Page %s is locked?!" % page.aslink())
+            pywikibot.output("Page %s is locked?!" % page.title(asLink=True))
 
     def run(self):
         for page in self.generator:

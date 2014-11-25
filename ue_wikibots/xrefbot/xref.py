@@ -78,43 +78,6 @@ recipe_cache = utils.RecipeCache()
 # Image cache
 image_map = utils.ImageMap()
 
-def listFromSection(text, section_name, whole_lines=False):
-    """
-    Extract a list from a section of text.
-    section_name specifies the section to find.
-    Returns a tuple - (section found boolean, list of content, index where the section starts, index where the section ends)
-    where content is the first link on the line if whole_lines is False,
-    or everything after '[[' to the end of the line if whole_lines is True.
-    """
-    # Does the page have the specified section ?
-    section_present = False
-    item_list = []
-    list_start = list_end = -1
-    match = re.search(r'==\s*%s' % section_name.lower(), text.lower())
-    if match:
-        list_start = match.start()
-        section_present = True
-        # List ends at a template, header or category
-        # Skip the start of the header for the section of interest itself
-        match = re.search(r'{{|==.*==|\[\[Category', text[list_start+2:])
-        if match:
-            list_end = list_start+2+match.start()
-        else:
-            list_end = len(text)
-        # Shift list_end back to exactly the end of the list
-        while text[list_end-1] in u'\n\r':
-            list_end -= 1
-        list_text = text[list_start:list_end]
-        # If so, what items are listed ?
-        if whole_lines:
-            reItem = re.compile(r'\[\[\s*(.*)')
-        else:
-            reItem = re.compile(r'\[\[\s*([^|\]]*?)(\|.*)?\]\]')
-        for match in reItem.finditer(list_text):
-            item_list.append(match.expand(r'\1'))
-            list_text = list_text[match.end():]
-    return (section_present, item_list, list_start, list_end)
-
 def dropParamsMatch(param1, param2):
     """
     Compares two drop parameters.
@@ -299,72 +262,6 @@ class XrefToolkit:
         missing_params = missingParams(params, param_cat_map.keys())
         return self.fixNeedsCats(text, missing_params, categories, param_cat_map)
 
-    def templateParam(self, templatesWithParams, template, param):
-        """
-        If the specified template is present, and gives a value for
-        the specified param, return that value.
-        Otherwise, return an empty string.
-        """
-        for (the_template, got_params) in templatesWithParams:
-            if template == the_template:
-                for the_param in got_params:
-                    match = re.search(r'\s*%s\s*=([^\|]*)' % param, the_param, re.MULTILINE)
-                    if match:
-                        return match.expand(r'\1')
-        return u''
-
-    def templateParamMissing(self, templatesWithParams, template, params):
-        """
-        If the specified template is present, and doesn't give a value for any
-        of the specified params, return True.
-        """
-        for (the_template, got_params) in templatesWithParams:
-            if template == the_template:
-                params_present = []
-                for param in got_params:
-                    for match in re.finditer(r'([^=,]+)', param):
-                        params_present.append(match.expand(r'\1') .strip())
-                for param in params:
-                    if param not in params_present:
-                        print "Param %s missing from template %s" % (param, template)
-                        return True
-        return False
-
-    def listFromParam(self, params, param_name, whole_lines=False):
-        """
-        Extract a list from the parameter of a template
-        param_name specifies the param to find.
-        Returns a list of content,
-        where content is the first link on the line if whole_lines is False,
-        or everything after '[[' to the end of the line if whole_lines is True.
-        """
-        item_list = []
-        # Does the template have the specified param ?
-        for param in params:
-            if param_name in param:
-                # what items are listed ?
-                if whole_lines:
-                    reItem = re.compile(r'\[\[\s*(.*)')
-                else:
-                    reItem = re.compile(r'\[\[\s*([^|\]]*?)(\|.*)?\]\]')
-                for match in reItem.finditer(param):
-                    item_list.append(match.expand(r'\1'))
-        return item_list
-
-    def listFromParamOfTemplate(self, templatesWithParams, template_name, param_name, whole_lines=False):
-        """
-        Extract a list from the parameter of a template
-        template_name specifies the template to find.
-        param_name specifies the param to find.
-        Returns a tuple - (list of content, param found boolean),
-        where content is the first link on the line if whole_lines is False,
-        or everything after '[[' to the end of the line if whole_lines is True.
-        """
-        for (template, params) in templatesWithParams:
-            if template == template_name:
-                return (self.listFromParam(params, param_name, whole_lines), True)
-        return ([], False)
-
     def findTemplate(self, text, name=None):
         """
         Find a template in text.
@@ -378,102 +275,6 @@ class XrefToolkit:
             if (name == None) or (found_name == name):
                 return (found_name, match.start(), match.end())
         return (None, -1, -1)
-
-    def parametersFromTemplate(self, templateText):
-        """
-        Returns the list of parameters in templateText.
-        This is copied extensively from pywikibot's templateWithParams()
-        """
-        params = []
-        match = Rtemplate.search(templateText)
-        if match:
-            paramString = match.group('params')
-            if paramString:
-                Rlink = re.compile(ur'\[\[[^\]]+\]\]')
-                marker2 = pywikibot.findmarker(templateText,  u'##', u'#')
-                Rmarker2 = re.compile(ur'%s(\d+)%s' % (marker2, marker2))
-                # Replace links to markers
-                links = {}
-                count2 = 0
-                for m2 in Rlink.finditer(paramString):
-                    count2 += 1
-                    text = m2.group()
-                    paramString = paramString.replace(text,
-                                    '%s%d%s' % (marker2, count2, marker2))
-                    links[count2] = text
-                # Parse string
-                markedParams = paramString.split('|')
-                # Replace markers
-                for param in markedParams:
-                    for m2 in Rmarker2.finditer(param):
-                        param = param.replace(m2.group(),
-                                              links[int(m2.group(1))])
-                    params.append(param)
-        return params
-
-    def findTemplateParam(self, text, template, param):
-        """
-        Find the specified parameter of the specified template in text.
-        Returns a tuple - (index where the parameter starts, index where the parameter ends) such that
-        removing text[start:end] would result in no value specified for the specified template.
-        Returns (-1,-1) if the template or the param of the template isn't found.
-        """
-        # First, find the template
-        (name, start, end) = self.findTemplate(text, template)
-        if start != -1:
-            # Now find the parameter within that block
-            params = self.parametersFromTemplate(text[start:end])
-            for p in params:
-                match = re.search(r'(\s*%s\s*)=' % param, p)
-                if match:
-                    intro = match.group(1)
-                    length = len(p) - len(intro)
-            match = re.search(intro, text[start:end])
-            assert match, "Unable to find intro '%s' in template text" % intro
-            return (start + match.end(), start + match.end() + length)
-        return (-1,-1)
-
-    def addBlockAtEnd(self, text, block):
-        """
-        Adds the new block of text at the very end of text, but before any categories.
-        Returns the new text (text + block).
-        """
-        categoryR = re.compile(r'\[\[Category:.*', re.MULTILINE|re.DOTALL)
-        match = categoryR.search(text)
-        if match:
-            pywikibot.output("Adding block before categories")
-            # Page has categories, so add the Uses template before they start
-            text = text[:match.start()] + block + u'\n' + text[match.start():]
-        else:
-            pywikibot.output("Adding block at end of page")
-            # Page has no categories, so just add Uses template to the end
-            text += block
-        return text
-
-    def matchCatToTemplate(self, text, categories, templatesWithParams, template, category):
-        """
-        Check that pages in category category use template template and vice versa.
-        Adds or removes the category in the event of a mismatch.
-        Note that template is used as a re to match against each template used on the page.
-        """
-        Rcat = re.compile(category_re % category)
-        # Does the page use one of the recipe templates ?
-        template_matches = False
-        for (test_template, params) in templatesWithParams:
-            if re.match(template, test_template):
-                template_matches = True
-        # Is it in the specified category ?
-        cat_matches = self.catInCategories(category, categories)
-        # Do the two agree ?
-        if template_matches and (not cat_matches):
-            pywikibot.output("Page uses a %s template but isn't in category %s" % (template, category))
-            # This is easy - just append a category line
-            text = self.appendCategory(text, category)
-        elif (not template_matches) and cat_matches:
-            pywikibot.output("Page does not use a %s template but is in category %s" % (template, category))
-            # Remove the category
-            text = Rcat.sub('', text)
-        return text
 
     def findSpecificSection(self, text, section):
         """
@@ -552,27 +353,6 @@ class XrefToolkit:
         Finds the image for the specified item.
         """
         return image_map.image_for(itemName)
-
-    def replaceImageInTemplate(self, text, template, param, new_image):
-        """
-        Find the specified template in text, and replace the image in the specified parameter.
-        Returns the new text
-        """
-        # TODO Can we use findTemplate() or findTemplateParam() ?
-        # First find the specified template
-        for match in Rtemplate.finditer(text):
-            if template in match.expand(r'\g<name>'):
-                # Then the specified parameter
-                start = match.start()
-                end = match.end()
-                match = re.search(r'%s\s*=\s*\[\[\s*(.*?)\s*\]\]' % param, text[start:end])
-                assert match, "Failed to find param %s in template %s" % (param, template)
-                # Do the substitution
-                end = start + match.end(1)
-                start += match.start(1)
-                text = text[:start] + new_image + text[end:]
-                return text
-        assert 0, "Failed to find template %s" % template
 
     def checkItemParams(self, text, source, drop_params):
         """

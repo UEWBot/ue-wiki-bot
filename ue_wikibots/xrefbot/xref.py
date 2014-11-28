@@ -1665,7 +1665,7 @@ class XrefToolkit:
         # Compare def
         def_param = utils.paramFromParams(params, u'def')
         if def_param is not None and def_param != recipe_dict[u'def']:
-            pywikibot.output("Defence parameter mismatch - %s in page, %s on Tech Lab page" % (def_param, recipe_dict[u'atk']))
+            pywikibot.output("Defence parameter mismatch - %s in page, %s on Tech Lab page" % (def_param, recipe_dict[u'def']))
 
         # Check that num_parts is right, if present
         # For some Lab templates, num_parts is optional. Those should all have 5 parts

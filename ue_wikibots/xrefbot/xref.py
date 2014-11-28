@@ -385,6 +385,9 @@ class XrefToolkit:
                 key = u'for'
                 if key not in drop_params and key in item_params:
                     # "for" parameter only needed where the item is a Tech Lab ingredient
+                    # TODO This isn't quite right. The Drop template treats its "for"
+                    #      parameter differently than the Item and Ingredient templates.
+                    #      It's probably the Drop template that needs to change...
                     # TODO There should be a better way to do this...
                     if item_name != u'Steel Beam' and item_name != u'Concrete Block' and item_name != u'Bronze Shadow Token' and item_name != u'Silver Shadow Token' and item_name != u'Laundered Donation Money (I)' and item_name != u'Laundered Donation Money (II)' and item_name != u'Laundered Donation Money (III)' and not self.catInCategories(u'Recombinators', item.categories()):
                         text = text.replace(ur'name=%s' % item_name, u'name=%s|%s=%s' % (item_name, key, item_params[key]))
@@ -449,9 +452,10 @@ class XrefToolkit:
         """
         job_boss = self.catInCategories(u'Job Bosses', categories)
         tl_boss = self.catInCategories(u'Tech Lab Bosses', categories)
+        legend_boss = self.catInCategories(u'Legend Bosses', categories)
         # Drop out early if not a boss page
         # TODO Is there a better test ?
-        if not job_boss and not tl_boss:
+        if not job_boss and not tl_boss and not legend_boss:
             return text
 
         drop_params = [u'image', u'type', u'atk', u'def']
@@ -460,8 +464,15 @@ class XrefToolkit:
         text = self.prependNowysiwygIfNeeded(text)
 
         # Check core category
-        if job_boss == tl_boss:
-            pywikibot.output("Boss isn't in exactly one category of Job Bosses and Tech Lab Bosses")
+        cat_count = 0
+        if job_boss:
+            cat_count += 1
+        if tl_boss:
+            cat_count += 1
+        if legend_boss:
+            cat_count += 1
+        if cat_count > 1:
+            pywikibot.output("Boss is in more than one category of Job Bosses, Tech Lab Bosses, and Legend Bosses")
 
         # Check each drop
         for (template, params) in templatesWithParams:
@@ -473,15 +484,15 @@ class XrefToolkit:
         (dummy, start, end, level) = self.findSection(text, u'Completion Dialogue')
         length = len(text[start:end])
         if self.catInCategories(u'Needs Completion Dialogue', categories):
-            if tl_boss:
-                pywikibot.output("Tech Lab bosses should never be categorised Needs Completion Dialogue")
+            if tl_boss or legend_boss:
+                pywikibot.output("Tech Lab and Legend bosses should never be categorised Needs Completion Dialogue")
                 text = self.removeCategory(text, u'Needs Completion Dialogue')
             elif (start != -1) and (length > 0):
                 pywikibot.output("Non-empty completion dialogue section found despite Needs Completion Dialogue category")
                 text = self.removeCategory(text, u'Needs Completion Dialogue')
         elif (start == -1) or (length == 0):
             # Section not present or empty
-            if not tl_boss:
+            if job_boss:
                 text = self.appendCategory(text, u'Needs Completion Dialogue')
 
         # We should find a section called Rewards that links to the Boss Drops page

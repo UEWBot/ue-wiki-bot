@@ -1606,17 +1606,9 @@ class XrefToolkit:
         Checks that the item is listed on the from and for pages.
         Assumes that the page uses the Ingredient template.
         """
-        no_desc = [u"Boss Frank's Cell Phone",
-                   u"Boss Twins' Cell Phone",
-                   u"Boss Victor's Cell Phone",
-                   u"Corrupt Cop's Cell Phone",
-                   u"Street Rival's Cell Phone"]
         # Check mandatory parameters
         ingr_param_map = {u'rarity': u'Needs Rarity',
                           u'image': u'Needs Improvement'} #u'Needs Image'}
-        # Most ingredients have a description, too
-        if not name in no_desc:
-            ingr_param_map[u'description'] = u'Needs Description'
  
         # If it's a tech lab item, from parameter will be misleading
         if not is_tech_lab_item:

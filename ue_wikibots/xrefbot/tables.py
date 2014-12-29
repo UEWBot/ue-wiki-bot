@@ -468,6 +468,18 @@ def rarities():
     page = pywikibot.Page(pywikibot.Site(), u'Rarity')
     return [u'Common', u'Uncommon', u'Rare', u'Epic', u'Legendary']
 
+def prop_row_key(text):
+    """
+    Returns the sort key for a property table row.
+    """
+    # Content is always name paramater then count parameter
+    # We return a turple with the name parameter and integer count
+    loc = text.find('count=')
+    num_part = text[loc+6:]
+    while not num_part.isdigit():
+        num_part = num_part[:-1]
+    return (text[1:loc], int(num_part))
+
 class XrefBot:
     def __init__(self, generator, acceptall = False):
         self.generator = generator
@@ -534,8 +546,8 @@ class XrefBot:
 
         # Start the new page text
         new_text = summary_header(row_template)
-        # TODO: Sort rows into some sensible order
-        for row in rows:
+        # Sort rows into a sensible order
+        for row in sorted(rows, key=prop_row_key):
             new_text += row + u'\n'
         # Finish with a footer
         new_text += summary_footer(row_template)

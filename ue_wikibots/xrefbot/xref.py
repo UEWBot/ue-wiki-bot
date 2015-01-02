@@ -360,6 +360,13 @@ class XrefToolkit:
         Also checks that the drop lists the source.
         Returns modified text with missing parameters added.
         """
+        paramless_items = [u'Steel Beam',
+                           u'Concrete Block',
+                           u'Bronze Shadow Token',
+                           u'Silver Shadow Token',
+                           u'Laundered Donation Money (I)',
+                           u'Laundered Donation Money (II)',
+                           u'Laundered Donation Money (III)']
         item_name = drop_params[u'name']
         item = pywikibot.Page(pywikibot.Site(), item_name)
         templatesWithParams = item.templatesWithParams()
@@ -387,9 +394,9 @@ class XrefToolkit:
                     # "for" parameter only needed where the item is a Tech Lab ingredient
                     # TODO This isn't quite right. The Drop template treats its "for"
                     #      parameter differently than the Item and Ingredient templates.
-                    #      It's probably the Drop template that needs to change...
+                    #      It's probably the Drop template that needs to change, though...
                     # TODO There should be a better way to do this...
-                    if item_name != u'Steel Beam' and item_name != u'Concrete Block' and item_name != u'Bronze Shadow Token' and item_name != u'Silver Shadow Token' and item_name != u'Laundered Donation Money (I)' and item_name != u'Laundered Donation Money (II)' and item_name != u'Laundered Donation Money (III)' and not self.catInCategories(u'Recombinators', item.categories()):
+                    if item_name not in paramless_items and not self.catInCategories(u'Recombinators', item.categories()):
                         text = text.replace(ur'name=%s' % item_name, u'name=%s|%s=%s' % (item_name, key, item_params[key]))
                 if source not in item_params['from']:
                     pywikibot.output("Boss claims to drop %s, but is not listed on that page" % item_name)

@@ -79,13 +79,18 @@ class ImageMap:
         if name not in self.mapping:
             pg = pywikibot.Page(pywikibot.Site(), name)
             # Retrieve the text of the specified page
-            text = pg.get()
-            # Extract the image parameter
-            m = self.imgRe.search(text)
-            if m is None:
-                m = self.img2Re.search(text)
+            try:
+                m = None
+                text = pg.get(get_redirect=True)
+                # Extract the image parameter
+                m = self.imgRe.search(text)
+                if m is None:
+                    m = self.img2Re.search(text)
+            except pywikibot.NoPage:
+                pass
             if m is None:
                 print("Unable to find image for %s" % name)
+                return None
             self.mapping[name] = m.group('image')
         return self.mapping[name]
 

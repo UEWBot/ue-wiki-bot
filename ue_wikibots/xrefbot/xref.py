@@ -617,18 +617,20 @@ class XrefToolkit:
 
     def fixTechLab(self, name, text, categories, templatesWithParams):
         """
-        Fixes the Tech Lab page.
+        Fixes the Tech Lab and Tech Lab - Historic pages.
         Ensures that __NOWYSIWYG__ is present.
         Checks for mandatory template parameters or corresponding Needs category.
         """
-        if name != u'Tech Lab':
+        if u'Tech Lab' not in name:
             return text
+
+        # Is this a historic recipe ?
+        is_old = False
+        if u'Historic' in name:
+            is_old = True
 
         # __NOWYSIWYG__
         text = self.prependNowysiwygIfNeeded(text)
-
-        # Find the start of the Historical section
-        start, end = self.findSpecificSection(text, u'Historical Items')
 
         # Check each recipe
         recipe_param_map = {u'name': u'Needs Information', #u'Needs Item Name',
@@ -646,9 +648,8 @@ class XrefToolkit:
                 name = utils.paramFromParams(params, u'name')
                 # This can take a while, so reassure the user
                 pywikibot.output("Checking %s" % name)
-                # Is it a historical recipe ?
                 recipe_start = text.find(name)
-                if recipe_start > start:
+                if is_old:
                     missing_params |= missingParams(params, old_recipe_map.keys())
                 # TODO Cross-reference against item page
                 # Check images for ingredients

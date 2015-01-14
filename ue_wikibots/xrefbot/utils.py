@@ -25,7 +25,7 @@ import pywikibot
 import re
 
 # Separate the name and value for a template parameter
-Rparam = re.compile(ur'\s*(?P<name>\S+)\s*=\s*(?P<value>.*)', re.DOTALL)
+Rparam = re.compile(ur'\s*(?P<name>[^\s=]+)\s*=\s*(?P<value>.*)', re.DOTALL)
 
 def escapeStr(string):
     """

@@ -1720,8 +1720,49 @@ class XrefToolkit:
                 # TODO this doesn't work for Lab Four of a Kind or Lab Full House
                 text = text.replace(u'Lab', u'Lab\n|%s=%s' % (key, recipe_dict[key]), 1)
 
-        # TODO Check any Lab "from" parameters are correct
+        # Check any Lab "from" parameters are correct
+        for i in range(1,i):
+            part_str = u'part_%d' % i
+            from_str = part_str + u'_from'
+            part = lab_dict[part_str]
+            try:
+                part_pg = pywikibot.Page(pywikibot.Site(), part)
+            except pywikibot.NoPage:
+                # No idea where it's from, so that's fine
+                continue
+            tmp = part_pg.templatesWithParams()
+            templatesWithParams = [(t.title(withNamespace=False),p) for (t,p) in tmp]
+            src_param = None
+            for t,p in templatesWithParams:
+                src_param = utils.paramFromParams(p, u'from')
+            if not src_param:
+                # Ingredient page doesn't say where to get it
+                continue
+            # Map it to a more suitable format
+            src_param = self.one_line(src_param)
+            try:
+                src = lab_dict[from_str]
+                # Compare with src_param
+                if src != src_param:
+                    pywikibot.output("Source mismatch for %s - this page says %s, item page says %s\n" % (part, src, src_param))
+            except KeyError:
+                # Add from parameter to this page
+                new_param = u'|%s=%s' % (from_str, src_param)
+                text = text.replace(ur'|%s' % part_str, u'%s\n|%s' % (new_param, part_str), 1)
 
+        return text
+
+    def one_line(self, src_list):
+        """
+        Converts a possibly mutli-line block of text listing sources for an item
+        into a single line.
+        """
+        labre = re.compile(ur'{{Lab[^}]*}}', re.MULTILINE | re.DOTALL)
+        text = src_list.replace(u'<br/>\n', u'')
+        text = text.replace(ur'*', u'')
+        # Convert any use of a Lab template to a link to the Tech Lab page
+        text = labre.sub(u'made in [[Tech Lab]]', text)
+        text = text.replace(u'\n', u', ')
         return text
 
 class XrefBot:

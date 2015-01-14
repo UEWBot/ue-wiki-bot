@@ -154,9 +154,14 @@ def summary_header(row_template):
         text += u'!span="col" data-sort-type="number" | Min XP\n'
         text += u'!span="col" data-sort-type="number" | Max XP\n'
         # Cash/energy column
-        text += u'!span="col" data-sort-type="currency" | Cash/energy\n'
+        text += u'!span="col" data-sort-type="currency" | Cash/ energy\n'
         # XP/energy Column
-        text += u'!span="col" data-sort-type="number" | XP/energy\n'
+        text += u'!span="col" data-sort-type="number" | XP/ energy\n'
+        # Penelope XP columns
+        text += u'!span="col" data-sort-type="number" | Min XP with [[Penelope]]\n'
+        text += u'!span="col" data-sort-type="number" | Max XP with [[Penelope]]\n'
+        # Penelope XP/energy Column
+        text += u'!span="col" data-sort-type="number" | XP/energy with [[Penelope]]\n'
     elif row_template == u'Challenge Job Row':
         # Area column
         text += u'!span="col" | Area\n'

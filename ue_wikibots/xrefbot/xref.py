@@ -158,7 +158,7 @@ class XrefToolkit:
         titleWithoutNamespace = page.title(withNamespace=False)
         # Leave template pages alone
         # TODO Better to match title or category ?
-        if titleWithoutNamespace.find(u'Template') != -1:
+        if u'Template' in titleWithoutNamespace:
             pywikibot.output("Not touching template page %s" % titleWithoutNamespace)
             return text
         # Note that this only gets explicit categories written into the page text,
@@ -374,7 +374,7 @@ class XrefToolkit:
             template = temp.title(withNamespace=False)
             #pywikibot.output("Template %s" % template)
             # TODO Clean this code up
-            if (template.find(u'Item') != -1) or (template == u'Ingredient'):
+            if (u'Item' in template) or (template == u'Ingredient'):
                 item_params = utils.paramsToDict(params)
                 # Check the drop parameters we do have
                 for key in drop_params.keys():
@@ -400,7 +400,7 @@ class XrefToolkit:
                         text = text.replace(ur'name=%s' % item_name, u'name=%s|%s=%s' % (item_name, key, item_params[key]))
                 if source not in item_params['from']:
                     pywikibot.output("Boss claims to drop %s, but is not listed on that page" % item_name)
-            elif template.find(u'Lieutenant') != -1:
+            elif u'Lieutenant' in template:
                 item_params = utils.paramsToDict(params)
                 for key in drop_params.keys():
                     dp = drop_params[key]
@@ -642,7 +642,7 @@ class XrefToolkit:
         old_recipe_map = {u'available' : u'Needs Information'}
         missing_params = set()
         for template, params in templatesWithParams:
-            if template.find(u'Recipe') != -1:
+            if u'Recipe' in template:
                 missing_params |= missingParams(params, recipe_param_map.keys())
                 # Find this item on the page
                 name = utils.paramFromParams(params, u'name')
@@ -921,7 +921,7 @@ class XrefToolkit:
         for r in refs:
             for temp,params in r.templatesWithParams():
                 template = temp.title(withNamespace=False)
-                if (template.find(u'Item') != -1):
+                if u'Item' in template:
                     powerParam = utils.paramFromParams(params, u'power')
                     imageParam = utils.paramFromParams(params, u'image')
                     refItems[r.title(withNamespace=False)] = (powerParam, imageParam)
@@ -1099,7 +1099,7 @@ class XrefToolkit:
             if template == u'Lieutenant':
                 pywikibot.output("Directly uses Lieutenant template")
 
-            if template.find(u'Lab') != -1:
+            if u'Lab' in template:
                 is_tech_lab_item = True
                 ingredients = params
 
@@ -1216,7 +1216,7 @@ class XrefToolkit:
             if template == u'Item':
                 pywikibot.output("Directly uses Item template")
 
-            if template.find(u'Lab') != -1:
+            if u'Lab' in template:
                 is_tech_lab_item = True
                 ingredients = params
 
@@ -1652,10 +1652,10 @@ class XrefToolkit:
             lab_dict = {}
             # Create an empty Lab template inclusion to add params to
             # TODO May actually want Lab Four of a Kind or Lab Full House
-            if text.find(u'|from=') == -1:
-                text = text.replace(u'|image=', u'|from={{Lab}}\n|image=', 1)
-            else:
+            if u'|from=' in text:
                 text = text.replace(u'|from=', u'|from=<br\\>\n*{{Lab|in_list=yes}}\n*', 1)
+            else:
+                text = text.replace(u'|image=', u'|from={{Lab}}\n|image=', 1)
         else:
             lab_dict = utils.paramsToDict(lab_params)
 

@@ -158,7 +158,7 @@ class XrefToolkit:
         titleWithoutNamespace = page.title(withNamespace=False)
         # Leave template pages alone
         # TODO Better to match title or category ?
-        if u'Template' in titleWithoutNamespace:
+        if page.title().startswith(u'Template:'):
             pywikibot.output("Not touching template page %s" % titleWithoutNamespace)
             return text
         # Note that this only gets explicit categories written into the page text,

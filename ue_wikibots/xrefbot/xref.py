@@ -92,13 +92,12 @@ def dropParamsMatch(param1, param2):
     param2 = param2.replace(' ', '_')
     # Match link with non-link equivalent
     if param1[0:2] == u'[[':
-        return param1[2:-2] == param2
+        param1 = param1[2:-2]
     if param2[0:2] == u'[[':
-        return param1 == param2[2:-2]
+        param2 = param2[2:-2]
     # Match with mismatched case of first character
     if param1[1:] == param2[1:]:
         return param1[0].lower() == param2[0].lower()
-    # TODO Match link with nonlink with mismatched first character
     return False
 
 def timeParamsMatch(param1, param2):

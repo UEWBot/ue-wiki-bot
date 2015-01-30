@@ -395,6 +395,48 @@ def fortress_rows(name, text, row_template, the_dict):
     #rows.sort()
     return rows
 
+def swap_lts(row, idx1, idx2):
+    """
+    Swaps the two specified lts in the row.
+    Returns the modified row.
+    """
+    row = row.replace('|lt_%d' % idx1, '|lt_9')
+    row = row.replace('|lt_%d' % idx2, '|lt_%d' % idx1)
+    row = row.replace('|lt_9', '|lt_%d' % idx2)
+    return row
+
+def sort_lts(row):
+    """
+    Sorts the Lts in a Challenge Job Row line by rarity.
+    Returns the modified row text.
+    """
+    # First find the rarities of the 4 LTs
+    rarities = {}
+    for i in range(1,5):
+        m = re.search(ur'\|lt_%d_rarity\s*=\s*(?P<rarity>[^|\s]*)' % i, row)
+	if m:
+		rarities[i] = m.group('rarity')
+	else:
+		pywikibot.output("Unable to find rarity for Lt %d" % i)
+    # Because we know we only have a max of three rarities, we can take shortcuts
+    # First move all Commons to the start
+    for i in range(1,4):
+        if rarities[i] != u'Common':
+            for j in range(i+1,5):
+                if rarities[j] == u'Common':
+                    row = swap_lts(row, i, j)
+                    rarities[j] = rarities[i]
+                    rarities[i] = u'Common'
+    # Then move all Rare to the end
+    for i in range(4,1,-1):
+        if rarities[i] != u'Rare':
+            for j in range(i-1,0,-1):
+                if rarities[j] == u'Rare':
+                    row = swap_lts(row, i, j)
+                    rarities[j] = rarities[i]
+                    rarities[i] = u'Rare'
+    return row
+
 def page_to_row(page, row_template):
     """
     Creates a table row for the item or challenge job described in page.
@@ -421,7 +463,8 @@ def page_to_row(page, row_template):
                 for param in params:
                     row += u'|%s' % param
     row += u'}}'
-    # pywikibot.output(u'Row is "%s"' % row)
+    if row_template == u'Challenge Job Row':
+        row = sort_lts(row)
     return row
 
 def page_to_rows(page, row_template, high_cost_ratios={}):

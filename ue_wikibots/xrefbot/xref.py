@@ -1716,8 +1716,9 @@ class XrefToolkit:
                 part_num = 1
             total += part_num
         if total != num_parts:
-            # TODO Fix num_parts, if present, else flag missing ingredient(s)
-            pywikibot.output("Calculated %d parts. num_parts is %d" % (total, num_parts))
+            # Fix num_parts, if present, else flag missing ingredient(s)
+            # TODO This assumes no spaces in the parameter setting
+            text = text.replace(u'num_parts=%d' % num_parts, u'num_parts=%d' % total)
 
         # Check the Lab parameters against the Recipe parameters
         lab_keys = set(lab_dict.keys())

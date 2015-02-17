@@ -1259,8 +1259,7 @@ class XrefToolkit:
         # (Mystery) Gift Item template uses from with a different meaning
         if template != u'Gift Item' and template != u'Mystery Gift Item' and not is_tech_lab_item:
             from_param = utils.paramFromParams(the_params, u'from')
-            if from_param is not None:
-                text = self.fixDrop(name, text, from_param, refs)
+            text = self.fixDrop(name, text, from_param, refs)
 
         # Do more detailed checks for specific sub-types
         if the_template == u'Gift Item':
@@ -1288,6 +1287,7 @@ class XrefToolkit:
         """
         Check that the page lists the right places it can be obtained from.
         Adds any that are missing
+        from_param may be None
         """
         # First, find pages that list this item as a drop
         # Starting with the list of pages that link here
@@ -1305,7 +1305,7 @@ class XrefToolkit:
                 elif template == u'Execution Method':
                     if name in utils.paramFromParams(params, u'bonus'):
                         source_set.add(r.title(withNamespace=False))
-            # Assume any page liked to from the Favor Point page is available from the Black Market
+            # Assume any page linked to from the Favor Point page is available from the Black Market
             if r.title(withNamespace=False) == u'Favor Point':
                 source_set.add(u'Black Market')
             # Don't call r.categories() for redirects
@@ -1318,7 +1318,10 @@ class XrefToolkit:
         # Remove any that match from the source list, leaving missing sources
         # Count the number of sources already in the list as we go
         src_count = 0
-        iterator = Rlink.finditer(from_param)
+        if from_param:
+            iterator = Rlink.finditer(from_param)
+        else:
+            iterator = []
         for m in iterator:
             src_count += 1
             src = m.group('page')
@@ -1342,12 +1345,27 @@ class XrefToolkit:
             else:
                 # Note that this is not necessarily an error, but is worth investigating
                 pywikibot.output("Page lists %s as a source, but that page doesn't list it as a drop" % src)
-        # Convert from single source to a list if necessary
-        if len(source_set) > 0 and src_count == 1:
-            text = text.replace(from_param, u'<br/>\n*' + from_param)
+        # Are any changes needed ?
+        if len(source_set) > 0:
+            # Add a from parameter if necessary
+            if src_count == 0:
+                if len(source_set) == 1:
+                    from_param = u'|from='
+                else:
+                    from_param = u'|from=<br/>'
+                text = text.replace(u'|image', u'%s|image' % from_param, 1)
+            # Convert from single source to a list if necessary
+            if src_count == 1:
+                text = text.replace(from_param, u'<br/>\n*' + from_param)
         # Add missing sources to the page
+        if (src_count == 0) and (len(source_set) == 1):
+            # Add the single source on the same line
+            new_str = u''
+        else:
+            # Each new source gets its own list entry
+            new_str = u'\n*'
         for src in source_set:
-            text = text.replace(from_param, from_param + u'\n*[[%s]]' % src)
+            text = text.replace(from_param, from_param + u'%s[[%s]]' % (new_str, src))
         return text
 
     def fixItemType(self, text, params, categories):

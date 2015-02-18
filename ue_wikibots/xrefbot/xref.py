@@ -993,7 +993,7 @@ class XrefToolkit:
         refItems = self.itemsInRefs(refs)
 
         # Check for any items that have a power that affects this Lt
-        refItems2 = self.itemsInRefs(refs)
+        refItems2 = refItems.copy()
         # Does the item have a power that affects this Lt ?
         x = {k: v for k, v in refItems2.iteritems() if v[0] is not None and name in v[0]}
         refItems.update(x)

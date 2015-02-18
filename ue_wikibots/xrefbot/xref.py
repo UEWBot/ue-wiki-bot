@@ -1770,7 +1770,14 @@ class XrefToolkit:
                 src = lab_dict[from_str]
                 # Compare with src_param
                 if src != src_param:
-                    pywikibot.output("Source mismatch for %s - this page says %s, item page says %s\n" % (part, src, src_param))
+                    if src in src_param:
+                        # New source(s) have been added to the item page
+                        # TODO This assumes no whitespace
+                        text = text.replace(u'|%s=%s' % (from_str, src),
+                                            u'|%s=%s' % (from_str, src_param),
+                                            1)
+                    else:
+                        pywikibot.output("Source mismatch for %s - this page says %s, item page says %s\n" % (part, src, src_param))
             except KeyError:
                 # Add from parameter to this page
                 new_param = u'|%s=%s' % (from_str, src_param)

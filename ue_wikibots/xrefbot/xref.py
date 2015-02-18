@@ -1305,6 +1305,8 @@ class XrefToolkit:
                 elif template == u'Execution Method':
                     if name in utils.paramFromParams(params, u'bonus'):
                         source_set.add(r.title(withNamespace=False))
+            # TODO Pages referenced from HQ can either be requirements
+            # to build improvements, or drops after Wars with Shadow Broker.
             # Assume any page linked to from the Favor Point page is available from the Black Market
             if r.title(withNamespace=False) == u'Favor Point':
                 source_set.add(u'Black Market')

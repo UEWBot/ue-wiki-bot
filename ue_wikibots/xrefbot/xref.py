@@ -1308,6 +1308,9 @@ class XrefToolkit:
             # Assume any page linked to from the Favor Point page is available from the Black Market
             if r.title(withNamespace=False) == u'Favor Point':
                 source_set.add(u'Black Market')
+            # If it's linked frm the Achievements page, it's a Daily achievement reward
+            elif r.title(withNamespace=False) == u'Achievements':
+                source_set.add(u'Achievements#Daily')
             # Don't call r.categories() for redirects
             elif r.isRedirectPage():
                 pass
@@ -1368,6 +1371,8 @@ class XrefToolkit:
             # Each new source gets its own list entry
             new_str = u'\n*'
         for src in source_set:
+            if src == u'Achievements#Daily':
+                src = u'Achievements#Daily|Daily Achievements'
             text = text.replace(from_param, from_param + u'%s[[%s]]' % (new_str, src))
         return text
 

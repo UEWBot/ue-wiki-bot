@@ -1255,9 +1255,9 @@ class XrefToolkit:
         # __NOWYSIWYG__
         text = self.prependNowysiwygIfNeeded(text)
 
-        # If the item comes from somewhere special (other than tech lab), do cross-ref check
+        # If the item comes from somewhere special, do cross-ref check
         # (Mystery) Gift Item template uses from with a different meaning
-        if template != u'Gift Item' and template != u'Mystery Gift Item' and not is_tech_lab_item:
+        if template != u'Gift Item' and template != u'Mystery Gift Item':
             from_param = utils.paramFromParams(the_params, u'from')
             text = self.fixDrop(name, text, from_param, refs)
 
@@ -1319,6 +1319,9 @@ class XrefToolkit:
         # Count the number of sources already in the list as we go
         src_count = 0
         if from_param:
+            if u'{{Lab' in from_param:
+                # TODO Need to avoid matches within the Lab template part
+                src_count += 1
             iterator = Rlink.finditer(from_param)
         else:
             iterator = []

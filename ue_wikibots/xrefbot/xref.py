@@ -879,7 +879,7 @@ class XrefToolkit:
                 c = u'Crate Lieutenants'
                 if not self.catInCategories(c, categories):
                     text = self.appendCategory(text, c)
-            elif self.catInCategories(u'Events', r.categories()):
+            elif self.catInCategories(u'Events', r.categories()) or self.catInCategories(u'Giveaways', r.categories()):
                 sources.append(u'[[%s]]' % r.title(withNamespace=False))
                 # Check that it's in Event Lieutenants
                 c = u'Event Lieutenants'
@@ -1312,7 +1312,7 @@ class XrefToolkit:
             elif r.isRedirectPage():
                 pass
             # If it's linked to from an event page, assume it's an event reward
-            elif self.catInCategories(u'Events', r.categories()):
+            elif self.catInCategories(u'Events', r.categories()) or self.catInCategories(u'Giveaways', r.categories()):
                 source_set.add(r.title(withNamespace=False))
         # Then, find the places listed as sources in this page
         # Remove any that match from the source list, leaving missing sources

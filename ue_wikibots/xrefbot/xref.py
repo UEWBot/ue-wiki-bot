@@ -828,9 +828,9 @@ class XrefToolkit:
                 the_params = params
 
         # Fortress and Safe House are special
-        if name ==u'Safe House':
+        if name == u'Safe House':
             return self.fixSafeHouse(text, categories)
-        elif name ==u'Fortress':
+        elif name == u'Fortress':
             return self.fixFortress(text, categories)
 
         # Drop out early if not a property page

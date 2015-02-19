@@ -644,7 +644,8 @@ class XrefToolkit:
             if u'Recipe' in template:
                 missing_params |= missingParams(params, recipe_param_map.keys())
                 # Find this item on the page
-                name = utils.paramFromParams(params, u'name')
+                param_dict = utils.paramsToDict(params)
+                name = param_dict[u'name']
                 # This can take a while, so reassure the user
                 pywikibot.output("Checking %s" % name)
                 recipe_start = text.find(name)
@@ -656,11 +657,13 @@ class XrefToolkit:
                 while True:
                     n += 1
                     part_str = u'part_%s' % n
-                    part = utils.paramFromParams(params, part_str)
-                    if part is None:
+                    try:
+                        part = param_dict[part_str]
+                    except KeyError:
+                        # Ran out of parts
                         break
                     part_img_str = part_str + u'_img'
-                    part_img = utils.paramFromParams(params, part_img_str)
+                    part_img = param_dict[part_img_str]
                     image = self.imageForItemOrIngredient(part)
                     if image is not None:
                         if part_img == None:
@@ -851,12 +854,15 @@ class XrefToolkit:
             prop_param_map[u'income'] = u'Needs Income'
 
         # Build time is required for non-FP properties only
-        fp_prop = utils.paramFromParams(the_params, u'fp_prop')
-        if fp_prop:
-            build_time = utils.paramFromParams(the_params, u'time')
-            if build_time:
+        param_dict = utils.paramsToDict(the_params)
+        try:
+            fp_prop = param_dict[u'fp_prop']
+            try:
+                build_time = param_dict[u'time']
                 pywikibot.output("FP property has build time!")
-        else:
+            except KeyError:
+                pass
+        except KeyError:
             prop_param_map[u'time'] = u'Needs Build Time'
  
         text = self.fixNeedsCategories(text, the_params, categories, prop_param_map)
@@ -921,8 +927,9 @@ class XrefToolkit:
             for temp,params in r.templatesWithParams():
                 template = temp.title(withNamespace=False)
                 if u'Item' in template:
-                    powerParam = utils.paramFromParams(params, u'power')
-                    imageParam = utils.paramFromParams(params, u'image')
+                    param_dict = utils.paramsToDict(params)
+                    powerParam = param_dict[u'power']
+                    imageParam = param_dict[u'image']
                     refItems[r.title(withNamespace=False)] = (powerParam, imageParam)
         return refItems
 
@@ -1004,7 +1011,8 @@ class XrefToolkit:
         refItems.update(self.itemsInRefs(refs))
 
         # Check for items that affect the entire faction
-        faction = utils.paramFromParams(the_params, u'faction')
+        param_dict = utils.paramsToDict(the_params)
+        faction = param_dict[u'faction']
         refs = cat_refs_map.refs_for(u'%s Lieutenants' % faction)
         refItems.update(self.itemsInRefs(refs))
 
@@ -1018,12 +1026,12 @@ class XrefToolkit:
             name_str = u'item_%d' % i
             power_str = u'item_%d_pwr' % i
             image_str = u'item_%d_img' % i
-            nameParam = utils.paramFromParams(the_params, name_str)
-            powerParam = utils.paramFromParams(the_params, power_str)
-            imageParam = utils.paramFromParams(the_params, image_str)
-            if nameParam:
+            try:
+                nameParam = param_dict[name_str]
+                powerParam = param_dict[power_str]
+                imageParam = param_dict[image_str]
                 items[nameParam] = (powerParam, imageParam)
-            else:
+            except KeyError:
                 break
         i = len(items)
         # compare the two lists and address any mismatches
@@ -1496,23 +1504,25 @@ class XrefToolkit:
         text = self.fixNeedsCategories(text, params, categories, faction_param_map)
 
         # Check points against corresponding faction page
-        faction_param = utils.paramFromParams(params, u'faction')
-        points_param = utils.paramFromParams(params, u'points')
-        if faction_param == None:
+        param_dict = utils.paramsToDict(params)
+        try:
+            faction_param = param_dict[u'faction']
+            try:
+                points_param = param_dict[u'points']
+                faction_page = pywikibot.Page(pywikibot.Site(), faction_param)
+                iterator = Rfaction.finditer(faction_page.get())
+                for m in iterator:
+                    if m.group('item') == name:
+                        if points_param != m.group('points'):
+                            # Change the value
+                            # Note that this replaces every instance of the text in points_param...
+                            text.replace(points_param, m.group('points'))
+            except KeyError:
+                if not self.catInCategories(u'Needs Unlock Criterion', categories):
+                    text = self.appendCategory(text, u'Needs Unlock Criterion')
+        except KeyError:
             if not self.catInCategories(u'Needs Information', categories):
                 text = self.appendCategory(text, u'Needs Information') # u'Needs Faction'
-        elif points_param == None:
-            if not self.catInCategories(u'Needs Unlock Criterion', categories):
-                text = self.appendCategory(text, u'Needs Unlock Criterion')
-        else:
-            faction_page = pywikibot.Page(pywikibot.Site(), faction_param)
-            iterator = Rfaction.finditer(faction_page.get())
-            for m in iterator:
-                if m.group('item') == name:
-                    if points_param != m.group('points'):
-                        # Change the value
-                        # Note that this replaces every instance of the text in points_param...
-                        text.replace(points_param, m.group('points'))
 
         # Check type param
         text = self.fixItemType(text, params, categories)
@@ -1565,8 +1575,15 @@ class XrefToolkit:
         text = self.fixNeedsCategories(text, params, categories, basic_param_map)
 
         # Check that we have either level or district but not both
-        level_param = utils.paramFromParams(params, u'level')
-        area_param = utils.paramFromParams(params, u'district')
+        param_dict = utils.paramsToDict(params)
+        try:
+            level_param = param_dict[u'level']
+        except KeyError:
+            level_param = None
+        try:
+            area_param = param_dict[u'district']
+        except KeyError:
+            area_param = None
         if level_param == None:
             if area_param == None:
                 pywikibot.output("Missing both level and district parameters")
@@ -1581,7 +1598,7 @@ class XrefToolkit:
         if self.catInCategories(cat, categories):
             text = self.removeCategory(text, cat)
             # Add a daily parameter, with value yes if not already present
-            daily_param = utils.paramFromParams(params, u'daily')
+            daily_param = param_dict[u'daily']
             if daily_param == None:
                 # Note that this just finds the first instance of params[0]...
                 start = text.find(params[0])
@@ -1624,8 +1641,9 @@ class XrefToolkit:
             for tmp,p in templatesWithParams:
                 t = tmp.title(withNamespace=False)
                 if t == u'Battle Rank List':
-                    rank = utils.paramFromParams(u'number',p)
-                    item = utils.paramFromParams(u'reward',p)
+                    param_dict = utils.paramsToDict(p)
+                    rank = param_dict[u'number']
+                    item = param_dict[u'reward']
                     if item == u'[[%s]]' % name and rank != rank_param:
                         pywikibot.output("Minimum battle rank mismatch - Battle Rank page says %s, this page says %s" % (rank, rank_param))
 
@@ -1669,6 +1687,7 @@ class XrefToolkit:
         """
         # Find this recipe on one of the tech lab pages
         recipe_dict = utils.paramsToDict(recipe_cache.recipe_for(name))
+        param_dict = utils.paramsToDict(params)
 
         # Now we can cross-check between the two
         # Page template has atk, def, image, and description
@@ -1688,22 +1707,31 @@ class XrefToolkit:
 
         # Compare image
         if check_image:
-            img_param = utils.paramFromParams(params, u'image')
-            # TODO Insert missing image
-            if img_param is not None and img_param != recipe_dict[u'image']:
-                pywikibot.output("Image parameter mismatch - %s in page, %s on Tech Lab page" % (img_param, recipe_dict[u'image']))
+            try:
+                img_param = param_dict[u'image']
+                if img_param != recipe_dict[u'image']:
+                    pywikibot.output("Image parameter mismatch - %s in page, %s on Tech Lab page" % (img_param, recipe_dict[u'image']))
+            except KeyError:
+                # TODO Insert missing image
+                pass
 
         # TODO Add Needs Build Time category if appropriate
 
         # Compare atk
-        atk_param = utils.paramFromParams(params, u'atk')
-        if atk_param is not None and atk_param != recipe_dict[u'atk']:
-            pywikibot.output("Attack parameter mismatch - %s in page, %s on Tech Lab page" % (atk_param, recipe_dict[u'atk']))
+        try:
+            atk_param = param_dict[u'atk']
+            if atk_param != recipe_dict[u'atk']:
+                pywikibot.output("Attack parameter mismatch - %s in page, %s on Tech Lab page" % (atk_param, recipe_dict[u'atk']))
+        except KeyError:
+            pass
 
         # Compare def
-        def_param = utils.paramFromParams(params, u'def')
-        if def_param is not None and def_param != recipe_dict[u'def']:
-            pywikibot.output("Defence parameter mismatch - %s in page, %s on Tech Lab page" % (def_param, recipe_dict[u'def']))
+        try:
+            def_param = param_dict[u'def']
+            if def_param != recipe_dict[u'def']:
+                pywikibot.output("Defence parameter mismatch - %s in page, %s on Tech Lab page" % (def_param, recipe_dict[u'def']))
+        except KeyError:
+            pass
 
         # Check that num_parts is right, if present
         # For some Lab templates, num_parts is optional. Those should all have 5 parts

@@ -1028,11 +1028,20 @@ class XrefToolkit:
             image_str = u'item_%d_img' % i
             try:
                 nameParam = param_dict[name_str]
-                powerParam = param_dict[power_str]
-                imageParam = param_dict[image_str]
-                items[nameParam] = (powerParam, imageParam)
             except KeyError:
+                # Ran out of items
                 break
+            try:
+                powerParam = param_dict[power_str]
+            except KeyError:
+                # Missing power parameter
+                powerParam = None
+            try:
+                imageParam = param_dict[image_str]
+            except KeyError:
+                # Missing image parameter
+                imageParam = None
+            items[nameParam] = (powerParam, imageParam, i)
         i = len(items)
         # compare the two lists and address any mismatches
         for key in refItems.keys():
@@ -1040,12 +1049,10 @@ class XrefToolkit:
                 # Compare the details
                 if refItems[key][0] != items[key][0]:
                     pywikibot.output("Mismatch in power for %s - %s vs %s" % (key, refItems[key][0], items[key][0]))
-                    pattern = utils.escapeStr(items[key][0])
-                    text = re.sub(pattern, refItems[key][0], text)
+                    text = re.sub(key, u'%s\n|item_%d_pwr=%s' % (key, items[key][2], refItems[key][0]), text)
                 if refItems[key][1] != items[key][1]:
                     pywikibot.output("Mismatch in image for %s - %s vs %s" % (key, refItems[key][1], items[key][1]))
-                    pattern = utils.escapeStr(items[key][1])
-                    text = re.sub(pattern, refItems[key][1], text)
+                    text = re.sub(key, u'%s\n|item_%d_img=%s' % (key, items[key][2], refItems[key][1]), text)
             else:
                 pywikibot.output("Missing item %s which gives %s" % (key, refItems[key][0]))
                 # Add the item. No way to determine which item should be which

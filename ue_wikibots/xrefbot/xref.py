@@ -1326,9 +1326,12 @@ class XrefToolkit:
             if r.title(withNamespace=False) == u'Favor Point':
                 source_set.add(u'Black Market')
             # If it's linked frm the Achievements page, it's a Daily achievement reward
-            # TODO Unless there's an achievement for collecting them...
             elif r.title(withNamespace=False) == u'Achievements':
-                source_set.add(u'Achievements#Daily')
+                # Check whether it's a daily achievement reward
+                r_text = r.get()
+                (s,e) = self.findSpecificSection(r_text, u'Daily Rewards')
+                if (s != -1) and (name in r_text[s:e]):
+                        source_set.add(u'Achievements#Daily')
             # Don't call r.categories() for redirects
             elif r.isRedirectPage():
                 pass

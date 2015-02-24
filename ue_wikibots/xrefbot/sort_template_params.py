@@ -36,7 +36,7 @@ docuReplacements = {
 }
 
 # Summary message when using this module as a stand-alone script
-summary = u'Robot: Sort template parameters'
+summary = u'Robot: Sort Lab/Lt template parameters'
 
 # RE to match a parameter for the form "root_n[_leaf] = value"
 numParamRe = re.compile(ur'(?P<root>[a-zA-Z]+)_(?P<num>\d+)(?P<leaf>[^=\s]*)\s*=\s*(?P<value>.*)')
@@ -62,19 +62,21 @@ def lt_sort_key(param):
             num += 20
         elif root == u'image':
             # Sort skin images in with the un-numbered part
-            num = 0
+            return (0, param)
         return (num, lt_root_ordering.index(root), m.group('leaf'))
     else:
         # Sort all unnumbered ones before all numbered ones
         return (0, param)
 
-def sort_lt_params(text, params):
+def sort_lt_params(text, template, params):
     """
     Returns text with the specified parameters sorted into a more reasonable order
     """
-    print sorted(params, key=lt_sort_key)
-    
-    return text
+    # RE to match the entire template and all its parameters
+    # We assume this is the last template on the page
+    templateRe = re.compile(ur'{{%s.*}}' % template, re.DOTALL | re.MULTILINE)
+    new_text = u'{{%s\n|' % template + u'\n|'.join(sorted(params, key=lt_sort_key)) + u'\n}}'
+    return templateRe.sub(new_text, text, count=1)
 
 def lab_sort_key(param):
     """
@@ -87,13 +89,16 @@ def lab_sort_key(param):
         # Sort all unnumbered ones before all numbered ones
         return (0, param)
 
-def sort_lab_params(text, params):
+def sort_lab_params(text, template, params):
     """
     Returns text with the specified parameters sorted into a more reasonable order
     """
-    print sorted(params, key=lab_sort_key)
-    
-    return text
+    # RE to match the entire template and all its parameters
+    # We assume no templates are nested within this one
+    print params
+    templateRe = re.compile(ur'{{%s[^}]*}}' % template, re.DOTALL | re.MULTILINE)
+    new_text = u'{{%s\n|' % template + u'\n|'.join(sorted(params, key=lab_sort_key)) + u'\n}}'
+    return templateRe.sub(new_text, text, count=1)
 
 class ItemBot:
     def __init__(self, generator, acceptall = False):
@@ -131,23 +136,23 @@ class ItemBot:
         Creates or updates each page in the Lieutenants category.
         """
         # All the pages we're interested in are in these two categories
-        # TODO If this list grwos, it may be better to find pages that
+        # TODO If this list grows, it may be better to find pages that
         #      reference the templates we're interested in
         cat1 = pywikibot.Category(pywikibot.Site(), u'Lieutenants')
         cat2 = pywikibot.Category(pywikibot.Site(), u'Epic Research Items')
         # Only process each page once
         pages = set(cat1.articles(recurse=False)) | set(cat2.articles(recurse=False))
-        print pages
 
         for page in pages:
             text = page.get()
             for t,p in page.templatesWithParams():
                 title = t.title(withNamespace=False)
                 # We only care about a few templates
+                # but some pages use more than one of them
                 if u'Lieutenant' in title:
-                    text = sort_lt_params(text, p);
-                elif title.startswith(u'Lab'):
-                    text = sort_lab_params(text, p)
+                    text = sort_lt_params(text, title, p);
+                if title.startswith(u'Lab'):
+                    text = sort_lab_params(text, title, p)
             # Update the page
             pywikibot.output(u"\n\n>>> \03{lightpurple}%s\03{default} <<<" % page.title())
             self.update_or_create_page(page, text);

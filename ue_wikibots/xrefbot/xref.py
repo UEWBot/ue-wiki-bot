@@ -1343,10 +1343,13 @@ class XrefToolkit:
         # Count the number of sources already in the list as we go
         src_count = 0
         if from_param:
-            if u'{{Lab' in from_param:
-                # TODO Need to avoid matches within the Lab template part
+            m = re.search(ur'{{Lab.*}}', from_param, re.MULTILINE | re.DOTALL)
+            if m:
                 src_count += 1
-            iterator = Rlink.finditer(from_param)
+                # Need to avoid matches within the Lab template part
+                iterator = Rlink.finditer(from_param[:m.start()] + from_param[m.end():])
+            else:
+                iterator = Rlink.finditer(from_param)
         else:
             iterator = []
         for m in iterator:

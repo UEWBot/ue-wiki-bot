@@ -1836,6 +1836,7 @@ class XrefToolkit:
         """
         labre = re.compile(ur'{{Lab[^}]*}}', re.MULTILINE | re.DOTALL)
         text = src_list.replace(u'<br/>\n', u'')
+        text = text.replace(u'<br />\n', u'')
         text = text.replace(ur'*', u'')
         # Convert any use of a Lab template to a link to the Tech Lab page
         text = labre.sub(u'made in [[Tech Lab]]', text)

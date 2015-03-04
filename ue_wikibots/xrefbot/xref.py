@@ -375,6 +375,8 @@ class XrefToolkit:
             # TODO Clean this code up
             if (u'Item' in template) or (template == u'Ingredient'):
                 item_params = utils.paramsToDict(params)
+                if template == u'Ingredient':
+                    item_params[u'type'] = u'Ingredients'
                 # Check the drop parameters we do have
                 for key in drop_params.keys():
                     if (key == u'name'):
@@ -387,6 +389,9 @@ class XrefToolkit:
                 # Then check for any that may be missing
                 for key in [u'name', u'image', u'atk', u'def', u'type']:
                     if key not in drop_params and key in item_params:
+                        if (key == u'type') and (u'for' in drop_params):
+                            # We want either for or type for Ingredients
+                            continue
                         text = text.replace(ur'name=%s' % item_name, u'name=%s|%s=%s' % (item_name, key, item_params[key]))
                 key = u'for'
                 if key not in drop_params and key in item_params:
@@ -396,6 +401,7 @@ class XrefToolkit:
                     #      It's probably the Drop template that needs to change, though...
                     # TODO There should be a better way to do this...
                     if item_name not in paramless_items and not self.catInCategories(u'Recombinators', item.categories()):
+                        # TODO Need to also remove type=Ingredients
                         text = text.replace(ur'name=%s' % item_name, u'name=%s|%s=%s' % (item_name, key, item_params[key]))
                 if source not in item_params['from']:
                     pywikibot.output("Boss claims to drop %s, but is not listed on that page" % item_name)

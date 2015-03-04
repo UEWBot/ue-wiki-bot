@@ -63,6 +63,7 @@ Rcategory = re.compile(ur'\[\[\s*Category:[^]]*\]\]')
 
 # Regexes used for item powers
 noStackRe = re.compile(ur'\[no \[\[stack\]\]\]')
+noStack2Re = re.compile(ur'{{No Stack}}')
 # Separators are with, for, and to
 sepRe = re.compile(ur' with | for | to ')
 # Some follow a completely patterns
@@ -976,6 +977,10 @@ class XrefToolkit:
         stack = (None == noStackRe.search(power))
         # Remove any "no stack" string
         power = noStackRe.sub('', power)
+        if not stack:
+            stack = (None == noStack2Re.search(power))
+            # Remove any "no stack" string
+            power = noStack2Re.sub('', power)
 
         # Try the "all" pattern
         res = allRe.match(power)
@@ -1148,6 +1153,8 @@ class XrefToolkit:
         to_nuke = []
         for param in the_params:
             p = param.rstrip()
+            if p == u'':
+                to_nuke.append(param)
             if p[-1] == u'=':
                 if u'atk_' in p or u'def_' in p or u'pwr_' in p:
                     pywikibot.output("Nuking empty parameter %s" % param)

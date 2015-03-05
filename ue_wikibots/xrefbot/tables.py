@@ -405,7 +405,7 @@ def swap_lts(row, idx1, idx2):
     row = row.replace('|lt_9', '|lt_%d' % idx2)
     return row
 
-def sort_lts(row):
+def sort_lts(row, area):
     """
     Sorts the Lts in a Challenge Job Row line by rarity.
     Returns the modified row text.
@@ -418,6 +418,12 @@ def sort_lts(row):
 		rarities[i] = m.group('rarity')
 	else:
 		pywikibot.output("Unable to find rarity for Lt %d" % i)
+    if len(rarities) < 4:
+        #m = re.search(ur'\|district=(?P<area>[^|\s]*)', row)
+        ## As we put this parameter in, it should always be present
+        #area = m.group('area')
+        pywikibot.output("Missing Lts - not sorting %s\n" % area)
+        return row
     # Because we know we only have a max of three rarities, we can take shortcuts
     # First move all Commons to the start
     for i in range(1,4):
@@ -446,7 +452,8 @@ def page_to_row(page, row_template):
                u'Lieutenant Row' : u'name',
                u'Item Row' : u'name'}
     templatesWithParams = page.templatesWithParams()
-    row = u'{{%s|%s=%s' % (row_template, mapping[row_template], page.title())
+    name = page.title()
+    row = u'{{%s|%s=%s' % (row_template, mapping[row_template], name)
     for (template, params) in templatesWithParams:
         template_name = template.title(withNamespace=False)
         # We're only interested in certain templates
@@ -464,7 +471,7 @@ def page_to_row(page, row_template):
                     row += u'|%s' % param
     row += u'}}'
     if row_template == u'Challenge Job Row':
-        row = sort_lts(row)
+        row = sort_lts(row, name)
     return row
 
 def page_to_rows(page, row_template, high_cost_ratios={}):

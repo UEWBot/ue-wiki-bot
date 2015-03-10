@@ -1060,10 +1060,16 @@ class XrefToolkit:
                 # Compare the details
                 if refItems[key][0] != items[key][0]:
                     pywikibot.output("Mismatch in power for %s - %s vs %s" % (key, refItems[key][0], items[key][0]))
-                    text = re.sub(key, u'%s\n|item_%d_pwr=%s' % (key, items[key][2], refItems[key][0]), text)
+                    # This regex assumes that the parameter has a line to itself
+                    text = re.sub(ur'item_%d_pwr\s*=\s*.*' % items[key][2],
+                                  u'item_%d_pwr=%s\n' % (items[key][2], refItems[key][0]),
+                                  text)
                 if refItems[key][1] != items[key][1]:
                     pywikibot.output("Mismatch in image for %s - %s vs %s" % (key, refItems[key][1], items[key][1]))
-                    text = re.sub(key, u'%s\n|item_%d_img=%s' % (key, items[key][2], refItems[key][1]), text)
+                    # This regex assumes that the parameter has a line to itself
+                    text = re.sub(ur'item_%d_img\s*=\s*.*' % items[key][2],
+                                  u'item_%d_img=%s\n' % (items[key][2], refItems[key][1]),
+                                  text)
             else:
                 pywikibot.output("Missing item %s which gives %s" % (key, refItems[key][0]))
                 # Add the item. No way to determine which item should be which

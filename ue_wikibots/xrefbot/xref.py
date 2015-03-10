@@ -1007,25 +1007,25 @@ class XrefToolkit:
         """
         # Validate items parameters, if present
         # Check for items that affect every Lt
-        refs = cat_refs_map.refs_for(u'Lieutenants')
-        refItems = self.itemsInRefs(refs)
+        lt_refs = cat_refs_map.refs_for(u'Lieutenants')
+        refItems = self.itemsInRefs(lt_refs)
 
         # Check for any items that have a power that affects this Lt
-        refItems2 = refItems.copy()
+        refItems2 = self.itemsInRefs(refs)
         # Does the item have a power that affects this Lt ?
         x = {k: v for k, v in refItems2.iteritems() if v[0] is not None and name in v[0]}
         refItems.update(x)
 
         # Check for items that affect all Lts of this rarity
         rarity = the_template.split()[1]
-        refs = cat_refs_map.refs_for(u'%s Lieutenants' % rarity)
-        refItems.update(self.itemsInRefs(refs))
+        rarity_refs = cat_refs_map.refs_for(u'%s Lieutenants' % rarity)
+        refItems.update(self.itemsInRefs(rarity_refs))
 
         # Check for items that affect the entire faction
         param_dict = utils.paramsToDict(the_params)
         faction = param_dict[u'faction']
-        refs = cat_refs_map.refs_for(u'%s Lieutenants' % faction)
-        refItems.update(self.itemsInRefs(refs))
+        faction_refs = cat_refs_map.refs_for(u'%s Lieutenants' % faction)
+        refItems.update(self.itemsInRefs(faction_refs))
 
         # TODO Filter out any items that don't affect this Lt
         refItems = {k: v for k, v in refItems.iteritems() if self.affectsLt(name, rarity, faction, self.splitPower(v[0])[1])}

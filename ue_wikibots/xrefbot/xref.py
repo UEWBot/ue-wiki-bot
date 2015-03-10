@@ -933,11 +933,15 @@ class XrefToolkit:
         for r in refs:
             for temp,params in r.templatesWithParams():
                 template = temp.title(withNamespace=False)
-                if u'Item' in template:
+                if u'Item' in template and not template == u'FP Item Row':
                     param_dict = utils.paramsToDict(params)
-                    powerParam = param_dict[u'power']
-                    imageParam = param_dict[u'image']
-                    refItems[r.title(withNamespace=False)] = (powerParam, imageParam)
+                    try:
+                        powerParam = param_dict[u'power']
+                        imageParam = param_dict[u'image']
+                        refItems[r.title(withNamespace=False)] = (powerParam, imageParam)
+                    except KeyError:
+                        print "KeyError - itemsInRefs(). template = %s, param_dict = %s" % (template, param_dict)
+                        continue
         return refItems
 
     def affectsLt(self, lt, rarity, faction, beneficiary):

@@ -446,7 +446,8 @@ def sort_lts(row, area):
 def gear_tuple(page):
     """
     Returns a tuple with the area name and a dict, keyed by item or property,
-    of the number of each item required to complete all the jobs in that area.
+    of tuples containing the number of each item required to complete all the
+    jobs in that area and the image for the item.
     """
     needed = {}
     templatesWithParams = page.templatesWithParams()
@@ -468,9 +469,10 @@ def gear_tuple(page):
                     key = u'gear_%d' % i
                     g = d[key]
                     n = int(d[key + u'_count'])
+                    img = d[key + u'_img']
                     # Store the largest number of each type of gear
-                    if g not in needed or n > needed[g]:
-                        needed[g] = n
+                    if g not in needed or n > needed[g][0]:
+                        needed[g] = (n, img)
                     #try:
                     #    if n > needed[g]:
                     #        needed[g] = n
@@ -554,8 +556,8 @@ def page_to_rows(page, row_template, high_cost_ratios={}):
 def dict_to_gear_page(gear_dict):
     """
     Takes a dictionary, indexed by area name, of dictionaries, indexed by gear name,
-    of numbers of that item required. Returns the entire text for a wiki page
-    containing that information.
+    of tuples containing the numbers of that item required and the item's image.
+    Returns the entire text for a wiki page containing that information.
     """
     text = u'<!-- This page was generated/modified by software -->\n'
     text += u'This page lists the gear required to complete all the jobs in each area (including secret jobs). Details are pulled from the individual [[:Category:Areas|Area]] pages, so any errors or omissions there will be reflected here.\n'
@@ -563,8 +565,8 @@ def dict_to_gear_page(gear_dict):
         text += u'==[[%s]]==\n' % area
         the_gear = gear_dict[area]
         for gear in sorted(the_gear.keys()):
-            n = the_gear[gear]
-            text += u'*%d [[%s]]\n' % (n, gear)
+            (n, img) = the_gear[gear]
+            text += u'*%d [[File:%s||100px]] [[%s]]\n' % (n, img, gear)
     text += u'[[Category:Summary Tables]]'
     return text
 

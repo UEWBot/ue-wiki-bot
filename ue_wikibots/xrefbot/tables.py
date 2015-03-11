@@ -665,7 +665,7 @@ class XrefBot:
 
     def update_jobs_tables(self):
         """
-        Creates or updates page Jobs Table and Callenge Jobs Table from the
+        Creates or updates page Jobs Table and Challenge Jobs Table from the
         content of the Areas category.
         """
         # Templates to use

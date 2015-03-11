@@ -443,6 +443,43 @@ def sort_lts(row, area):
                     rarities[i] = u'Rare'
     return row
 
+def gear_tuple(page):
+    """
+    Returns a tuple with the area name and a dict, keyed by item or property,
+    of the number of each item required to complete all the jobs in that area.
+    """
+    needed = {}
+    templatesWithParams = page.templatesWithParams()
+    name = page.title()
+    for (template, params) in templatesWithParams:
+        template_name = template.title(withNamespace=False)
+        # We're only interested in certain templates
+        if template_name == u'Job':
+            d = utils.paramsToDict(params)
+            try:
+                g = d[u'gear']
+                if g != u'None':
+                    # There shouldn't be any of these
+                    print "Found %s in gear parameter in %s" % (g, name)
+            except:
+                pass
+            for i in range(1,5):
+                try:
+                    key = u'gear_%d' % i
+                    g = d[key]
+                    n = int(d[key + u'_count'])
+                    # Store the largest number of each type of gear
+                    if g not in needed or n > needed[g]:
+                        needed[g] = n
+                    #try:
+                    #    if n > needed[g]:
+                    #        needed[g] = n
+                    #except:
+                    #    needed[g] = n
+                except:
+                    pass
+    return (name, needed)
+
 def page_to_row(page, row_template):
     """
     Creates a table row for the item or challenge job described in page.
@@ -513,6 +550,23 @@ def page_to_rows(page, row_template, high_cost_ratios={}):
             for count in range(1, max + 1):
                 rows.append(property_row(page.title(), d, count, high_cost_ratios))
     return rows
+
+def dict_to_gear_page(gear_dict):
+    """
+    Takes a dictionary, indexed by area name, of dictionaries, indexed by gear name,
+    of numbers of that item required. Returns the entire text for a wiki page
+    containing that information.
+    """
+    text = u'<!-- This page was generated/modified by software -->\n'
+    text += u'This page lists the gear required to complete all the jobs in each area (including secret jobs). Details are pulled from the individual [[:Category:Areas|Area]] pages, so any errors or omissions there will be reflected here.\n'
+    for area in sorted(gear_dict.keys()):
+        text += u'==[[%s]]==\n' % area
+        the_gear = gear_dict[area]
+        for gear in sorted(the_gear.keys()):
+            n = the_gear[gear]
+            text += u'*%d [[%s]]\n' % (n, gear)
+    text += u'[[Category:Summary Tables]]'
+    return text
 
 def rarities():
     """
@@ -620,13 +674,16 @@ class XrefBot:
 
         job_page = pywikibot.Page(pywikibot.Site(), u'Jobs Table')
         dice_job_page = pywikibot.Page(pywikibot.Site(), u'Challenge Jobs Table')
+        area_gear_page = pywikibot.Page(pywikibot.Site(), u'Area Gear Table')
         job_rows = []
         dice_rows = []
+        gear_dict = {}
         cat = pywikibot.Category(pywikibot.Site(), u'Areas')
         # One row per use of the template on a page in category
         for page in list(cat.articles()):
             job_rows += page_to_rows(page, job_row_template)
             dice_rows.append(page_to_row(page, dice_row_template))
+            gear_dict.update([gear_tuple(page)])
         # Start the new page text
         new_job_text = summary_header(job_row_template)
         new_dice_text = summary_header(dice_row_template)
@@ -638,9 +695,11 @@ class XrefBot:
         # Finish with a footer
         new_job_text += summary_footer(job_row_template)
         new_dice_text += summary_footer(dice_row_template)
-        # Upload it
+        new_gear_text = dict_to_gear_page(gear_dict)
+        # Upload the new pages
         self.update_or_create_page(job_page, new_job_text);
         self.update_or_create_page(dice_job_page, new_dice_text);
+        self.update_or_create_page(area_gear_page, new_gear_text);
 
     def update_lt_rarity_table(self):
         """

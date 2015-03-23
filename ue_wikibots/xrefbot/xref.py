@@ -1335,6 +1335,7 @@ class XrefToolkit:
                 template = temp.title(withNamespace=False)
                 if template == u'Drop':
                     if utils.paramFromParams(params, u'name') == name:
+                        # TODO If it has creator=true, need to ensure that's reflected on this page
                         source_set.add(r.title(withNamespace=False))
                 elif template == u'Mystery Gift Item':
                     gift_params = utils.paramsToDict(params)

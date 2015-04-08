@@ -1453,7 +1453,7 @@ class XrefToolkit:
                 pywikibot.output("Unexpected type '%s'" % type_param)
                 # Change it to Needs Type
                 # Note that this replaces every instance of the text in type_param...
-                text.replace(type_param, cat)
+                text = text.replace(type_param, cat)
 
         return text
 
@@ -1554,7 +1554,7 @@ class XrefToolkit:
                         if points_param != m.group('points'):
                             # Change the value
                             # Note that this replaces every instance of the text in points_param...
-                            text.replace(points_param, m.group('points'))
+                            text = text.replace(points_param, m.group('points'))
             except KeyError:
                 if not self.catInCategories(u'Needs Unlock Criterion', categories):
                     text = self.appendCategory(text, u'Needs Unlock Criterion')

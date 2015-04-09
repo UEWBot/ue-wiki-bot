@@ -1307,7 +1307,7 @@ class XrefToolkit:
         elif the_template == u'Faction Item':
             text = self.fixFactionItem(name, text, the_params, categories)
         elif the_template == u'Special Item':
-            text = self.fixSpecialItem(text, the_params, categories, is_tech_lab_item)
+            text = self.fixSpecialItem(name, text, the_params, categories, is_tech_lab_item)
         elif the_template == u'Basic Item':
             text = self.fixBasicItem(text, the_params, categories)
         elif the_template == u'Battle Rank Item':
@@ -1441,12 +1441,7 @@ class XrefToolkit:
         type_param = utils.paramFromParams(params, u'type')
         if type_param == None:
             # Add a type parameter, with value Needs Type
-            # Note that this just finds the first instance of params...
-            start = text.find(params[0])
-            if start != -1:
-                text = text[0:start] + u'type=' + cat + u'\n|' + text[start:]
-            else:
-                assert 0, "Failed to find params %s" % params
+            text = self.addParam(text, params, u'type=' + cat + u'\n')
         else:
             # Check that the type is one we expect
             if oneCap(type_param) not in types:
@@ -1567,7 +1562,64 @@ class XrefToolkit:
 
         return text
 
-    def fixSpecialItem(self, text, params, categories, is_tech_lab_item):
+    def recipesUsing(self, name):
+        """
+        Returns a set of items that this item is an ingredient for.
+        Only checks recipe_cache (i.e. Tech Lab pages).
+        """
+        retval = set()
+        for r in recipe_cache.recipes():
+            for p in recipe_cache.recipe_for(r):
+                # This assumes no space between the = and the parameter value
+                if p.startswith(u'part_') and p.endswith(u'=' + name):
+                    retval.add(r)
+
+        return retval
+
+    def addParam(self, text, params, new_param):
+        """
+        Add a parameter to the parameters of a template.
+        new_param should take the form u'<name>=<value>'.
+        Returns the modified text.
+        """
+        # Note that this just finds the first instance of params[0]...
+        start = text.find(params[0])
+        if start != -1:
+            text = text[0:start] + new_param + u'|' + text[start:]
+        else:
+            assert 0, "Failed to find params %s" % params
+
+        return text
+
+    def fixPossibleIngredient(self, name, text, params, for_mandatory=False):
+        """
+        Fix an item that may be an ingredient in Tech Lab recipes.
+        Checks any for parameter. Modifies it or adds a category as needed.
+        If for_mandatory is True, a Needs category will be added if no for
+        parameter is present and one can't be derived.
+        """
+        recipes = self.recipesUsing(name)
+        for_param = utils.paramFromParams(params, u'for')
+
+        if for_param == None:
+            if len(recipes) > 1:
+                # Add a for parameter listing the recipes
+                new_param = u'for=<br/>\n*[[' + u']]\n*[['.join(recipes) + u']]\n'
+                text = self.addParam(text, params, new_param)
+            elif len(recipes) > 0:
+                # Add a for parameter listing the recipe
+                new_param = u'for=[[' + u']], [['.join(recipes) + u']]\n'
+                text = self.addParam(text, params, new_param)
+            elif for_mandatory and not self.catInCategories(u'Needs Information', categories):
+                # It should be for something, but we don't know what
+                text = self.appendCategory(text, u'Needs Information') # u'Needs Purpose'
+        else:
+            #TODO Check that all the recipes we found are listed in the for parameter
+            pass
+
+        return text
+
+    def fixSpecialItem(self, name, text, params, categories, is_tech_lab_item):
         """
         Ensures that special items have description, image, atk, def, cost, rarity, type
         and from params or appropriate "Needs" category.
@@ -1589,6 +1641,8 @@ class XrefToolkit:
 
         # Check type param
         text = self.fixItemType(text, params, categories)
+
+        text = self.fixPossibleIngredient(name, text, params)
 
         return text
 
@@ -1638,12 +1692,7 @@ class XrefToolkit:
             # Add a daily parameter, with value yes if not already present
             daily_param = param_dict[u'daily']
             if daily_param == None:
-                # Note that this just finds the first instance of params[0]...
-                start = text.find(params[0])
-                if start != -1:
-                    text = text[0:start] + u'daily=yes|' + text[start:]
-                else:
-                    assert 0, "Failed to find params %s" % params
+                text = self.addParam(text, params, u'daily=yes')
 
         # Check type param
         text = self.fixItemType(text, params, categories)
@@ -1707,13 +1756,7 @@ class XrefToolkit:
 
         text = self.fixNeedsCategories(text, params, categories, ingr_param_map)
 
-        for_param = utils.paramFromParams(params, u'for')
-        if for_param == None:
-            if not self.catInCategories(u'Needs Information', categories):
-                text = self.appendCategory(text, u'Needs Information') # u'Needs Purpose'
-        else:
-            #TODO Check item is listed as an ingredient where appropriate
-            pass
+        text = self.fixPossibleIngredient(name, text, params, True)
 
         return text
 

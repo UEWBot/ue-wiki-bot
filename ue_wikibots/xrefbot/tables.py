@@ -498,8 +498,12 @@ def page_to_row(page, row_template):
         # We're only interested in certain templates
         if item_templates.search(template_name) or template_name == u'Challenge Job':
             # Pass all the item template parameters
+            if template_name != u'Basic Item':
+                # We only have a real cost for Basic Items
+                row += u'|cost=N/A'
             for param in params:
-                row += u'|%s' % param
+                if not param.startswith(u'cost') or (template_name == u'Basic Item'):
+                    row += u'|%s' % param
         else:
             match = lieutenant_templates.search(template_name)
             if match:

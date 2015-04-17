@@ -1045,6 +1045,7 @@ class XrefToolkit:
                 nameParam = param_dict[name_str]
             except KeyError:
                 # Ran out of items
+		# TODO There have been cases of Lts skipping item numbers...
                 break
             try:
                 powerParam = param_dict[power_str]

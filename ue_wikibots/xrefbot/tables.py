@@ -490,6 +490,9 @@ def page_to_row(page, row_template):
     mapping = {u'Challenge Job Row': u'district',
                u'Lieutenant Row' : u'name',
                u'Item Row' : u'name'}
+    ignore_cost_param = {u'Special Item',
+                         u'Gift Item',
+                         u'Faction Item'}
     templatesWithParams = page.templatesWithParams()
     name = page.title()
     row = u'{{%s|%s=%s' % (row_template, mapping[row_template], name)
@@ -498,11 +501,11 @@ def page_to_row(page, row_template):
         # We're only interested in certain templates
         if item_templates.search(template_name) or template_name == u'Challenge Job':
             # Pass all the item template parameters
-            if template_name != u'Basic Item':
+            if template_name in ignore_cost_param:
                 # We only have a real cost for Basic Items
                 row += u'|cost=N/A'
             for param in params:
-                if not param.startswith(u'cost') or (template_name == u'Basic Item'):
+                if not param.startswith(u'cost') or (template_name not in ignore_cost_param):
                     row += u'|%s' % param
         else:
             match = lieutenant_templates.search(template_name)

@@ -174,17 +174,7 @@ class XrefToolkit:
         refs = list(page.getReferences())
         oldText = text
         #pywikibot.output("******\nIn text:\n%s" % text)
-        # Note that these are effectively independent. Although the text gets changed,
-        # the categories, templates, and parameters are not re-generated after each call
-        text = self.fixEventBoss(titleWithoutNamespace, text, categories, templatesWithParams)
-        text = self.fixBoss(titleWithoutNamespace, text, categories, templatesWithParams)
-        text = self.fixItem(titleWithoutNamespace, text, categories, templatesWithParams, refs)
-        text = self.fixLieutenant(titleWithoutNamespace, text, categories, templatesWithParams, refs)
-        text = self.fixProperty(titleWithoutNamespace, text, categories, templatesWithParams)
-        text = self.fixExecutionMethod(text, categories, templatesWithParams)
-        text = self.fixClass(text, categories, templatesWithParams)
-        text = self.fixTechLab(titleWithoutNamespace, text, categories, templatesWithParams)
-        text = self.fixArea(titleWithoutNamespace, text, categories, templatesWithParams)
+        text = self.fixPage(titleWithoutNamespace, text, categories, templatesWithParams, refs)
         #pywikibot.output("******\nOld text:\n%s" % oldText)
         #pywikibot.output("******\nIn text:\n%s" % text)
         # Just comparing oldText with text wasn't sufficient
@@ -199,6 +189,23 @@ class XrefToolkit:
         if self.debug:
             print
             pywikibot.showDiff(oldText, text)
+        return text
+
+    def fixPage(self, titleWithoutNamespace, text, categories, templatesWithParams, refs):
+        """
+        Modify text to fix any inconsistencies in the page.
+        """
+        # Note that these are effectively independent. Although the text gets changed,
+        # the categories, templates, and parameters are not re-generated after each call
+        text = self.fixEventBoss(titleWithoutNamespace, text, categories, templatesWithParams)
+        text = self.fixBoss(titleWithoutNamespace, text, categories, templatesWithParams)
+        text = self.fixItem(titleWithoutNamespace, text, categories, templatesWithParams, refs)
+        text = self.fixLieutenant(titleWithoutNamespace, text, categories, templatesWithParams, refs)
+        text = self.fixProperty(titleWithoutNamespace, text, categories, templatesWithParams)
+        text = self.fixExecutionMethod(text, categories, templatesWithParams)
+        text = self.fixClass(text, categories, templatesWithParams)
+        text = self.fixTechLab(titleWithoutNamespace, text, categories, templatesWithParams)
+        text = self.fixArea(titleWithoutNamespace, text, categories, templatesWithParams)
         return text
 
     # Now a load of utility methods

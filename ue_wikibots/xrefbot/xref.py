@@ -129,7 +129,8 @@ def timeParamsMatch(param1, param2):
 
 def missingParams(all_params, mandatory_list):
     """
-    Returns the set of all the parameters in mandatory_list that are not represented in all_params.
+    Returns the set of all the parameters in mandatory_list that
+    are not represented in all_params.
     """
     ret = set(mandatory_list)
     for p in all_params:
@@ -174,7 +175,11 @@ class XrefToolkit:
         refs = list(page.getReferences())
         oldText = text
         #pywikibot.output("******\nIn text:\n%s" % text)
-        text = self.fixPage(titleWithoutNamespace, text, categories, templatesWithParams, refs)
+        text = self.fixPage(titleWithoutNamespace,
+                            text,
+                            categories,
+                            templatesWithParams,
+                            refs)
         #pywikibot.output("******\nOld text:\n%s" % oldText)
         #pywikibot.output("******\nIn text:\n%s" % text)
         # Just comparing oldText with text wasn't sufficient
@@ -191,21 +196,46 @@ class XrefToolkit:
             pywikibot.showDiff(oldText, text)
         return text
 
-    def fixPage(self, titleWithoutNamespace, text, categories, templatesWithParams, refs):
+    def fixPage(self,
+                titleWithoutNamespace,
+                text,
+                categories,
+                templatesWithParams,
+                refs):
         """
         Modify text to fix any inconsistencies in the page.
         Returns updated text.
         """
         # Note that these are effectively independent. Although the text gets changed,
         # the categories, templates, and parameters are not re-generated after each call
-        text = self.fixBoss(titleWithoutNamespace, text, categories, templatesWithParams)
-        text = self.fixItem(titleWithoutNamespace, text, categories, templatesWithParams, refs)
-        text = self.fixLieutenant(titleWithoutNamespace, text, categories, templatesWithParams, refs)
-        text = self.fixProperty(titleWithoutNamespace, text, categories, templatesWithParams)
+        text = self.fixBoss(titleWithoutNamespace,
+                            text,
+                            categories,
+                            templatesWithParams)
+        text = self.fixItem(titleWithoutNamespace,
+                            text,
+                            categories,
+                            templatesWithParams,
+                            refs)
+        text = self.fixLieutenant(titleWithoutNamespace,
+                                  text,
+                                  categories,
+                                  templatesWithParams,
+                                  refs)
+        text = self.fixProperty(titleWithoutNamespace,
+                                text,
+                                categories,
+                                templatesWithParams)
         text = self.fixExecutionMethod(text, categories, templatesWithParams)
         text = self.fixClass(text, categories, templatesWithParams)
-        text = self.fixTechLab(titleWithoutNamespace, text, categories, templatesWithParams)
-        text = self.fixArea(titleWithoutNamespace, text, categories, templatesWithParams)
+        text = self.fixTechLab(titleWithoutNamespace,
+                               text,
+                               categories,
+                               templatesWithParams)
+        text = self.fixArea(titleWithoutNamespace,
+                            text,
+                            categories,
+                            templatesWithParams)
         return text
 
     # Now a load of utility methods
@@ -318,7 +348,10 @@ class XrefToolkit:
         iterator = Rheader.finditer(text)
         for m in iterator:
             hdr_lvl = len(m.group(1))
-            headers.append({'level':hdr_lvl, 'title':m.group(u'title'), 'from':m.start(), 'to':m.end()})
+            headers.append({'level':hdr_lvl,
+                            'title':m.group(u'title'),
+                            'from':m.start(),
+                            'to':m.end()})
         section_name = u''
         start = -1
         end = -1
@@ -409,7 +442,10 @@ class XrefToolkit:
                         if (key == u'type') and (u'for' in drop_params):
                             # We want either for or type for Ingredients
                             continue
-                        text = text.replace(ur'name=%s' % item_name, u'name=%s|%s=%s' % (item_name, key, item_params[key]))
+                        text = text.replace(ur'name=%s' % item_name,
+                                            u'name=%s|%s=%s' % (item_name,
+                                                                key,
+                                                                item_params[key]))
                 key = u'for'
                 if key not in drop_params and key in item_params:
                     # "for" parameter only needed where the item is a Tech Lab ingredient
@@ -419,7 +455,10 @@ class XrefToolkit:
                     # TODO There should be a better way to do this...
                     if item_name not in paramless_items and not self.catInCategories(u'Recombinators', item.categories()):
                         # TODO Need to also remove type=Ingredients
-                        text = text.replace(ur'name=%s' % item_name, u'name=%s|%s=%s' % (item_name, key, item_params[key]))
+                        text = text.replace(ur'name=%s' % item_name,
+                                            u'name=%s|%s=%s' % (item_name,
+                                                                key,
+                                                                item_params[key]))
                 if source not in item_params['from']:
                     pywikibot.output("Boss claims to drop %s, but is not listed on that page" % item_name)
             elif u'Lieutenant' in template:
@@ -713,6 +752,7 @@ class XrefToolkit:
         assigned by the template.
         Checks for mandatory template parameters or corresponding Needs category.
         Checks for increasing skill levels.
+        Returns updated text.
         """
         # Does the page use the Class template ?
         the_params = None
@@ -739,7 +779,10 @@ class XrefToolkit:
                            u'special_atk_effect': u'Needs Information', #u'Needs Special Attack Effect',
                            u'help_text': u'Needs Information'} #u'Needs Help Text'}
  
-        text = self.fixNeedsCategories(text, the_params, categories, class_param_map)
+        text = self.fixNeedsCategories(text,
+                                       the_params,
+                                       categories,
+                                       class_param_map)
 
         skill_param_map = {u'level': u'Needs Information', #u'Needs Skill Level',
                            u'effect': u'Needs Information', #u'Needs Skill Effect',
@@ -757,7 +800,10 @@ class XrefToolkit:
                     old_level = level
                 missing_params |= missingParams(params, skill_param_map.keys())
         # Ensure the Needs categories are correct
-        text = self.fixNeedsCats(text, missing_params, categories, skill_param_map)
+        text = self.fixNeedsCats(text,
+                                 missing_params,
+                                 categories,
+                                 skill_param_map)
 
         return text
 
@@ -768,6 +814,7 @@ class XrefToolkit:
         Checks that the page doesn't explictly list any categories that should be
         assigned by the template.
         Checks for mandatory template parameters or corresponding Needs category.
+        Returns updated text.
         """
         # Does the page use the execution method template ?
         the_params = None
@@ -792,7 +839,10 @@ class XrefToolkit:
                             u'bonus': u'Needs Information', #u'Needs Bonus',
                             u'need': u'Needs Information'} #u'Needs Prerequisite'}
  
-        text = self.fixNeedsCategories(text, the_params, categories, method_param_map)
+        text = self.fixNeedsCategories(text,
+                                       the_params,
+                                       categories,
+                                       method_param_map)
 
         return text
 
@@ -800,6 +850,7 @@ class XrefToolkit:
         """
         Checks that the page includes appropriate information (like Upgrade properties).
         Checks that the cost table matches the template for upgrade properties.
+        Returns updated text.
         """
         # TODO implement this function
         return text
@@ -808,11 +859,13 @@ class XrefToolkit:
         """
         Checks that the page includes appropriate information (like Upgrade properties).
         Checks that the cost table matches the template for upgrade properties.
+        Returns updated text.
         """
         # TODO implement this function
         # First, retrieve the expected cost ratios from the template
         Rrow = re.compile(ur'\|\s*(?P<level>\d+).*cost}}}\*(?P<ratio>[\d.]+)')
-        table_page = pywikibot.Page(pywikibot.Site(), u'Template:Property Cost Table')
+        table_page = pywikibot.Page(pywikibot.Site(),
+                                    u'Template:Property Cost Table')
         table_text = table_page.get()
         iterator = Rrow.finditer(table_text)
         ratios = {1:1.0}
@@ -832,7 +885,9 @@ class XrefToolkit:
         for level,cost in costs.iteritems():
             expected_cost = base_cost * ratios[level]
             if cost != expected_cost:
-                pywikibot.output("Level %d cost of %d != expected %d" % (level, cost, expected_cost))
+                pywikibot.output("Level %d cost of %d != expected %d" % (level,
+                                                                         cost,
+                                                                         expected_cost))
         return text
 
     def fixProperty(self, name, text, categories, templatesWithParams):
@@ -842,6 +897,7 @@ class XrefToolkit:
         Checks that the page doesn't explictly list any categories that should be
         assigned by the template.
         Checks for mandatory template parameters or corresponding Needs category.
+        Returns updated text.
         """
         # Does the page use a property template ?
         the_params = None
@@ -888,7 +944,10 @@ class XrefToolkit:
         except KeyError:
             prop_param_map[u'time'] = u'Needs Build Time'
  
-        text = self.fixNeedsCategories(text, the_params, categories, prop_param_map)
+        text = self.fixNeedsCategories(text,
+                                       the_params,
+                                       categories,
+                                       prop_param_map)
 
         return text
 
@@ -908,7 +967,9 @@ class XrefToolkit:
                 c = u'Crate Lieutenants'
                 if not self.catInCategories(c, categories):
                     text = self.appendCategory(text, c)
-            elif self.catInCategories(u'Events', r.categories()) or self.catInCategories(u'Giveaways', r.categories()):
+            elif self.catInCategories(u'Events',
+                                      r.categories()) or self.catInCategories(u'Giveaways',
+                                                                              r.categories()):
                 sources.append(u'[[%s]]' % r.title(withNamespace=False))
                 # Check that it's in Event Lieutenants
                 c = u'Event Lieutenants'
@@ -921,7 +982,8 @@ class XrefToolkit:
                     job = utils.paramFromParams(params, u'name')
                     for p in params:
                         if p.startswith(u'lt_') and name in p:
-                            sources.append(u'{{Job Link|district=%s|job=%s}}' % (area, job))
+                            sources.append(u'{{Job Link|district=%s|job=%s}}' % (area,
+                                                                                 job))
                 elif template == u'FP Item Row':
                     if name == utils.paramFromParams(params, u'lieutenant'):
                         sources.append(u'[[Black Market]]')
@@ -954,7 +1016,8 @@ class XrefToolkit:
                     try:
                         powerParam = param_dict[u'power']
                         imageParam = param_dict[u'image']
-                        refItems[r.title(withNamespace=False)] = (powerParam, imageParam)
+                        refItems[r.title(withNamespace=False)] = (powerParam,
+                                                                  imageParam)
                     except KeyError:
                         print "KeyError - itemsInRefs(). template = %s, param_dict = %s" % (template, param_dict)
                         continue
@@ -1048,7 +1111,10 @@ class XrefToolkit:
         refItems.update(self.itemsInRefs(faction_refs))
 
         # TODO Filter out any items that don't affect this Lt
-        refItems = {k: v for k, v in refItems.iteritems() if self.affectsLt(name, rarity, faction, self.splitPower(v[0])[1])}
+        refItems = {k: v for k, v in refItems.iteritems() if self.affectsLt(name,
+                                                                            rarity,
+                                                                            faction,
+                                                                            self.splitPower(v[0])[1])}
 
         items = {}
         i = 0
@@ -1080,19 +1146,26 @@ class XrefToolkit:
             if key in items:
                 # Compare the details
                 if refItems[key][0] != items[key][0]:
-                    pywikibot.output("Mismatch in power for %s - %s vs %s" % (key, refItems[key][0], items[key][0]))
+                    pywikibot.output("Mismatch in power for %s - %s vs %s" % (key,
+                                                                              refItems[key][0],
+                                                                              items[key][0]))
                     # This regex assumes that the parameter has a line to itself
                     text = re.sub(ur'item_%d_pwr\s*=\s*.*' % items[key][2],
-                                  u'item_%d_pwr=%s\n' % (items[key][2], refItems[key][0]),
+                                  u'item_%d_pwr=%s\n' % (items[key][2],
+                                                         refItems[key][0]),
                                   text)
                 if refItems[key][1] != items[key][1]:
-                    pywikibot.output("Mismatch in image for %s - %s vs %s" % (key, refItems[key][1], items[key][1]))
+                    pywikibot.output("Mismatch in image for %s - %s vs %s" % (key,
+                                                                              refItems[key][1],
+                                                                              items[key][1]))
                     # This regex assumes that the parameter has a line to itself
                     text = re.sub(ur'item_%d_img\s*=\s*.*' % items[key][2],
-                                  u'item_%d_img=%s\n' % (items[key][2], refItems[key][1]),
+                                  u'item_%d_img=%s\n' % (items[key][2],
+                                                         refItems[key][1]),
                                   text)
             else:
-                pywikibot.output("Missing item %s which gives %s" % (key, refItems[key][0]))
+                pywikibot.output("Missing item %s which gives %s" % (key,
+                                                                     refItems[key][0]))
                 # Add the item. No way to determine which item should be which
                 i += 1
                 #(temp, start, end) = self.findTemplate(text, the_template)
@@ -1107,7 +1180,7 @@ class XrefToolkit:
 
     def fixLtNeedsParams(self, text, the_params, categories, is_tech_lab_item):
         """
-        Fix the "Needs" parameters on a Lieutenant page.
+        Fix the "Needs" categories on a Lieutenant page.
         Returns modified version of text parameter.
         """
         # Check mandatory parameters
@@ -1195,14 +1268,22 @@ class XrefToolkit:
         for i in to_nuke:
             the_params.remove(i)
 
-        text = self.fixLtNeedsParams(text, the_params, categories, is_tech_lab_item)
+        text = self.fixLtNeedsParams(text,
+                                     the_params,
+                                     categories,
+                                     is_tech_lab_item)
 
         if not is_tech_lab_item:
             text = self.fixLtSources(name, text, categories, the_params, refs)
 
         # Do special checks for any Epic Research Items
         if is_tech_lab_item:
-            text = self.fixTechLabItem(name, text, the_params, categories, ingredients, False)
+            text = self.fixTechLabItem(name,
+                                       text,
+                                       the_params,
+                                       categories,
+                                       ingredients,
+                                       False)
 
         # Validate items parameters, if present
         text = self.fixLtItems(name, text, the_template, the_params, refs)
@@ -1219,6 +1300,7 @@ class XrefToolkit:
         Checks that the item is listed everywhere it says it can be obtained.
         Checks whether the categories Needs Cost and Needs Type are used correctly.
         Calls the appropriate fix function for the specific type of item.
+        Returns updated text.
         """
         # All these categories should be added by the various templates
         # Note that Daily Rewards also logically belongs here, but we do clever stuff for that one
@@ -1324,17 +1406,29 @@ class XrefToolkit:
         elif the_template == u'Faction Item':
             text = self.fixFactionItem(name, text, the_params, categories)
         elif the_template == u'Special Item':
-            text = self.fixSpecialItem(name, text, the_params, categories, is_tech_lab_item)
+            text = self.fixSpecialItem(name,
+                                       text,
+                                       the_params,
+                                       categories,
+                                       is_tech_lab_item)
         elif the_template == u'Basic Item':
             text = self.fixBasicItem(text, the_params, categories)
         elif the_template == u'Battle Rank Item':
             text = self.fixBattleItem(name, text, the_params, categories)
         elif the_template == u'Ingredient':
-            text = self.fixIngredient(name, text, the_params, categories, is_tech_lab_item)
+            text = self.fixIngredient(name,
+                                      text,
+                                      the_params,
+                                      categories,
+                                      is_tech_lab_item)
 
         # Do special checks for any Epic Research Items
         if is_tech_lab_item:
-            text = self.fixTechLabItem(name, text, the_params, categories, ingredients)
+            text = self.fixTechLabItem(name,
+                                       text,
+                                       the_params,
+                                       categories,
+                                       ingredients)
 
         return text
 
@@ -1343,6 +1437,7 @@ class XrefToolkit:
         Check that the page lists the right places it can be obtained from.
         Adds any that are missing
         from_param may be None
+        Returns updated text.
         """
         # First, find pages that list this item as a drop
         # Starting with the list of pages that link here
@@ -1377,7 +1472,9 @@ class XrefToolkit:
             elif r.isRedirectPage():
                 pass
             # If it's linked to from an event page, assume it's an event reward
-            elif self.catInCategories(u'Events', r.categories()) or self.catInCategories(u'Giveaways', r.categories()):
+            elif self.catInCategories(u'Events',
+                                      r.categories()) or self.catInCategories(u'Giveaways',
+                                                                              r.categories()):
                 source_set.add(r.title(withNamespace=False))
         # Then, find the places listed as sources in this page
         # Remove any that match from the source list, leaving missing sources
@@ -1438,13 +1535,15 @@ class XrefToolkit:
         for src in source_set:
             if src == u'Achievements#Daily':
                 src = u'Achievements#Daily|Daily Achievements'
-            text = text.replace(from_param, from_param + u'%s[[%s]]' % (new_str, src))
+            text = text.replace(from_param,
+                                from_param + u'%s[[%s]]' % (new_str, src))
         return text
 
     def fixItemType(self, text, params, categories):
         """
         Checks the type parameter.
         Adds or removes the Needs Type category.
+        Returns updated text.
         """
         types = [u'Gear',
                  u'Vehicles',
@@ -1474,6 +1573,7 @@ class XrefToolkit:
         Checks the from parameter.
         Adds or removes Needs Minimum Level category.
         Warns if the from parameter differs from what the Gift page says.
+        Returns updated text.
         """
         from_param = utils.paramFromParams(params, u'from')
         if from_param == None:
@@ -1497,6 +1597,7 @@ class XrefToolkit:
         Trusts that type param will be checked elsewhere.
         Checks that the minimum level is specified, and that it matches what the Gift page says.
         Assumes that that page uses the Gift Item template.
+        Returns updated text.
         """
         # Check mandatory parameters
         gift_param_map = {u'description': u'Needs Description',
@@ -1522,6 +1623,7 @@ class XrefToolkit:
         parameters, or appropriate "Needs" category.
         Checks that the minimum level is specified, and that it matches what the Gift page says.
         Assumes that that page uses the Mystery Gift Item template.
+        Returns updated text.
         """
         # Check mandatory parameters
         gift_param_map = {u'item_1': u'Needs Information', #u'Needs Item',
@@ -1551,7 +1653,10 @@ class XrefToolkit:
                              u'rarity': u'Needs Rarity',
                              u'image': u'Needs Improvement'} #u'Needs Image'}
  
-        text = self.fixNeedsCategories(text, params, categories, faction_param_map)
+        text = self.fixNeedsCategories(text,
+                                       params,
+                                       categories,
+                                       faction_param_map)
 
         # Check points against corresponding faction page
         param_dict = utils.paramsToDict(params)
@@ -1568,7 +1673,8 @@ class XrefToolkit:
                             # Note that this replaces every instance of the text in points_param...
                             text = text.replace(points_param, m.group('points'))
             except KeyError:
-                if not self.catInCategories(u'Needs Unlock Criterion', categories):
+                if not self.catInCategories(u'Needs Unlock Criterion',
+                                            categories):
                     text = self.appendCategory(text, u'Needs Unlock Criterion')
         except KeyError:
             if not self.catInCategories(u'Needs Information', categories):
@@ -1627,7 +1733,8 @@ class XrefToolkit:
                 # Add a for parameter listing the recipe
                 new_param = u'for=[[' + u']], [['.join(recipes) + u']]\n'
                 text = self.addParam(text, params, new_param)
-            elif for_mandatory and not self.catInCategories(u'Needs Information', categories):
+            elif for_mandatory and not self.catInCategories(u'Needs Information',
+                                                            categories):
                 # It should be for something, but we don't know what
                 text = self.appendCategory(text, u'Needs Information') # u'Needs Purpose'
         else:
@@ -1641,6 +1748,7 @@ class XrefToolkit:
         Ensures that special items have description, image, atk, def, cost, rarity, type
         and from params or appropriate "Needs" category.
         Assumes that the page uses the Special Item template.
+        Returns updated text.
         """
         # Check mandatory parameters
         special_param_map = {u'description': u'Needs Description',
@@ -1654,7 +1762,10 @@ class XrefToolkit:
         if not is_tech_lab_item:
             special_param_map[u'from'] = u'Needs Source'
  
-        text = self.fixNeedsCategories(text, params, categories, special_param_map)
+        text = self.fixNeedsCategories(text,
+                                       params,
+                                       categories,
+                                       special_param_map)
 
         # Check type param
         text = self.fixItemType(text, params, categories)
@@ -1670,6 +1781,7 @@ class XrefToolkit:
         Checks that either level or area is specified.
         Checks that it not explicitly in Daily Rewards category.
         Assumes that the page uses the Basic Item template.
+        Returns updated text.
         """
         # Check mandatory parameters
         basic_param_map = {u'description': u'Needs Description',
@@ -1696,7 +1808,8 @@ class XrefToolkit:
         if level_param == None:
             if area_param == None:
                 pywikibot.output("Missing both level and district parameters")
-                if not self.catInCategories(u'Needs Unlock Criterion', categories):
+                if not self.catInCategories(u'Needs Unlock Criterion',
+                                            categories):
                     text = self.appendCategory(text, u'Needs Unlock Criterion')
         else:
             if area_param is not None:
@@ -1722,6 +1835,7 @@ class XrefToolkit:
         or appropriate "Needs" category.
         Checks that the battle rank is specified, and that it matches what the Battle Rank page says.
         Assumes that the page uses the Battle Rank Item template.
+        Returns updated text.
         """
         # Check mandatory parameters
         battle_param_map = {u'description': u'Needs Description',
@@ -1732,7 +1846,10 @@ class XrefToolkit:
                             u'time': u'Needs Build Time',
                             u'image': u'Needs Improvement'} #u'Needs Image'}
  
-        text = self.fixNeedsCategories(text, params, categories, battle_param_map)
+        text = self.fixNeedsCategories(text,
+                                       params,
+                                       categories,
+                                       battle_param_map)
 
         # Check rank parameter against Battle Rank page
         rank_param = utils.paramFromParams(params, u'rank')
@@ -1762,6 +1879,7 @@ class XrefToolkit:
         or appropriate "Needs" category.
         Checks that the item is listed on the from and for pages.
         Assumes that the page uses the Ingredient template.
+        Returns updated text.
         """
         # Check mandatory parameters
         ingr_param_map = {u'rarity': u'Needs Rarity',
@@ -1777,11 +1895,18 @@ class XrefToolkit:
 
         return text
 
-    def fixTechLabItem(self, name, text, params, categories, lab_params, check_image=True):
+    def fixTechLabItem(self,
+                       name,
+                       text,
+                       params,
+                       categories,
+                       lab_params,
+                       check_image=True):
         """
         Check that it is listed as made in the same way on its page and the Tech Lab page.
         Check that atk and def match what the Tech Lab page says.
         If check_image is True, also check that the image matches the one on the Tech Lab page.
+        Returns updated text.
         """
         # Find this recipe on one of the tech lab pages
         recipe_dict = utils.paramsToDict(recipe_cache.recipe_for(name))
@@ -1797,9 +1922,13 @@ class XrefToolkit:
             # Create an empty Lab template inclusion to add params to
             # TODO May actually want Lab Four of a Kind or Lab Full House
             if u'|from=' in text:
-                text = text.replace(u'|from=', u'|from=<br\\>\n*{{Lab|in_list=yes}}\n*', 1)
+                text = text.replace(u'|from=',
+                                    u'|from=<br\\>\n*{{Lab|in_list=yes}}\n*',
+                                    1)
             else:
-                text = text.replace(u'|image=', u'|from={{Lab}}\n|image=', 1)
+                text = text.replace(u'|image=',
+                                    u'|from={{Lab}}\n|image=',
+                                    1)
         else:
             lab_dict = utils.paramsToDict(lab_params)
 
@@ -1854,7 +1983,8 @@ class XrefToolkit:
         if total != num_parts:
             # Fix num_parts, if present, else flag missing ingredient(s)
             # TODO This assumes no spaces in the parameter setting
-            text = text.replace(u'num_parts=%d' % num_parts, u'num_parts=%d' % total)
+            text = text.replace(u'num_parts=%d' % num_parts,
+                                u'num_parts=%d' % total)
 
         # Check the Lab parameters against the Recipe parameters
         lab_keys = set(lab_dict.keys())
@@ -1865,14 +1995,17 @@ class XrefToolkit:
             if key in lab_keys:
                 if recipe_dict[key] != lab_dict[key]:
                     # Fix up this page to match Tech Lab, because recipes are found there
-                    text = re.sub(ur'(\|\W*%s\W*=\W*)%s' % (key, utils.escapeStr(lab_dict[key])),
+                    text = re.sub(ur'(\|\W*%s\W*=\W*)%s' % (key,
+                                                            utils.escapeStr(lab_dict[key])),
                                   ur'\g<1>%s' % recipe_dict[key],
                                   text)
             else:
                 # Insert the missing parameter
                 pywikibot.output("Missing param - %s" % recipe_dict[key])
                 # TODO this doesn't work for Lab Four of a Kind or Lab Full House
-                text = text.replace(u'Lab', u'Lab\n|%s=%s' % (key, recipe_dict[key]), 1)
+                text = text.replace(u'Lab',
+                                    u'Lab\n|%s=%s' % (key, recipe_dict[key]),
+                                    1)
 
         # Check any Lab "from" parameters are correct
         for i in range(1,i):
@@ -1909,7 +2042,9 @@ class XrefToolkit:
             except KeyError:
                 # Add from parameter to this page
                 new_param = u'|%s=%s' % (from_str, src_param)
-                text = text.replace(ur'|%s' % part_str, u'%s\n|%s' % (new_param, part_str), 1)
+                text = text.replace(ur'|%s' % part_str,
+                                    u'%s\n|%s' % (new_param, part_str),
+                                    1)
 
         return text
 
@@ -1932,7 +2067,8 @@ class XrefBot:
         self.generator = generator
         self.acceptall = acceptall
         # Find all the sub-categories of Needs Information
-        cat = pywikibot.Category(pywikibot.Site(), u'Category:Needs Information')
+        cat = pywikibot.Category(pywikibot.Site(),
+                                 u'Category:Needs Information')
         self.specificNeeds = set(c.title(withNamespace=False) for c in cat.subcategories(recurse=True))
 
     def treat(self, page):
@@ -1945,13 +2081,18 @@ class XrefBot:
             # TODO Modify to treat just whitespace as unchanged
             # Just comparing changedText with page.get() wasn't sufficient
             changes = False
-            for diffline in difflib.ndiff(page.get().splitlines(), changedText.splitlines()):
+            for diffline in difflib.ndiff(page.get().splitlines(),
+                                          changedText.splitlines()):
                 if not diffline.startswith(u'  '):
                     changes = True
                     break
             if changes:
                 if not self.acceptall:
-                    choice = pywikibot.input_choice(u'Do you want to accept these changes?',  [('Yes', 'Y'), ('No', 'n'), ('All', 'a')], 'N')
+                    choice = pywikibot.input_choice(u'Do you want to accept these changes?',
+                                                    [('Yes', 'Y'),
+                                                     ('No', 'n'),
+                                                     ('All', 'a')],
+                                                    'N')
                     if choice == 'a':
                         self.acceptall = True
                 if self.acceptall or choice == 'y':

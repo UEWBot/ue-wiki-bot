@@ -599,30 +599,36 @@ class XrefToolkit:
         missing_params = set()
         for template, params in templatesWithParams:
             if template == u'Job':
-                missing_params |= missingParams(params, common_param_map.keys() + job_param_map.keys())
+                mp = missingParams(params,
+                                   common_param_map.keys() + job_param_map.keys())
                 # xp_min and xp_max will do instead of xp
-                if u'xp' in missing_params:
-                    missing_params.remove(u'xp')
-                    missing_params |= missingParams(params, xp_pair_param_map.keys())
+                if u'xp' in mp:
+                    mp.remove(u'xp')
+                    mp |= missingParams(params, xp_pair_param_map.keys())
                 # Special case for missing gear_n and gear_n_img parameters
                 got_gear = False
                 for i in range(4,0,-1):
                     root = u'gear_%d' % i
-                    if root in missing_params:
+                    if root in mp:
                         # Shouldn't have higher number without lower
                         if not got_gear:
-                            missing_params.remove(root)
+                            mp.remove(root)
                             img_param = root + u'_img'
-                            if img_param in missing_params:
-                                missing_params.remove(img_param)
+                            if img_param in mp:
+                                mp.remove(img_param)
                     else:
                         got_gear = True
+                missing_params |= mp
             elif template == u'Challenge Job':
-                missing_params |= missingParams(params, common_param_map.keys() + xp_pair_param_map.keys() + challenge_param_map.keys())
+                missing_params |= missingParams(params,
+                                                common_param_map.keys() + xp_pair_param_map.keys() + challenge_param_map.keys())
                 # TODO Check the LT rarities
         pywikibot.output("Set of missing job parameters is %s" % missing_params)
         # Ensure the Needs categories are correct
-        text = self.fixNeedsCats(text, missing_params, categories, dict(common_param_map.items() + job_param_map.items() + challenge_param_map.items()))
+        text = self.fixNeedsCats(text,
+                                 missing_params,
+                                 categories,
+                                 dict(common_param_map.items() + job_param_map.items() + challenge_param_map.items()))
 
         return text
 

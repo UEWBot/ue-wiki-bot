@@ -637,14 +637,13 @@ class XrefToolkit:
         Fixes the Tech Lab and Tech Lab - Historic pages.
         Ensures that __NOWYSIWYG__ is present.
         Checks for mandatory template parameters or corresponding Needs category.
+        Returns updated text.
         """
         if u'Tech Lab' not in name:
             return text
 
         # Is this a historic recipe ?
-        is_old = False
-        if u'Historic' in name:
-            is_old = True
+        is_old = (u'Historic' in name)
 
         # __NOWYSIWYG__
         text = self.prependNowysiwygIfNeeded(text)
@@ -659,44 +658,50 @@ class XrefToolkit:
         old_recipe_map = {u'available' : u'Needs Information'}
         missing_params = set()
         for template, params in templatesWithParams:
-            if u'Recipe' in template:
-                missing_params |= missingParams(params, recipe_param_map.keys())
-                # Find this item on the page
-                param_dict = utils.paramsToDict(params)
-                name = param_dict[u'name']
-                # This can take a while, so reassure the user
-                pywikibot.output("Checking %s" % name)
-                recipe_start = text.find(name)
-                if is_old:
-                    missing_params |= missingParams(params, old_recipe_map.keys())
-                # TODO Cross-reference against item page
-                # Check images for ingredients
-                n = 0
-                while True:
-                    n += 1
-                    part_str = u'part_%s' % n
-                    try:
-                        part = param_dict[part_str]
-                    except KeyError:
-                        # Ran out of parts
-                        break
-                    part_img_str = part_str + u'_img'
-                    part_img = param_dict[part_img_str]
-                    image = self.imageForItemOrIngredient(part)
-                    if image is not None:
-                        if part_img == None:
-                            # Insert an appropriate part_img parameter
-                            new_part = re.sub(ur'(\|\W*%s\W*=\W*%s)' % (part_str, utils.escapeStr(part)),
-                                              ur'\1\n|%s=%s' % (part_img_str, image),
-                                              text[recipe_start:],
-                                              1)
-                            text = text[:recipe_start] + new_part
-                        elif image != part_img:
-                            # TODO Replace the image with the one from the ingredient page
-                            pywikibot.output("Image mismatch. %s has %s, %s has %s" % (name, part_img, part, image))
+            if u'Recipe' not in template:
+                continue
+            missing_params |= missingParams(params, recipe_param_map.keys())
+            # Find this item on the page
+            param_dict = utils.paramsToDict(params)
+            name = param_dict[u'name']
+            # This can take a while, so reassure the user
+            pywikibot.output("Checking %s" % name)
+            recipe_start = text.find(name)
+            if is_old:
+                missing_params |= missingParams(params, old_recipe_map.keys())
+            # TODO Cross-reference against item page
+            # Check images for ingredients
+            n = 0
+            while True:
+                n += 1
+                part_str = u'part_%s' % n
+                try:
+                    part = param_dict[part_str]
+                except KeyError:
+                    # Ran out of parts
+                    break
+                part_img_str = part_str + u'_img'
+                part_img = param_dict[part_img_str]
+                image = self.imageForItemOrIngredient(part)
+                if image is not None:
+                    if part_img == None:
+                        # Insert an appropriate part_img parameter
+                        new_part = re.sub(ur'(\|\W*%s\W*=\W*%s)' % (part_str,
+                                                                    utils.escapeStr(part)),
+                                          ur'\1\n|%s=%s' % (part_img_str,
+                                                            image),
+                                          text[recipe_start:],
+                                          1)
+                        text = text[:recipe_start] + new_part
+                    elif image != part_img:
+                        # TODO Replace the image with the one from the ingredient page
+                        pywikibot.output("Image mismatch. %s has %s, %s has %s" % (name, part_img, part, image))
         pywikibot.output("Set of missing recipe parameters is %s" % missing_params)
         # Ensure the Needs categories are correct
-        text = self.fixNeedsCats(text, missing_params, categories, recipe_param_map)
+        text = self.fixNeedsCats(text,
+                                 missing_params,
+                                 categories,
+                                 recipe_param_map)
 
         return text
 

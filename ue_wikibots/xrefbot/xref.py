@@ -194,10 +194,10 @@ class XrefToolkit:
     def fixPage(self, titleWithoutNamespace, text, categories, templatesWithParams, refs):
         """
         Modify text to fix any inconsistencies in the page.
+        Returns updated text.
         """
         # Note that these are effectively independent. Although the text gets changed,
         # the categories, templates, and parameters are not re-generated after each call
-        text = self.fixEventBoss(titleWithoutNamespace, text, categories, templatesWithParams)
         text = self.fixBoss(titleWithoutNamespace, text, categories, templatesWithParams)
         text = self.fixItem(titleWithoutNamespace, text, categories, templatesWithParams, refs)
         text = self.fixLieutenant(titleWithoutNamespace, text, categories, templatesWithParams, refs)
@@ -445,37 +445,12 @@ class XrefToolkit:
                 pywikibot.output("Ignoring template %s" % template)
         return text
 
-    def fixEventBoss(self, name, text, categories, templatesWithParams):
-        """
-        If the page is in both the Bosses and Events categories:
-        Ensures that __NOWYSIWYG__ is present.
-        Checks each drop's image, type, attack, and defence.
-        """
-        boss = self.catInCategories(u'Bosses', categories)
-        event = self.catInCategories(u'Events', categories)
-        # Drop out early if not an event boss page
-        # TODO Is there a better test ?
-        if not boss or not event:
-            return text
-
-        drop_params = [u'image', u'type', u'atk', u'def']
-
-        # __NOWYSISYG__
-        text = self.prependNowysiwygIfNeeded(text)
-
-        # Check each drop
-        for (template, params) in templatesWithParams:
-            if template == u'Drop':
-                drop_params = utils.paramsToDict(params)
-                text = self.checkItemParams(text, name, drop_params)
-
-        return text
-
     def fixBoss(self, name, text, categories, templatesWithParams):
         """
-        If the page is in either the 'Job Bosses' or 'Tech Lab Bosses' categories:
+        Fixes a Boss page.
+        If the page is in any of the five boss categories.
         Ensures that __NOWYSIWYG__ is present.
-        Checks that the page is in one of the Job Bosses or Tech Lab Bosses categories.
+        Checks that the page is in exactly one of the five boss categories.
         Checks each drop's image, type, attack, and defence.
         Checks whether the categories Needs Completion Dialogue, Needs Rewards,
         Needs Stages, and Needs Time Limit are used correctly.
@@ -510,6 +485,11 @@ class XrefToolkit:
 
         # Event Bosses are structured very differently
         if u'Event Bosses' in the_cats:
+            # Should also be in the 'Events' category
+            cat = u'Events'
+            if not self.catInCategories(cat, categories):
+                text = self.appendCategory(text, cat)
+            # Don't check other 'Needs' categories
             return text
 
         # Check Needs categories

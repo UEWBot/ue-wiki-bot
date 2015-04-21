@@ -367,6 +367,15 @@ class XrefToolkit:
                            u'Laundered Donation Money (I)',
                            u'Laundered Donation Money (II)',
                            u'Laundered Donation Money (III)']
+        templates_to_ignore = [u'Job Link',
+                               u'For',
+                               u'Sic',
+                               u'No Stack',
+                               u'Legendary',
+                               u'Epic',
+                               u'Rare',
+                               u'Uncommon',
+                               u'Common']
         item_name = drop_params[u'name']
         item = pywikibot.Page(pywikibot.Site(), item_name)
         templatesWithParams = item.templatesWithParams()
@@ -424,7 +433,8 @@ class XrefToolkit:
                         pywikibot.output("Drop parameter mismatch for %s parameter of item %s (%s vs %s)" % (key, item_name, dp, ip))
                 if source not in item_params['from']:
                     pywikibot.output("Boss claims to drop %s, but is not listed on that page" % item_name)
-            elif (template != u'Job Link') and (template != u'For') and (template != u'Sic'):
+            elif template not in templates_to_ignore:
+                # Report unexpected templates we don't know how to handle
                 pywikibot.output("Ignoring template %s" % template)
         return text
 

@@ -356,7 +356,7 @@ class XrefToolkit:
 
     def imageForItemOrIngredient(self, itemName):
         """
-        Finds the image for the specified item.
+        Returns the image for the specified item.
         """
         return image_map.image_for(itemName)
 

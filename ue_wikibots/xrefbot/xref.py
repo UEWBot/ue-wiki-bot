@@ -480,29 +480,27 @@ class XrefToolkit:
         Checks whether the categories Needs Completion Dialogue, Needs Rewards,
         Needs Stages, and Needs Time Limit are used correctly.
         """
-        job_boss = self.catInCategories(u'Job Bosses', categories)
-        tl_boss = self.catInCategories(u'Tech Lab Bosses', categories)
-        legend_boss = self.catInCategories(u'Legend Bosses', categories)
+        boss_categories = [u'Job Bosses',
+                           u'Tech Lab Bosses',
+                           u'Legend Bosses',
+                           u'Event Bosses',
+                           u'Retired Bosses']
+        # Check core category
+        the_cats = []
+        for cat in boss_categories:
+            if self.catInCategories(cat, categories):
+                the_cats.append(cat)
+
         # Drop out early if not a boss page
         # TODO Is there a better test ?
-        if not job_boss and not tl_boss and not legend_boss:
+        if len(the_cats) == 0:
             return text
-
-        drop_params = [u'image', u'type', u'atk', u'def']
+        elif len(the_cats) > 1:
+            pywikibot.output("Boss should be in just one of the %s categories"
+                             % ', '.join(the_cats))
 
         # __NOWYSISYG__
         text = self.prependNowysiwygIfNeeded(text)
-
-        # Check core category
-        cat_count = 0
-        if job_boss:
-            cat_count += 1
-        if tl_boss:
-            cat_count += 1
-        if legend_boss:
-            cat_count += 1
-        if cat_count > 1:
-            pywikibot.output("Boss is in more than one category of Job Bosses, Tech Lab Bosses, and Legend Bosses")
 
         # Check each drop
         for (template, params) in templatesWithParams:
@@ -510,58 +508,68 @@ class XrefToolkit:
                 drop_params = utils.paramsToDict(params)
                 text = self.checkItemParams(text, name, drop_params)
 
+        # Event Bosses are structured very differently
+        if u'Event Bosses' in the_cats:
+            return text
+
         # Check Needs categories
-        (dummy, start, end, level) = self.findSection(text, u'Completion Dialogue')
-        length = len(text[start:end])
-        if self.catInCategories(u'Needs Completion Dialogue', categories):
-            if tl_boss or legend_boss:
-                pywikibot.output("Tech Lab and Legend bosses should never be categorised Needs Completion Dialogue")
-                text = self.removeCategory(text, u'Needs Completion Dialogue')
-            elif (start != -1) and (length > 0):
-                pywikibot.output("Non-empty completion dialogue section found despite Needs Completion Dialogue category")
-                text = self.removeCategory(text, u'Needs Completion Dialogue')
-        elif (start == -1) or (length == 0):
-            # Section not present or empty
-            if job_boss:
-                text = self.appendCategory(text, u'Needs Completion Dialogue')
+        cat = u'Needs Completion Dialogue'
+        if u'Job Bosses' in the_cats:
+            text = self.checkNeedsSection(text,
+                                          categories,
+                                          u'Completion Dialogue',
+                                          cat)
+        elif self.catInCategories(cat, categories):
+            pywikibot.output("Non-Job bosses should never be categorised %s" % cat)
+            text = self.removeCategory(text, cat)
 
         # We should find a section called Rewards that links to the Boss Drops page
-        (dummy, start, end, level) = self.findSection(text, u'[[Boss Drops|Rewards]]')
+        sect = u'Rewards'
+        sect_str = u'[[Boss Drops|Rewards]]'
+        cat = u'Needs Rewards'
+        (dummy, start, end, level) = self.findSection(text, sect_str)
         # If we don't find one, maybe there's just a 'Rewards' section...
         if (start == -1):
-            (dummy, start, end, level) = self.findSection(text, u'Rewards')
+            (dummy, start, end, level) = self.findSection(text, sect)
             # Replace the header
-            text = text.replace(u'=Rewards=', u'=[[Boss Drops|Rewards]]=')
-            (dummy, start, end, level) = self.findSection(text, u'[[Boss Drops|Rewards]]')
-        if self.catInCategories(u'Needs Rewards', categories):
-            if start != -1:
-                # There is a Rewards section
-                # TODO Check for actual content - may just have sub-headers
-                pywikibot.output("Non-empty Rewards section found despite Needs Rewards category")
+            text = text.replace(u'=%s=' % sect, u'=%s=' % sect_str)
+
+        text = self.checkNeedsSection(text, categories, sect, cat, sect_str)
+
+        text = self.checkNeedsSection(text,
+                                      categories,
+                                      u'Stages',
+                                      u'Needs Stages')
+
+        text = self.checkNeedsSection(text,
+                                      categories,
+                                      u'Basic Information',
+                                      u'Needs Time Limit')
+
+        return text
+
+    def checkNeedsSection(self, text, categories, sect, cat, sect_str=None):
+        """
+        Checks whether the specified section is present in the page.
+        If it is, checks that the specified category is not in categories.
+        If it isn't, checks that the specified category is in categories
+        and appends it to the page text if needed.
+        sect is the section name. If specified, sect_str is the text to
+        search for in the section title.
+        Returns updated text.
+        """
+        if not sect_str:
+            sect_str = sect
+        (dummy, start, end, level) = self.findSection(text, sect_str)
+        length = len(text[start:end])
+        if self.catInCategories(cat, categories):
+            if (start != -1) and (length > 0):
+                # Section is present
+                # TODO Check for actual content
+                pywikibot.output("Non-empty %s section found despite %s category" % (sect, cat))
         elif start == -1:
             # Section not present
-            text = self.appendCategory(text, u'Needs Rewards')
-
-        (dummy, start, end, level) = self.findSection(text, u'Stages')
-        if self.catInCategories(u'Needs Stages', categories):
-            if start != -1:
-                # There is a Stages section
-                # TODO Check for actual content - may just have sub-headers
-                pywikibot.output("Non-empty Stages section found despite Needs Stages category")
-        elif start == -1:
-            # Section not present
-            text = self.appendCategory(text, u'Needs Stages')
-
-        (dummy, start, end, level) = self.findSection(text, u'Basic Information')
-        if self.catInCategories(u'Needs Time Limit', categories):
-            if start != -1:
-                # There is a Basic Information section
-                # TODO Check for the actual time limit line
-                pywikibot.output("Non-empty Basic Information section found despite Needs Time Limit category")
-        elif start == -1:
-            # Section not present
-            text = self.appendCategory(text, u'Needs Time Limit')
-
+            text = self.appendCategory(text, cat)
         return text
 
     def fixArea(self, name, text, categories, templatesWithParams):

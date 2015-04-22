@@ -1944,21 +1944,14 @@ class XrefToolkit:
 
         # TODO Add Needs Build Time category if appropriate
 
-        # Compare atk
-        try:
-            atk_param = param_dict[u'atk']
-            if atk_param != recipe_dict[u'atk']:
-                pywikibot.output("Attack parameter mismatch - %s in page, %s on Tech Lab page" % (atk_param, recipe_dict[u'atk']))
-        except KeyError:
-            pass
-
-        # Compare def
-        try:
-            def_param = param_dict[u'def']
-            if def_param != recipe_dict[u'def']:
-                pywikibot.output("Defence parameter mismatch - %s in page, %s on Tech Lab page" % (def_param, recipe_dict[u'def']))
-        except KeyError:
-            pass
+        # Compare atk and def
+        for p in [u'atk', u'def']:
+            try:
+                the_param = param_dict[p]
+                if the_param != recipe_dict[p]:
+                    pywikibot.output("%s parameter mismatch - %s in page, %s on Tech Lab page" % (p, the_param, recipe_dict[p]))
+            except KeyError:
+                pass
 
         # Check that num_parts is right, if present
         # For some Lab templates, num_parts is optional. Those should all have 5 parts
@@ -1966,20 +1959,7 @@ class XrefToolkit:
             num_parts = int(lab_dict[u'num_parts'])
         except KeyError, TypeError:
             num_parts = 5
-        total = 0
-        i = 0
-        while True:
-            i += 1
-            part_str = u'part_%d' % i
-            if part_str not in lab_dict:
-                break
-            part = lab_dict[part_str]
-            num_str = part_str + u'_count'
-            if num_str in lab_dict:
-                part_num = int(lab_dict[num_str])
-            else:
-                part_num = 1
-            total += part_num
+        total = self.parts_count(lab_dict)
         if total != num_parts:
             # Fix num_parts, if present, else flag missing ingredient(s)
             # TODO This assumes no spaces in the parameter setting
@@ -2008,8 +1988,21 @@ class XrefToolkit:
                                     1)
 
         # Check any Lab "from" parameters are correct
-        for i in range(1,i):
+        text = self.fixTLItemSource(text, lab_dict)
+
+        return text
+
+    def fixTLItemSource(self, text, lab_dict):
+        """
+        Checks that the sources listed for ingredients are correct.
+        Returns updated text.
+        """
+        i = 0
+        while True:
+            i += 1
             part_str = u'part_%d' % i
+            if part_str not in lab_dict:
+                break
             from_str = part_str + u'_from'
             part = lab_dict[part_str]
             try:
@@ -2045,8 +2038,27 @@ class XrefToolkit:
                 text = text.replace(ur'|%s' % part_str,
                                     u'%s\n|%s' % (new_param, part_str),
                                     1)
-
         return text
+
+    def parts_count(self, lab_dict):
+        """
+        Counts the total number of parts and returns that total.
+        """
+        total = 0
+        i = 0
+        while True:
+            i += 1
+            part_str = u'part_%d' % i
+            if part_str not in lab_dict:
+                break
+            part = lab_dict[part_str]
+            num_str = part_str + u'_count'
+            if num_str in lab_dict:
+                part_num = int(lab_dict[num_str])
+            else:
+                part_num = 1
+            total += part_num
+        return total
 
     def one_line(self, src_list):
         """

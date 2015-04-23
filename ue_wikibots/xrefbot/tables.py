@@ -701,6 +701,9 @@ class XrefBot:
         If the content differs, prompt the user whether to upload the
         new version, and obey their response.
         """
+        # Show the title of the page we're working on.
+        # Highlight the title in purple.
+        pywikibot.output(u"\n\n>>> \03{lightpurple}%s\03{default} <<<" % old_page.title())
         # Read the original content
         try:
             old_text = old_page.get()

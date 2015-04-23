@@ -15,7 +15,22 @@
 #! /usr/bin/python
 
 """
-Script to create useful tables on Underworld Empire Wiki
+Create/update useful tables on Underworld Empire Wiki.
+
+Run with no arguments.
+Generate the following tables:
+- Rifles Table
+- Handguns Table
+- Melee Wepaons Tale
+- Heavy Weapons Table
+- Vehicles Table
+- Gear Table
+- Lieutenants Table
+- Lieutenants Faction Rarity Table
+- Properties Table
+- Jobs Table
+- Challenge Jobs Table
+- Area Gear Table
 """
 
 import sys, os, operator
@@ -45,7 +60,11 @@ lieutenant_templates = re.compile(u'Lieutenant\W(.*)')
 
 def name_to_link(name):
     """
-    Takes the name of a page and returns wiki markup for a link,
+    Return name as a wiki link string.
+
+    name -- wiki page name to be linked to
+
+    Take the name of a page and return wiki markup for a link,
     converting disambiguated pages.
     e.g. "Dog (pet)" -> "[[Dog (pet)|Dog]]".
     """
@@ -56,21 +75,28 @@ def name_to_link(name):
         page = name + u'|' + name[0:paren-1]
     return u'[[' + page + u']]'
 
-def oneParam(params, the_param):
+def one_param(params, the_param):
     """
-    Takes the list of parameters for a template, and returns
-    the value (if any) for the specified parameter.
-    Returns an empty string if the parameter is not present.
+    Return the value of one parameter from the set of all template params.
+
+    params -- list containing the full set of template parameters.
+    the_param -- the parameter to find.
+
+    Return an empty string if the parameter is not present.
     """
     for one_param in params:
-        match = re.search(r'\s*%s\s*=([^\|]*)' % the_param, one_param, re.MULTILINE)
+        match = re.search(r'\s*%s\s*=([^\|]*)' % the_param,
+                          one_param,
+                          re.MULTILINE)
         if match:
             return match.expand(r'\1')
     return u''
 
 def lt_faction_rarity_header(factions):
     """
-    Returns a summary table down to the first row of data.
+    Return a summary table down to the first row of data.
+
+    factions -- list of all the factions. Used for column headers.
     """
     # Warn editors that the page was generated
     text = u'<!-- This page was generated/modified by software -->\n'
@@ -84,14 +110,19 @@ def lt_faction_rarity_header(factions):
 
 def lt_faction_rarity_row(factions, rarity, lieutenants_by_faction):
     """
-    Returns a row for the specified rarity.
+    Return a row for the specified rarity.
+
+    factions -- list of all the factions. Order must match column headers.
+    rarity -- String identifying the rarity of interest.
+    lieutenants_by_faction -- dict, indexed by faction, of lists of lt names.
     """
     text = u'|-\n'
     text += u'!scope=row | {{%s}}\n' % rarity
     for faction in factions:
         text += u'|'
         if faction in lieutenants_by_faction:
-            text += u'<br/>'.join(map(name_to_link,lieutenants_by_faction[faction]))
+            text += u'<br/>'.join(map(name_to_link,
+                                      lieutenants_by_faction[faction]))
         else:
             text += u'None'
         text += u'\n'
@@ -99,7 +130,11 @@ def lt_faction_rarity_row(factions, rarity, lieutenants_by_faction):
  
 def summary_header(row_template):
     """
-    Returns a summary table page down to the first row of data.
+    Return a summary table page down to the first row of data.
+
+    row_template -- Name of the template to be used for each data row.
+                    One of 'Item Row', 'Property Row', 'Job Row',
+                    'Challenge Job Row', or 'Lieutenant Row'.
     """
     # Warn editors that the page was generated
     text = u'<!-- This page was generated/modified by software -->\n'
@@ -199,13 +234,15 @@ def summary_header(row_template):
 
 def summary_footer(row_template):
     """
-    Returns the rest of a summary table, after the last row of data.
+    Return the rest of a summary table, after the last row of data.
     """
     return u'|}\n[[Category:Summary Tables]]'
 
 def cost_ratios():
     """
-    Calculates the cost ratios table for all the original properties
+    Return the cost ratios table for all the original properties.
+
+    Return value is a dict, indexed by level, of real numbers.
     """
     cost_ratios = {}
     for level in range(1,21):
@@ -214,8 +251,13 @@ def cost_ratios():
 
 def prop_cost(base_cost, level, cost_ratios):
     """
-    Calculates the cost for the specified level of a property.
-    cost_ratios is a dict, indexed by level, of the ratio of the cost to the level 1 cost
+    Return the cost for the specified level of a property.
+
+    base_cost -- cost for level 1 of the property.
+    level -- property level of interest.
+    cost_ratios -- a dict, indexed by level, of the ratio of the cost to the level 1 cost
+
+    Return 0 if the cost cannot be calulcated.
     """
     if level in cost_ratios:
         return cost_ratios[level] * base_cost
@@ -223,12 +265,13 @@ def prop_cost(base_cost, level, cost_ratios):
 
 def property_row(name, d, count, high_cost_ratios):
     """
-    Returns a property row line for the specified property.
-    name is the name of the property.
-    d is a dict of template parameters.
-    count is the level of the property.
-    high_cost_ratios is a dict, indexed by level, of the ratio of the cost to the level 1 cost,
-    for high-cost properties (the later additions)
+    Return a property row line for the specified property.
+
+    name -- the name of the property.
+    d -- a dict of template parameters.
+    count -- the level of the property.
+    high_cost_ratios -- a dict, indexed by level, of the ratio of the cost to the level 1 cost,
+                        for high-cost properties (the later additions)
     """
     low_cost_ratios = cost_ratios()
     # We need to provide count, name, cost, income, and unlock
@@ -284,7 +327,11 @@ def property_row(name, d, count, high_cost_ratios):
 
 def safe_house_rows(name, text, row_template):
     """
-    Returns rows for Properties Table for the Safe House page
+    Return a list of rows for Properties Table for the Safe House page.
+
+    name -- Name of the Safe House wiki page.
+    text -- Text of the Safe House wiki page.
+    row_template -- Template to use for the row.
     """
     rows = []
     # Find the info we need - income, unlock criteria, cost
@@ -325,9 +372,12 @@ def safe_house_rows(name, text, row_template):
 
 def parsed_fortress_table(text):
     """
-    Parse the cost and pre-requisite table on the page into a dict
-    Dict is indexed by Fortress level, and contains a (cost, pre-requisite name, pre-requisite level)
-    tuple.
+    Return a dict parsing the cost and pre-requisite table on the page.
+
+    text -- text of the Fortress wiki page.
+
+    Dict returned is indexed by Fortress level, and contains a 3-tuple of
+    (cost, pre-requisite name, pre-requisite level).
     """
     fortress_table_full_re = re.compile(ur'\|\W*(?P<count>\d+)\W*\|\|\D*(?P<cost>\d+)\D*\|\|\W*\[\[(?P<prop>.*)\]\]\D*(?P<lvl>\d+)')
     fortress_table_part_re = re.compile(ur'\|\W*(?P<count>\d+)\W*\|\|\W*\|\|\W*\[\[(?P<prop>.*)\]\]\D*(?P<lvl>\d+)')
@@ -349,9 +399,13 @@ def parsed_fortress_table(text):
 
 def fortress_cost_ratios(the_dict):
     """
-    Determines the cost ratios table for Fortress, from a dict parsed from the Fortress page.
-    Dict is indexed by Fortress level, and contains a (cost, pre-requisite name, pre-requisite level)
-    tuple.
+    Return the cost ratios table for Fortress.
+
+    the_dict -- a dict parsed from the Fortress page.
+                Dict is indexed by Fortress level, and contains a 3-tuple of
+                (cost, pre-requisite name, pre-requisite level).
+
+    Return a list, indexed by level, of ratio of cost to base cost.
     """
     costs = {}
     base_cost = float(the_dict[1][0])
@@ -361,13 +415,14 @@ def fortress_cost_ratios(the_dict):
 
 def fortress_rows(name, text, row_template, the_dict):
     """
-    Returns rows for Properties Table for the Fortress page
-    name is the name of the Fortress page.
-    text is the text of the Fortress page.
-    row_template is the name of the template to use.
-    the_dict is a dict from the table on the Fortress page.
-    Dict is indexed by Fortress level, and contains a (cost, pre-requisite name, pre-requisite level)
-    tuple.
+    Return a list of rows for Properties Table for the Fortress page.
+
+    name -- the name of the Fortress page.
+    text -- the text of the Fortress page.
+    row_template -- the name of the template to use.
+    the_dict -- a dict from the table on the Fortress page.
+                Dict is indexed by Fortress level, and contains a 3-tuple of
+                (cost, pre-requisite name, pre-requisite level).
     """
     rows = []
     # Find the info we need - income, unlock criteria, cost
@@ -397,8 +452,10 @@ def fortress_rows(name, text, row_template, the_dict):
 
 def swap_lts(row, idx1, idx2):
     """
-    Swaps the two specified lts in the row.
-    Returns the modified row.
+    Return the row with the two specified Lts swapped.
+
+    row -- the text for the row.
+    idx1, idx2 -- Numbers of the Lts to swap.
     """
     row = row.replace('|lt_%d' % idx1, '|lt_9')
     row = row.replace('|lt_%d' % idx2, '|lt_%d' % idx1)
@@ -407,8 +464,10 @@ def swap_lts(row, idx1, idx2):
 
 def sort_lts(row, area):
     """
-    Sorts the Lts in a Challenge Job Row line by rarity.
-    Returns the modified row text.
+    Return row with the Lts sorted by rarity.
+
+    row -- the text of the Challenge Job Row line.
+    area -- name of the Area the row corresponds to.
     """
     # First find the rarities of the 4 LTs
     rarities = {}
@@ -445,9 +504,13 @@ def sort_lts(row, area):
 
 def gear_tuple(page):
     """
-    Returns a tuple with the area name and a dict, keyed by item or property,
-    of tuples containing the number of each item required to complete all the
-    jobs in that area and the image for the item.
+    Return a 2-tuple representing the gear required for the area page.
+
+    page -- text of the Area page.
+
+    Return a 2-tuple with the area name and a dict, keyed by item or property,
+    of 2-tuples containing the number of each item/property required to
+    complete all the jobs in that area, and the image for the item/property.
     """
     needed = {}
     templatesWithParams = page.templatesWithParams()
@@ -484,7 +547,11 @@ def gear_tuple(page):
 
 def page_to_row(page, row_template):
     """
-    Creates a table row for the item or challenge job described in page.
+    Return a table row for the item or challenge job described in page.
+
+    page -- text of the page to parse.
+    row_template -- template to use in the generated row text.
+                    One of 'Challenge Job Row', 'Lieutenant Row', or 'Item Row'.
     """
     # Where to put the page name
     mapping = {u'Challenge Job Row': u'district',
@@ -521,9 +588,14 @@ def page_to_row(page, row_template):
     return row
 
 def page_to_rows(page, row_template, high_cost_ratios={}):
-    # TODO Look at combining this function and page_to_row().
     """
-    Returns a list of table rows for the jobs or property described in page.
+    Return a list of table rows for the jobs or property described in page.
+
+    page -- text of the page to parse.
+    row_template -- template to use in the resulting row.
+    high_cost_ratios -- a dict from the table on the Fortress page (optional).
+                Dict is indexed by Fortress level, and contains a 3-tuple of
+                (cost, pre-requisite name, pre-requisite level).
     """
     templatesWithParams = page.templatesWithParams()
     rows = []
@@ -545,7 +617,7 @@ def page_to_rows(page, row_template, high_cost_ratios={}):
             d = utils.paramsToDict(params)
             # Figure out how many rows we need
             if u'max' in d:
-                # Exlplicit max has priority
+                # Explicit max has priority
                 max = int(d[u'max'])
             elif u'fp_prop'in d:
                 # All FP properties so far you just get 5 of
@@ -557,14 +629,19 @@ def page_to_rows(page, row_template, high_cost_ratios={}):
                 # Upgrade properties (and Safe House) are limited to 10
                 max = 10
             for count in range(1, max + 1):
-                rows.append(property_row(page.title(), d, count, high_cost_ratios))
+                rows.append(property_row(page.title(),
+                                         d,
+                                         count,
+                                         high_cost_ratios))
     return rows
 
 def dict_to_gear_page(gear_dict):
     """
-    Takes a dictionary, indexed by area name, of dictionaries, indexed by gear name,
-    of tuples containing the numbers of that item required and the item's image.
-    Returns the entire text for a wiki page containing that information.
+    Return the text of the Area Gear Table page.
+
+    gear_dict -- a dictionary, indexed by area name, of dictionaries,
+                 indexed by item/property name, of 2-tuples containing the
+                 number of that item/property required and its image.
     """
     text = u'<!-- This page was generated/modified by software -->\n'
     text += u'This page lists the gear required to complete all the jobs in each area (including secret jobs). Details are pulled from the individual [[:Category:Areas|Area]] pages, so any errors or omissions there will be reflected here.\n'
@@ -579,7 +656,7 @@ def dict_to_gear_page(gear_dict):
 
 def rarities():
     """
-    Returns an ordered list of rarities.
+    Return an ordered list of rarities.
     """
     # TODO Dynamically create the list from the rarity page
     rarities = []
@@ -588,7 +665,9 @@ def rarities():
 
 def prop_row_key(text):
     """
-    Returns the sort key for a property table row.
+    Return the sort key for a property table row.
+
+    text -- text of the row to be sorted.
     """
     # Content is always name paramater then count parameter
     # We return a turple with the name parameter and integer count
@@ -598,16 +677,29 @@ def prop_row_key(text):
         num_part = num_part[:-1]
     return (text[1:loc], int(num_part))
 
+
 class XrefBot:
-    def __init__(self, generator, acceptall = False):
-        self.generator = generator
+    """Class to create/update pages summarising sets of pages on the wiki."""
+
+    def __init__(self, acceptall = False):
+        """
+        Instantiate the class.
+
+        accept_all -- Pass True to not ask the user whether to create/update
+                      pages.
+        """
         self.acceptall = acceptall
 
     def update_or_create_page(self, old_page, new_text):
         """
-        Reads the current text of page old_page,
-        compare it with new_text, prompts the user,
-        and uploads the page
+        If the page needs changing, upload with user permission.
+
+        old_page -- Page to be checked.
+        new_text -- Text the page should contain.
+
+        Retrieve the existing page, if any, and compare the content.
+        If the content differs, prompt the user whether to upload the
+        new version, and obey their response.
         """
         # Read the original content
         try:
@@ -624,7 +716,11 @@ class XrefBot:
             pywikibot.output(u'No changes necessary to %s' % old_page.title());
         else:
             if not self.acceptall:
-                choice = pywikibot.input_choice(u'Do you want to accept these changes?',  [('Yes', 'Y'), ('No', 'n'), ('All', 'a')], 'N')
+                choice = pywikibot.input_choice(u'Do you want to accept these changes?',
+                                                [('Yes', 'Y'),
+                                                 ('No', 'n'),
+                                                 ('All', 'a')],
+                                                'N')
                 if choice == 'a':
                     self.acceptall = True
             if self.acceptall or choice == 'y':
@@ -633,8 +729,10 @@ class XrefBot:
 
     def update_properties_table(self):
         """
-        Creates or updates page Properties Table from the
-        content of the Properties category.
+        Create or update page Properties Table.
+
+        Read every page in the Properties category and create/update the summary
+        page accordingly.
         """
         # Extract cost ratio table from the Fortress page
         fortress_page = pywikibot.Page(pywikibot.Site(), u'Fortress')
@@ -656,7 +754,10 @@ class XrefBot:
                 rows += new_rows
             elif page.title() == u'Fortress':
                 # Use the cached page text
-                rows += fortress_rows(page.title(), fortress_text, row_template, fortress_dict)
+                rows += fortress_rows(page.title(),
+                                      fortress_text,
+                                      row_template,
+                                      fortress_dict)
             elif page.title() == u'Safe House':
                 rows += safe_house_rows(page.title(), page.get(), row_template)
             else:
@@ -674,8 +775,10 @@ class XrefBot:
 
     def update_jobs_tables(self):
         """
-        Creates or updates page Jobs Table and Challenge Jobs Table from the
-        content of the Areas category.
+        Create or update the three job summary pages.
+
+        Read every page in the Areas category and create/update pages
+        Jobs Table, Challenge Jobs Table, and Area Gear Table accordingly.
         """
         # Templates to use
         job_row_template = u'Job Row'
@@ -684,27 +787,37 @@ class XrefBot:
         job_page = pywikibot.Page(pywikibot.Site(), u'Jobs Table')
         dice_job_page = pywikibot.Page(pywikibot.Site(), u'Challenge Jobs Table')
         area_gear_page = pywikibot.Page(pywikibot.Site(), u'Area Gear Table')
+
         job_rows = []
         dice_rows = []
         gear_dict = {}
+
         cat = pywikibot.Category(pywikibot.Site(), u'Areas')
-        # One row per use of the template on a page in category
+
         for page in list(cat.articles()):
+            # One row per use of the template on a page in category
             job_rows += page_to_rows(page, job_row_template)
             dice_rows.append(page_to_row(page, dice_row_template))
+            # Add an entry to gear_dict for this page
             gear_dict.update([gear_tuple(page)])
+
         # Start the new page text
         new_job_text = summary_header(job_row_template)
         new_dice_text = summary_header(dice_row_template)
+
         # TODO: Sort rows into some sensible order
         for row in job_rows:
             new_job_text += row + u'\n'
         for row in dice_rows:
             new_dice_text += row + u'\n'
+
         # Finish with a footer
         new_job_text += summary_footer(job_row_template)
         new_dice_text += summary_footer(dice_row_template)
+
+        # Generate the area gear page from the dict
         new_gear_text = dict_to_gear_page(gear_dict)
+
         # Upload the new pages
         self.update_or_create_page(job_page, new_job_text);
         self.update_or_create_page(dice_job_page, new_dice_text);
@@ -712,10 +825,13 @@ class XrefBot:
 
     def update_lt_rarity_table(self):
         """
-        Creates or updates page Lieutenants Faction Rarity Table
-        from the content of the Lieutenants category.
+        Create or update page Lieutenants Faction Rarity Table.
+
+        Read every page in the Lieutenants category and create/update the
+        summary page accordingly.
         """
-        old_page = pywikibot.Page(pywikibot.Site(), u'Lieutenants Faction Rarity Table')
+        old_page = pywikibot.Page(pywikibot.Site(),
+                                  u'Lieutenants Faction Rarity Table')
         factions = []
         cat = pywikibot.Category(pywikibot.Site(), u'Factions')
         for faction in list(cat.articles()):
@@ -723,7 +839,8 @@ class XrefBot:
         new_text = lt_faction_rarity_header(factions)
         for rarity in rarities():
             lieutenants = {}
-	    lt_cat = pywikibot.Category(pywikibot.Site(), u'%s Lieutenants' % rarity)
+	    lt_cat = pywikibot.Category(pywikibot.Site(),
+                                        u'%s Lieutenants' % rarity)
             for lt in list(lt_cat.articles()):
                 name = lt.title()
                 templatesWithParams = lt.templatesWithParams()
@@ -731,7 +848,7 @@ class XrefBot:
                     template_name = template.title(withNamespace=False)
                     match = lieutenant_templates.search(template_name)
                     if match:
-                        faction = oneParam(params, u'faction')
+                        faction = one_param(params, u'faction')
                         if faction not in lieutenants:
                             lieutenants[faction] = []
                         lieutenants[faction].append(name)
@@ -743,14 +860,17 @@ class XrefBot:
 
     def update_most_tables(self):
         """
-        Creates or updates these pages from the corresponding categories:
-        Rifles Table
-        Handguns Table
-        Melee Wepaons Tale
-        Heavy Weapons Table
-        Vehicles Table
-        Gear Table
-        Lieutenants Table
+        Create or update most summary pages.
+
+        Read every page in the categories listed below and create/update the
+        corresponding summary page:
+        Rifles - Rifles Table
+        Handguns - Handguns Table
+        Melee Weapons - Melee Weapons Tale
+        Heavy Weapons - Heavy Weapons Table
+        Vehicles - Vehicles Table
+        Gear - Gear Table
+        Lieutenants - Lieutenants Table
         """
         # Categories we're interested in and row template to use for each category
         cat_to_templ = {u'Rifles': 'Item Row',
@@ -782,6 +902,7 @@ class XrefBot:
             self.update_or_create_page(old_page, new_text);
 
     def run(self):
+        """Create/update all the summary pages."""
         self.update_most_tables()
         self.update_properties_table()
         self.update_jobs_tables()
@@ -789,7 +910,7 @@ class XrefBot:
 
 def main():
     #logging.basicConfig()
-    bot = XrefBot(None)
+    bot = XrefBot()
     bot.run()
 
 if __name__ == "__main__":

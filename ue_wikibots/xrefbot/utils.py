@@ -15,7 +15,7 @@
 #! /usr/bin/python
 
 """
-Utility functions for UEW wikibots
+Utility functions and classes for UEW wikibots.
 """
 
 import sys, os
@@ -29,7 +29,10 @@ Rparam = re.compile(ur'\s*(?P<name>[^\s=]+)\s*=\s*(?P<value>.*)', re.DOTALL)
 
 def escapeStr(string):
     """
-    Returns text with any |, +, (, ), [, or ] characters preceded with \ characters.
+    Return text with any |, +, (, ), [, or ] characters preceded with \ characters.
+
+    string -- text to be escaped.
+
     Useful if you want to include it in a regex.
     """
     string = re.sub(ur'\|', u'\|', string)
@@ -41,7 +44,10 @@ def escapeStr(string):
 
 def paramFromParams(params, param):
     """
-    Returns the value for 'param' in 'params', or None if it isn't present.
+    Return the value for 'param' in 'params', or None if it isn't present.
+
+    params -- list of template parameter values.
+    param -- parameter to find the value for.
     """
     for p in params:
         m = Rparam.match(p)
@@ -54,7 +60,11 @@ def paramFromParams(params, param):
 
 def paramsToDict(params):
     """
-    Takes the list of parameters to a template and returns them as a dict.
+    Return the template parameters as a dict.
+
+    params -- list of template parameters.
+
+    Return a dict, indexed by parameter name, of parameter values.
     """
     result = {}
     for param in params:
@@ -65,9 +75,16 @@ def paramsToDict(params):
 
 def findSpecificSection(text, section):
     """
-    Find the specified section in text, starting with a header,
-    and ending with a header, template, or category.
-    Returns a tuple - (index where the section starts, index where the section ends)
+    Find the specified section in text.
+
+    text -- page text to search.
+    section -- name of the section to locate.
+
+    Search for a header for the specified section.
+    If found, search forward for a header, template, or category that
+    marks the end of the section.
+
+    Return a 2-tuple containing the start and end indices of the seciion,
     or (-1, -1) if the section isn't found.
     """
     # Does the page have a section header ?
@@ -87,18 +104,25 @@ def findSpecificSection(text, section):
         return (list_start, list_end)
     return (-1, -1)
 
+
 class ImageMap:
+    """
+    Cache class for the image filenames for items, properties, and ingredients.
+    """
+
     imgRe = re.compile(ur'\|W*image\W*=\W*(?P<image>.*)')
     img2Re = re.compile(ur'\[\[File:(?P<image>.*\.png)\|.*\]\]')
 
     def __init__(self):
+        """Instantiate the class."""
         # Populate image_map
         self.mapping = {}
 
     def image_for(self, name):
         """
-        Returns the image for the specified item, property, or ingredient.
-        Caches results for speed.
+        Return the image for the specified item, property, or ingredient.
+
+        name -- name of the item, property, or ingredient.
         """
         if name not in self.mapping:
             pg = pywikibot.Page(pywikibot.Site(), name)
@@ -118,14 +142,21 @@ class ImageMap:
             self.mapping[name] = m.group('image')
         return self.mapping[name]
 
+
 class CategoryRefs:
+    """
+    Cache class for pages that reference category pages.
+    """
+
     def __init__(self):
+        """Instantiate the class."""
         self.mapping = {}
 
     def refs_for(self, category):
         """
-        Returns a list of pages that reference the specified category page.
-        Caches the result, and returns from the cache in preference.
+        Return a list of pages that reference the specified category page.
+
+        category -- name of the category of interest.
         """
         try:
             return self.mapping[category]
@@ -136,11 +167,18 @@ class CategoryRefs:
         self.mapping[category] = refs
         return refs
 
+
 class RecipeCache:
+    """
+    Cache class for Tech Lab recipes.
+    """
+
     def __init__(self):
+        """Instantiate the class."""
         self._initialised = False
 
     def _read_pages(self):
+        """Read and parse all Tech Lab pages."""
         page_names = [u'Tech Lab', u'Tech Lab - Historic']
         self._recipes = {}
         for p in page_names:
@@ -152,22 +190,22 @@ class RecipeCache:
                     self._recipes[item] = params
 
     def _init_if_needed(self):
+        """Initialise instance attributes if necessary."""
         if not self._initialised:
             self._read_pages()
             self._initialised = True
 
     def recipes(self):
-        """
-        Returns a list of items with recipes.
-        """
+        """Return a list of items that have recipes."""
         self._init_if_needed()
         return self._recipes.keys()
 
     def recipe_for(self, item):
         """
-        Returns the parameters to the Recipe template for the
+        Return the parameters to the Recipe template for the
         specified item.
-        Caches results for speed.
+
+        item -- item of interest.
         """
         self._init_if_needed()
         return self._recipes[item]

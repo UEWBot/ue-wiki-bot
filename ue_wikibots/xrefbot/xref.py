@@ -312,30 +312,6 @@ class XrefToolkit:
                 return (found_name, match.start(), match.end())
         return (None, -1, -1)
 
-    def findSpecificSection(self, text, section):
-        """
-        Find the specified section in text, starting with a header,
-        and ending with a header, template, or category.
-        Returns a tuple - (index where the section starts, index where the section ends)
-        or (-1, -1) if the section isn't found.
-        """
-        # Does the page have a section header ?
-        header = re.search(ur'==\s*%s\W*==' % section, text)
-        if header:
-            list_start = header.start()
-            # List ends at a template, header or category
-            # Skip the header for the section of interest itself
-            match = re.search(r'{{|==.*==|\[\[Category', text[list_start+2:])
-            if match:
-                list_end = list_start+2+match.start()
-            else:
-                list_end = len(text)
-            # Shift list_end back to exactly the end of the list
-            while text[list_end-1] in u'\n\r':
-                list_end -= 1
-            return (list_start, list_end)
-        return (-1, -1)
-
     def findSection(self, text, title=u'',level=-1):
         """
         Find a section in text, starting with a header,
@@ -1465,7 +1441,7 @@ class XrefToolkit:
             elif r.title(withNamespace=False) == u'Achievements':
                 # Check whether it's a daily achievement reward
                 r_text = r.get()
-                (s,e) = self.findSpecificSection(r_text, u'Daily Rewards')
+                (s,e) = utils.findSpecificSection(r_text, u'Daily Rewards')
                 if (s != -1) and (name in r_text[s:e]):
                         source_set.add(u'Achievements#Daily')
             # Don't call r.categories() for redirects

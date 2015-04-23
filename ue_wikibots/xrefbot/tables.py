@@ -635,25 +635,6 @@ def page_to_rows(page, row_template, high_cost_ratios={}):
                                          high_cost_ratios))
     return rows
 
-def dict_to_gear_page(gear_dict):
-    """
-    Return the text of the Area Gear Table page.
-
-    gear_dict -- a dictionary, indexed by area name, of dictionaries,
-                 indexed by item/property name, of 2-tuples containing the
-                 number of that item/property required and its image.
-    """
-    text = u'<!-- This page was generated/modified by software -->\n'
-    text += u'This page lists the gear required to complete all the jobs in each area (including secret jobs). Details are pulled from the individual [[:Category:Areas|Area]] pages, so any errors or omissions there will be reflected here.\n'
-    for area in sorted(gear_dict.keys()):
-        text += u'==[[%s]]==\n' % area
-        the_gear = gear_dict[area]
-        for gear in sorted(the_gear.keys()):
-            (n, img) = the_gear[gear]
-            text += u'*%d [[File:%s||100px]] [[%s]]\n' % (n, img, gear)
-    text += u'[[Category:Summary Tables]]'
-    return text
-
 def rarities():
     """
     Return an ordered list of rarities.
@@ -677,6 +658,22 @@ def prop_row_key(text):
         num_part = num_part[:-1]
     return (text[1:loc], int(num_part))
 
+def areas_in_order():
+    """Return a list of Area pages in in=game order."""
+    # Just parse it from the end of the Jobs page
+    jobs_page = pywikibot.Page(pywikibot.Site(), u'Jobs')
+    text = jobs_page.get()
+
+    areas = []
+
+    # Find the "Areas" section
+    (start, end) = utils.findSpecificSection(text, u'Areas')
+
+    # Find and add each one in turn
+    for m in re.finditer(ur'#\s*\[\[([^]]*)\]\]', text[start:end]):
+        areas.append(m.group(1))
+
+    return areas
 
 class XrefBot:
     """Class to create/update pages summarising sets of pages on the wiki."""
@@ -689,6 +686,7 @@ class XrefBot:
                       pages.
         """
         self.acceptall = acceptall
+        self.areas = areas_in_order()
 
     def update_or_create_page(self, old_page, new_text):
         """
@@ -776,6 +774,33 @@ class XrefBot:
         # Upload it
         self.update_or_create_page(old_page, new_text);
 
+    def area_key(self, page):
+        """Return the sort key for a Page for an Area."""
+        try:
+            return self.areas.index(page.title())
+        except ValueError:
+            # Put any we don't know about at the end
+            return 10000
+
+    def dict_to_gear_page(self, gear_dict):
+        """
+        Return the text of the Area Gear Table page.
+
+        gear_dict -- a dictionary, indexed by area name, of dictionaries,
+                     indexed by item/property name, of 2-tuples containing the
+                     number of that item/property required and its image.
+        """
+        text = u'<!-- This page was generated/modified by software -->\n'
+        text += u'This page lists the gear required to complete all the jobs in each area (including secret jobs). Details are pulled from the individual [[:Category:Areas|Area]] pages, so any errors or omissions there will be reflected here.\n'
+        for area in sorted(gear_dict.keys(), key=self.area_key):
+            text += u'==[[%s]]==\n' % area
+            the_gear = gear_dict[area]
+            for gear in sorted(the_gear.keys()):
+                (n, img) = the_gear[gear]
+                text += u'*%d [[File:%s||100px]] [[%s]]\n' % (n, img, gear)
+        text += u'[[Category:Summary Tables]]'
+        return text
+
     def update_jobs_tables(self):
         """
         Create or update the three job summary pages.
@@ -797,7 +822,8 @@ class XrefBot:
 
         cat = pywikibot.Category(pywikibot.Site(), u'Areas')
 
-        for page in list(cat.articles()):
+        # Go through the area pages in in-game order
+        for page in sorted(cat.articles(), key=self.area_key):
             # One row per use of the template on a page in category
             job_rows += page_to_rows(page, job_row_template)
             dice_rows.append(page_to_row(page, dice_row_template))
@@ -808,7 +834,6 @@ class XrefBot:
         new_job_text = summary_header(job_row_template)
         new_dice_text = summary_header(dice_row_template)
 
-        # TODO: Sort rows into some sensible order
         for row in job_rows:
             new_job_text += row + u'\n'
         for row in dice_rows:
@@ -819,7 +844,7 @@ class XrefBot:
         new_dice_text += summary_footer(dice_row_template)
 
         # Generate the area gear page from the dict
-        new_gear_text = dict_to_gear_page(gear_dict)
+        new_gear_text = self.dict_to_gear_page(gear_dict)
 
         # Upload the new pages
         self.update_or_create_page(job_page, new_job_text);

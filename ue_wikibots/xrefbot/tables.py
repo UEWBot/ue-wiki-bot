@@ -18,10 +18,11 @@
 Create/update useful tables on Underworld Empire Wiki.
 
 Run with no arguments.
+
 Generate the following tables:
 - Rifles Table
 - Handguns Table
-- Melee Wepaons Tale
+- Melee Weapons Table
 - Heavy Weapons Table
 - Vehicles Table
 - Gear Table

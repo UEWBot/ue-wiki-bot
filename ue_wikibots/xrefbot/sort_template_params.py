@@ -32,9 +32,9 @@ import difflib
 summary = u'Robot: Sort Lab/Lt template parameters'
 
 # RE to match a parameter for the form "root_n[_leaf] = value"
-numParamRe = re.compile(ur'(?P<root>[a-zA-Z]+)_(?P<num>\d+)(?P<leaf>[^=\s]*)\s*=\s*(?P<value>.*)')
+NUM_PARAM_RE = re.compile(ur'(?P<root>[a-zA-Z]+)_(?P<num>\d+)(?P<leaf>[^=\s]*)\s*=\s*(?P<value>.*)')
 
-lt_root_ordering = [
+LT_ROOT_ORDERING = [
     u'image',
     u'atk',
     u'def',
@@ -44,9 +44,9 @@ lt_root_ordering = [
 
 def lt_sort_key(param):
     """
-    Returns a sort key tuple from a parameter
+    Return a sort key tuple from a parameter
     """
-    m = numParamRe.match(param)
+    m = NUM_PARAM_RE.match(param)
     if m:
         num = int(m.group('num'))
         root = m.group('root')
@@ -56,26 +56,28 @@ def lt_sort_key(param):
         elif root == u'image':
             # Sort skin images in with the un-numbered part
             return (0, param)
-        return (num, lt_root_ordering.index(root), m.group('leaf'))
+        return (num, LT_ROOT_ORDERING.index(root), m.group('leaf'))
     else:
         # Sort all unnumbered ones before all numbered ones
         return (0, param)
 
 def sort_lt_params(text, template, params):
     """
-    Returns text with the specified parameters sorted into a more reasonable order
+    Return text with the specified parameters sorted into a more reasonable order
     """
     # RE to match the entire template and all its parameters
     # We assume this is the last template on the page
-    templateRe = re.compile(ur'{{%s.*}}' % template, re.DOTALL | re.MULTILINE)
-    new_text = u'{{%s\n|' % template + u'\n|'.join(sorted(params, key=lt_sort_key)) + u'\n}}'
+    templateRe = re.compile(ur'{{%s.*}}' % template,
+                            re.DOTALL | re.MULTILINE)
+    new_text = u'{{%s\n|' % template + u'\n|'.join(sorted(params,
+                                                          key=lt_sort_key)) + u'\n}}'
     return templateRe.sub(new_text, text, count=1)
 
 def lab_sort_key(param):
     """
-    Returns a sort key tuple from a parameter
+    Return a sort key tuple from a parameter
     """
-    m = numParamRe.match(param)
+    m = NUM_PARAM_RE.match(param)
     if m:
         return (m.group('num'), m.group('root'), m.group('leaf'))
     else:
@@ -84,13 +86,15 @@ def lab_sort_key(param):
 
 def sort_lab_params(text, template, params):
     """
-    Returns text with the specified parameters sorted into a more reasonable order
+    Return text with the specified parameters sorted into a more reasonable order
     """
     # RE to match the entire template and all its parameters
     # We assume no templates are nested within this one
     print params
-    templateRe = re.compile(ur'{{%s[^}]*}}' % template, re.DOTALL | re.MULTILINE)
-    new_text = u'{{%s\n|' % template + u'\n|'.join(sorted(params, key=lab_sort_key)) + u'\n}}'
+    templateRe = re.compile(ur'{{%s[^}]*}}' % template,
+                            re.DOTALL | re.MULTILINE)
+    new_text = u'{{%s\n|' % template + u'\n|'.join(sorted(params,
+                                                          key=lab_sort_key)) + u'\n}}'
     return templateRe.sub(new_text, text, count=1)
 
 class ItemBot:
@@ -100,9 +104,9 @@ class ItemBot:
 
     def update_or_create_page(self, old_page, new_text):
         """
-        Reads the current text of page old_page,
-        compare it with new_text, prompts the user,
-        and uploads the page
+        Read the current text of page old_page,
+        compare it with new_text, prompt the user,
+        and upload the page
         """
         # Read the original content
         old_text = old_page.get()
@@ -117,7 +121,11 @@ class ItemBot:
             pywikibot.output(u'No changes necessary to %s' % old_page.title());
         else:
             if not self.acceptall:
-                choice = pywikibot.input_choice(u'Do you want to accept these changes?',  [('Yes', 'Y'), ('No', 'n'), ('All', 'a')], 'N')
+                choice = pywikibot.input_choice(u'Do you want to accept these changes?',
+                                                [('Yes', 'Y'),
+                                                 ('No', 'n'),
+                                                 ('All', 'a')],
+                                                'N')
                 if choice == 'a':
                     self.acceptall = True
             if self.acceptall or choice == 'y':
@@ -126,7 +134,7 @@ class ItemBot:
 
     def update_lts(self):
         """
-        Creates or updates each page in the Lieutenants category.
+        Create or update each page in the Lieutenants category.
         """
         # All the pages we're interested in are in these two categories
         # TODO If this list grows, it may be better to find pages that

@@ -53,10 +53,10 @@ docuReplacements = {
 summary = u'Robot: Create/update item summary tables'
 
 # Handy regular expressions
-item_templates = re.compile(u'.*\WItem')
-property_templates = re.compile(u'.*\WProperty')
-job_templates = re.compile(u'.*Job')
-lieutenant_templates = re.compile(u'Lieutenant\W(.*)')
+ITEM_TEMPLATES = re.compile(u'.*\WItem')
+PROPERTY_TEMPLATES = re.compile(u'.*\WProperty')
+JOB_TEMPLATES = re.compile(u'.*Job')
+LIEUTENANT_TEMPLATES = re.compile(u'Lieutenant\W(.*)')
 
 def name_to_link(name):
     """
@@ -566,7 +566,7 @@ def page_to_row(page, row_template):
     for (template, params) in templatesWithParams:
         template_name = template.title(withNamespace=False)
         # We're only interested in certain templates
-        if item_templates.search(template_name) or template_name == u'Challenge Job':
+        if ITEM_TEMPLATES.search(template_name) or template_name == u'Challenge Job':
             # Pass all the item template parameters
             if template_name in ignore_cost_param:
                 # We only have a real cost for Basic Items
@@ -575,7 +575,7 @@ def page_to_row(page, row_template):
                 if not param.startswith(u'cost') or (template_name not in ignore_cost_param):
                     row += u'|%s' % param
         else:
-            match = lieutenant_templates.search(template_name)
+            match = LIEUTENANT_TEMPLATES.search(template_name)
             if match:
                 # Construct a rarity parameter from the template name
                 row += u'|rarity=%s' % match.group(1)
@@ -602,7 +602,7 @@ def page_to_rows(page, row_template, high_cost_ratios={}):
     for (template, params) in templatesWithParams:
         template_name = template.title(withNamespace=False)
         # We're only interested in certain templates
-        if job_templates.search(template_name):
+        if JOB_TEMPLATES.search(template_name):
             row_stub = u'{{%s|district=%s' % (row_template, page.title())
             # Create a new row
             row = row_stub
@@ -613,7 +613,7 @@ def page_to_rows(page, row_template, high_cost_ratios={}):
             # pywikibot.output(u'Row is "%s"' % row)
             # Add the new row to the list
             rows.append(row)
-        elif property_templates.search(template_name):
+        elif PROPERTY_TEMPLATES.search(template_name):
             d = utils.params_to_dict(params)
             # Figure out how many rows we need
             if u'max' in d:
@@ -874,7 +874,7 @@ class XrefBot:
                 templatesWithParams = lt.templatesWithParams()
                 for (template, params) in templatesWithParams:
                     template_name = template.title(withNamespace=False)
-                    match = lieutenant_templates.search(template_name)
+                    match = LIEUTENANT_TEMPLATES.search(template_name)
                     if match:
                         faction = one_param(params, u'faction')
                         if faction not in lieutenants:

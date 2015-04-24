@@ -26,7 +26,7 @@ import pywikibot
 import re
 
 # Separate the name and value for a template parameter
-Rparam = re.compile(ur'\s*(?P<name>[^\s=]+)\s*=\s*(?P<value>.*)', re.DOTALL)
+_RE_PARAM = re.compile(ur'\s*(?P<name>[^\s=]+)\s*=\s*(?P<value>.*)', re.DOTALL)
 
 def escape_str(string):
     """
@@ -51,7 +51,7 @@ def param_from_params(params, param):
     param -- parameter to find the value for.
     """
     for p in params:
-        m = Rparam.match(p)
+        m = _RE_PARAM.match(p)
         if m != None and m.group('name') == param:
             val = m.group('value')
             # People sometimes provide the parameters,
@@ -70,7 +70,7 @@ def params_to_dict(params):
     """
     result = {}
     for param in params:
-        m = Rparam.match(param)
+        m = _RE_PARAM.match(param)
         if m != None:
             result[m.group('name')] = m.group('value')
     return result
@@ -177,6 +177,8 @@ class RecipeCache:
 
     def __init__(self):
         """Instantiate the class."""
+        # Note that we defer actually reading the wiki until we know
+        # that we need to.
         self._initialised = False
 
     def _read_pages(self):

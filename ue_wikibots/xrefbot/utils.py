@@ -18,7 +18,8 @@
 Utility functions and classes for UEW wikibots.
 """
 
-import sys, os
+import sys
+import os
 sys.path.append(os.environ['HOME'] + '/ue/ue_wikibots/core/pywikibot')
 
 import pywikibot
@@ -27,7 +28,7 @@ import re
 # Separate the name and value for a template parameter
 Rparam = re.compile(ur'\s*(?P<name>[^\s=]+)\s*=\s*(?P<value>.*)', re.DOTALL)
 
-def escapeStr(string):
+def escape_str(string):
     """
     Return text with any |, +, (, ), [, or ] characters preceded with \ characters.
 
@@ -42,7 +43,7 @@ def escapeStr(string):
     string = re.sub(ur'\+', u'\+', string)
     return re.sub(ur'\]', u'\]', string)
 
-def paramFromParams(params, param):
+def param_from_params(params, param):
     """
     Return the value for 'param' in 'params', or None if it isn't present.
 
@@ -53,12 +54,13 @@ def paramFromParams(params, param):
         m = Rparam.match(p)
         if m != None and m.group('name') == param:
             val = m.group('value')
-            # People sometimes provide the parameters, even though we don't know the value
+            # People sometimes provide the parameters,
+            # even though we don't know the value
             if val != u'' and val != u'?':
                 return val
     return None
 
-def paramsToDict(params):
+def params_to_dict(params):
     """
     Return the template parameters as a dict.
 
@@ -73,7 +75,7 @@ def paramsToDict(params):
             result[m.group('name')] = m.group('value')
     return result
 
-def findSpecificSection(text, section):
+def find_specific_section(text, section):
     """
     Find the specified section in text.
 
@@ -186,7 +188,7 @@ class RecipeCache:
             for template, params in page.templatesWithParams():
                 template_name = template.title(withNamespace=False)
                 if template_name.find(u'Recipe') != -1:
-                    item = paramFromParams(params, u'name')
+                    item = param_from_params(params, u'name')
                     self._recipes[item] = params
 
     def _init_if_needed(self):

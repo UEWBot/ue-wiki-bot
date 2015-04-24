@@ -19,27 +19,14 @@ sys.path.append(os.environ['HOME'] + '/ue/ue_wikibots/core/pywikibot')
 import pywikibot
 import re
 
-Rparam = re.compile(ur'\s*(?P<name>\S+)\s*=\s*(?P<value>.*)', re.DOTALL)
-
-def paramFromParams(params, param):
-    """
-    Returns the value for 'param' in 'params', or None if it isn't present.
-    """
-    for p in params:
-        m = Rparam.match(p)
-        if m != None and m.group('name') == param:
-            val = m.group('value')
-            # People sometimes provide the parameters, even though we don't know the value
-            if val != u'' and val != u'?':
-                return val
-    return None
+from utils import param_from_params
 
 c = pywikibot.Category(pywikibot.Site(), u'Category:Special Items')
 
 for d in c.articles():
- for t,p in d.templatesWithParams():
-  t_name = t.title(withNamespace=False)
-  if t_name == u'Special Item':
-   power = paramFromParams(p,u'power')
-   if power != None:
-    print "%s: %s" % (d.title(withNamespace=False), power)
+    for t,p in d.templatesWithParams():
+        t_name = t.title(withNamespace=False)
+        if t_name == u'Special Item':
+            power = param_from_params(p, u'power')
+            if power != None:
+                print "%s: %s" % (d.title(withNamespace=False), power)

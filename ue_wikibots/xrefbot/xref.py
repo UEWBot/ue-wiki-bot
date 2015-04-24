@@ -400,7 +400,7 @@ class XrefToolkit:
             #pywikibot.output("Template %s" % template)
             # TODO Clean this code up
             if (u'Item' in template) or (template == u'Ingredient'):
-                item_params = utils.paramsToDict(params)
+                item_params = utils.params_to_dict(params)
                 if template == u'Ingredient':
                     item_params[u'type'] = u'Ingredients'
                 # Check the drop parameters we do have
@@ -438,7 +438,7 @@ class XrefToolkit:
                 if source not in item_params['from']:
                     pywikibot.output("Boss claims to drop %s, but is not listed on that page" % item_name)
             elif u'Lieutenant' in template:
-                item_params = utils.paramsToDict(params)
+                item_params = utils.params_to_dict(params)
                 for key in drop_params.keys():
                     dp = drop_params[key]
                     if key == u'name':
@@ -495,7 +495,7 @@ class XrefToolkit:
         # Check each drop
         for (template, params) in templatesWithParams:
             if template == u'Drop':
-                drop_params = utils.paramsToDict(params)
+                drop_params = utils.params_to_dict(params)
                 text = self.checkItemParams(text, name, drop_params)
 
         # Event Bosses are structured very differently
@@ -677,7 +677,7 @@ class XrefToolkit:
                 continue
             missing_params |= missingParams(params, recipe_param_map.keys())
             # Find this item on the page
-            param_dict = utils.paramsToDict(params)
+            param_dict = utils.params_to_dict(params)
             name = param_dict[u'name']
             # This can take a while, so reassure the user
             pywikibot.output("Checking %s" % name)
@@ -702,7 +702,7 @@ class XrefToolkit:
                     if part_img == None:
                         # Insert an appropriate part_img parameter
                         new_part = re.sub(ur'(\|\W*%s\W*=\W*%s)' % (part_str,
-                                                                    utils.escapeStr(part)),
+                                                                    utils.escape_str(part)),
                                           ur'\1\n|%s=%s' % (part_img_str,
                                                             image),
                                           text[recipe_start:],
@@ -769,7 +769,7 @@ class XrefToolkit:
         old_level = 0
         for template,params in templatesWithParams:
             if template == u'Skill':
-                level = utils.paramFromParams(params, u'level')
+                level = utils.param_from_params(params, u'level')
                 if level is not None:
                     if (level == old_level) and (level != u'1'):
                         pywikibot.output("copy-paste error for skill level %s (%s) ?" % (level, params))
@@ -909,7 +909,7 @@ class XrefToolkit:
             prop_param_map[u'income'] = u'Needs Income'
 
         # Build time is required for non-FP properties only
-        param_dict = utils.paramsToDict(the_params)
+        param_dict = utils.params_to_dict(the_params)
         try:
             fp_prop = param_dict[u'fp_prop']
             try:
@@ -932,7 +932,7 @@ class XrefToolkit:
         Fix the list of sources on a Lieutenant page.
         Returns the modified text parameter.
         """
-        fromParam = utils.paramFromParams(the_params, u'from')
+        fromParam = utils.param_from_params(the_params, u'from')
         # Check where the Lt can be obtained from
         # TODO Ones that can be bought are listed on [[Category:Lieutenants]]
         sources = []
@@ -955,13 +955,13 @@ class XrefToolkit:
                 template = temp.title(withNamespace=False)
                 if template == u'Challenge Job':
                     area = r.title(withNamespace=False)
-                    job = utils.paramFromParams(params, u'name')
+                    job = utils.param_from_params(params, u'name')
                     for p in params:
                         if p.startswith(u'lt_') and name in p:
                             sources.append(u'{{Job Link|district=%s|job=%s}}' % (area,
                                                                                  job))
                 elif template == u'FP Item Row':
-                    if name == utils.paramFromParams(params, u'lieutenant'):
+                    if name == utils.param_from_params(params, u'lieutenant'):
                         sources.append(u'[[Black Market]]')
                         c = u'Favor Point Lieutenants'
                         # Check that it's in Favor Point Lieutenants
@@ -988,7 +988,7 @@ class XrefToolkit:
             for temp,params in r.templatesWithParams():
                 template = temp.title(withNamespace=False)
                 if u'Item' in template and not template == u'FP Item Row':
-                    param_dict = utils.paramsToDict(params)
+                    param_dict = utils.params_to_dict(params)
                     try:
                         powerParam = param_dict[u'power']
                         imageParam = param_dict[u'image']
@@ -1081,7 +1081,7 @@ class XrefToolkit:
         refItems.update(self.itemsInRefs(rarity_refs))
 
         # Check for items that affect the entire faction
-        param_dict = utils.paramsToDict(the_params)
+        param_dict = utils.params_to_dict(the_params)
         faction = param_dict[u'faction']
         faction_refs = cat_refs_map.refs_for(u'%s Lieutenants' % faction)
         refItems.update(self.itemsInRefs(faction_refs))
@@ -1371,7 +1371,7 @@ class XrefToolkit:
         # If the item comes from somewhere special, do cross-ref check
         # (Mystery) Gift Item template uses from with a different meaning
         if template != u'Gift Item' and template != u'Mystery Gift Item':
-            from_param = utils.paramFromParams(the_params, u'from')
+            from_param = utils.param_from_params(the_params, u'from')
             text = self.fixDrop(name, text, from_param, refs)
 
         # Do more detailed checks for specific sub-types
@@ -1422,15 +1422,15 @@ class XrefToolkit:
             for temp,params in r.templatesWithParams():
                 template = temp.title(withNamespace=False)
                 if template == u'Drop':
-                    if utils.paramFromParams(params, u'name') == name:
+                    if utils.param_from_params(params, u'name') == name:
                         # TODO If it has creator=true, need to ensure that's reflected on this page
                         source_set.add(r.title(withNamespace=False))
                 elif template == u'Mystery Gift Item':
-                    gift_params = utils.paramsToDict(params)
+                    gift_params = utils.params_to_dict(params)
                     if name in gift_params.values():
                         source_set.add(r.title(withNamespace=False))
                 elif template == u'Execution Method':
-                    if name in utils.paramFromParams(params, u'bonus'):
+                    if name in utils.param_from_params(params, u'bonus'):
                         source_set.add(r.title(withNamespace=False))
             # TODO Pages referenced from HQ can either be requirements
             # to build improvements, or drops after Wars with Shadow Broker.
@@ -1441,7 +1441,7 @@ class XrefToolkit:
             elif r.title(withNamespace=False) == u'Achievements':
                 # Check whether it's a daily achievement reward
                 r_text = r.get()
-                (s,e) = utils.findSpecificSection(r_text, u'Daily Rewards')
+                (s,e) = utils.find_specific_section(r_text, u'Daily Rewards')
                 if (s != -1) and (name in r_text[s:e]):
                         source_set.add(u'Achievements#Daily')
             # Don't call r.categories() for redirects
@@ -1530,7 +1530,7 @@ class XrefToolkit:
                  u'Needs Type']
         cat = u'Needs Type'
 
-        type_param = utils.paramFromParams(params, u'type')
+        type_param = utils.param_from_params(params, u'type')
         if type_param == None:
             # Add a type parameter, with value Needs Type
             text = self.addParam(text, params, u'type=' + cat + u'\n')
@@ -1551,7 +1551,7 @@ class XrefToolkit:
         Warns if the from parameter differs from what the Gift page says.
         Returns updated text.
         """
-        from_param = utils.paramFromParams(params, u'from')
+        from_param = utils.param_from_params(params, u'from')
         if from_param == None:
             if not self.catInCategories(u'Needs Minimum Level', categories):
                 text = self.appendCategory(text, u'Needs Minimum Level')
@@ -1635,7 +1635,7 @@ class XrefToolkit:
                                        faction_param_map)
 
         # Check points against corresponding faction page
-        param_dict = utils.paramsToDict(params)
+        param_dict = utils.params_to_dict(params)
         try:
             faction_param = param_dict[u'faction']
             try:
@@ -1698,7 +1698,7 @@ class XrefToolkit:
         parameter is present and one can't be derived.
         """
         recipes = self.recipesUsing(name)
-        for_param = utils.paramFromParams(params, u'for')
+        for_param = utils.param_from_params(params, u'for')
 
         if for_param == None:
             if len(recipes) > 1:
@@ -1772,7 +1772,7 @@ class XrefToolkit:
         text = self.fixNeedsCategories(text, params, categories, basic_param_map)
 
         # Check that we have either level or district but not both
-        param_dict = utils.paramsToDict(params)
+        param_dict = utils.params_to_dict(params)
         try:
             level_param = param_dict[u'level']
         except KeyError:
@@ -1828,7 +1828,7 @@ class XrefToolkit:
                                        battle_param_map)
 
         # Check rank parameter against Battle Rank page
-        rank_param = utils.paramFromParams(params, u'rank')
+        rank_param = utils.param_from_params(params, u'rank')
         if rank_param == None:
             if not self.catInCategories(u'Needs Unlock Criterion', categories):
                 text = self.appendCategory(text, u'Needs Unlock Criterion')
@@ -1838,7 +1838,7 @@ class XrefToolkit:
             for tmp,p in templatesWithParams:
                 t = tmp.title(withNamespace=False)
                 if t == u'Battle Rank List':
-                    param_dict = utils.paramsToDict(p)
+                    param_dict = utils.params_to_dict(p)
                     rank = param_dict[u'number']
                     item = param_dict[u'reward']
                     if item == u'[[%s]]' % name and rank != rank_param:
@@ -1885,8 +1885,8 @@ class XrefToolkit:
         Returns updated text.
         """
         # Find this recipe on one of the tech lab pages
-        recipe_dict = utils.paramsToDict(recipe_cache.recipe_for(name))
-        param_dict = utils.paramsToDict(params)
+        recipe_dict = utils.params_to_dict(recipe_cache.recipe_for(name))
+        param_dict = utils.params_to_dict(params)
 
         # Now we can cross-check between the two
         # Page template has atk, def, image, and description
@@ -1906,7 +1906,7 @@ class XrefToolkit:
                                     u'|from={{Lab}}\n|image=',
                                     1)
         else:
-            lab_dict = utils.paramsToDict(lab_params)
+            lab_dict = utils.params_to_dict(lab_params)
 
         # Compare image
         if check_image:
@@ -1952,7 +1952,7 @@ class XrefToolkit:
                 if recipe_dict[key] != lab_dict[key]:
                     # Fix up this page to match Tech Lab, because recipes are found there
                     text = re.sub(ur'(\|\W*%s\W*=\W*)%s' % (key,
-                                                            utils.escapeStr(lab_dict[key])),
+                                                            utils.escape_str(lab_dict[key])),
                                   ur'\g<1>%s' % recipe_dict[key],
                                   text)
             else:
@@ -1990,7 +1990,7 @@ class XrefToolkit:
             templatesWithParams = [(t.title(withNamespace=False),p) for (t,p) in tmp]
             src_param = None
             for t,p in templatesWithParams:
-                src_param = utils.paramFromParams(p, u'from')
+                src_param = utils.param_from_params(p, u'from')
             if not src_param:
                 # Ingredient page doesn't say where to get it
                 continue

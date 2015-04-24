@@ -519,7 +519,7 @@ def gear_tuple(page):
         template_name = template.title(withNamespace=False)
         # We're only interested in certain templates
         if template_name == u'Job':
-            d = utils.paramsToDict(params)
+            d = utils.params_to_dict(params)
             try:
                 g = d[u'gear']
                 if g != u'None':
@@ -614,7 +614,7 @@ def page_to_rows(page, row_template, high_cost_ratios={}):
             # Add the new row to the list
             rows.append(row)
         elif property_templates.search(template_name):
-            d = utils.paramsToDict(params)
+            d = utils.params_to_dict(params)
             # Figure out how many rows we need
             if u'max' in d:
                 # Explicit max has priority
@@ -667,7 +667,7 @@ def areas_in_order():
     areas = []
 
     # Find the "Areas" section
-    (start, end) = utils.findSpecificSection(text, u'Areas')
+    (start, end) = utils.find_specific_section(text, u'Areas')
 
     # Find and add each one in turn
     for m in re.finditer(ur'#\s*\[\[([^]]*)\]\]', text[start:end]):

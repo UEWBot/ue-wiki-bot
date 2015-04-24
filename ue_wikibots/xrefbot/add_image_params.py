@@ -76,7 +76,7 @@ class ImgBot:
                 offset += len(new_str)
                 before = text[:start] 
                 after = text[end:]
-                middle = re.sub(utils.escapeStr(old_param), u'%s%s' % (old_param, new_str), text[start:end])
+                middle = re.sub(utils.escape_str(old_param), u'%s%s' % (old_param, new_str), text[start:end])
                 text = before + middle + after
             except pywikibot.NoPage:
                 pywikibot.output("Page %s does not exist?!" % key)

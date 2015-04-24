@@ -71,23 +71,6 @@ def name_to_link(name):
         page = name + u'|' + name[0:paren-1]
     return u'[[' + page + u']]'
 
-def one_param(params, the_param):
-    """
-    Return the value of one parameter from the set of all template params.
-
-    params -- list containing the full set of template parameters.
-    the_param -- the parameter to find.
-
-    Return an empty string if the parameter is not present.
-    """
-    for one_param in params:
-        match = re.search(r'\s*%s\s*=([^\|]*)' % the_param,
-                          one_param,
-                          re.MULTILINE)
-        if match:
-            return match.expand(r'\1')
-    return u''
-
 def lt_faction_rarity_header(factions):
     """
     Return a summary table down to the first row of data.
@@ -872,7 +855,8 @@ class XrefBot:
                     template_name = template.title(withNamespace=False)
                     match = LIEUTENANT_TEMPLATES.search(template_name)
                     if match:
-                        faction = one_param(params, u'faction')
+                        faction = utils.param_from_params(params,
+                                                          u'faction')
                         if faction not in lieutenants:
                             lieutenants[faction] = []
                         lieutenants[faction].append(name)

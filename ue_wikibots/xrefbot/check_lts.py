@@ -14,8 +14,11 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #! /usr/bin/python
 
-import sys, os, operator
-sys.path.append(os.environ['HOME'] + '/ue/ue_wikibots/core/pywikibot')
+import sys
+import os
+import operator
+sys.path.append(os.environ['HOME'] + '/ue/ue_wikibots/core')
+
 import pywikibot
 import re
 

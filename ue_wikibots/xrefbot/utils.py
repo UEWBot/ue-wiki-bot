@@ -20,7 +20,8 @@ Utility functions and classes for UEW wikibots.
 
 import sys
 import os
-sys.path.append(os.environ['HOME'] + '/ue/ue_wikibots/core/pywikibot')
+import operator
+sys.path.append(os.environ['HOME'] + '/ue/ue_wikibots/core')
 
 import pywikibot
 import re

@@ -24,10 +24,10 @@ Arguments:
 import sys
 import os
 import operator
-sys.path.append(os.environ['HOME'] + '/ue/ue_wikibots/core/pywikibot')
+sys.path.append(os.environ['HOME'] + '/ue/ue_wikibots/core')
 
 import pywikibot
-import pagegenerators
+from pywikibot import pagegenerators
 import re
 import difflib
 import utils

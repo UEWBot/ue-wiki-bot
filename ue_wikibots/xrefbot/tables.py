@@ -33,21 +33,17 @@ Generate the following tables:
 - Area Gear Table
 """
 
-import sys, os, operator
-sys.path.append(os.environ['HOME'] + '/ue/ue_wikibots/core/pywikibot')
+import sys
+import os
+import operator
+sys.path.append(os.environ['HOME'] + '/ue/ue_wikibots/core')
 
-import pywikibot, pagegenerators
-import re, difflib
-import logging
+import pywikibot
+from pywikibot import pagegenerators
+import re
+import difflib
+from pywikibot import logging
 import utils
-
-# Stuff for the pywikibot help system
-parameterHelp = pagegenerators.parameterHelp + """\
-"""
-
-docuReplacements = {
-    '&params;': parameterHelp
-}
 
 # Summary message when using this module as a stand-alone script
 summary = u'Robot: Create/update item summary tables'

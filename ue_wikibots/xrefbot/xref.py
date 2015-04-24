@@ -16,59 +16,58 @@
 
 """
 Script to fix up categories and cross-references between pages on UE Wiki.
+
+Arguments:
+&params;
 """
 
-import sys, os, operator
+import sys
+import os
+import operator
 sys.path.append(os.environ['HOME'] + '/ue/ue_wikibots/core/pywikibot')
 
-import pywikibot, pagegenerators
-import re, difflib
+import pywikibot
+import pagegenerators
+import re
+import difflib
 import utils
 
 # Stuff for the pywikibot help system
-parameterHelp = pagegenerators.parameterHelp + """\
-"""
-
 docuReplacements = {
-    '&params;': parameterHelp
+    '&params;': pagegenerators.parameterHelp
 }
 
 # Summary message when using this module as a stand-alone script
 summary = u'Robot: Fix cross-references and/or categories'
 
-# Copied from pywikibot.py
-Rtemplate = re.compile(ur'{{(msg:)?(?P<name>[^{\|]+?)(\|(?P<params>[^{]+?))?}}')
-# Modified from the above
-namedtemplate = (ur'{{(msg:)?(%s[^{\|]+?)(\|(?P<params>[^{]+?))?}}')
+# Copied from pywikibot.py's Rtemplate
+TEMPLATE_RE = re.compile(ur'{{(msg:)?(?P<name>[^{\|]+?)(\|(?P<params>[^{]+?))?}}')
 
 # Headers
 # This doesn't match level 1 headers, but they're rare...
-Rheader = re.compile(ur'(={2,})\s*(?P<title>[^=]+)\s*\1')
+HEADER_RE = re.compile(ur'(={2,})\s*(?P<title>[^=]+)\s*\1')
 
 # List items on gift page
-Rgift = re.compile(ur'<li value=(?P<level>.*)>\[\[(?P<item>.*)\]\]</li>')
+GIFT_RE = re.compile(ur'<li value=(?P<level>.*)>\[\[(?P<item>.*)\]\]</li>')
 
 # List items on faction page
-Rfaction = re.compile(ur'\*\s*(?P<points>\S*)>\s*points - \[\[(?P<item>.*)\]\]')
+FACTION_RE = re.compile(ur'\*\s*(?P<points>\S*)>\s*points - \[\[(?P<item>.*)\]\]')
 
 # Any link
-Rlink = re.compile(ur'\[\[\s*(?P<page>[^\|\]]*)\s*.*\]\]')
-
-# Ingredient, with source
-Ringredient = re.compile(ur'\[\[\s*(?P<ingredient>.*)\s*.*\]\].*from\s*\[\[\s*(?P<source>[^\|\]]*)\s*.*\]\]')
+LINK_RE = re.compile(ur'\[\[\s*(?P<page>[^\|\]]*)\s*.*\]\]')
 
 # String used for category REs
-category_re = ur'\[\[\s*Category:\s*%s\s*\]\]'
-Rcategory = re.compile(ur'\[\[\s*Category:[^]]*\]\]')
+CATEGORY_RE_STR = ur'\[\[\s*Category:\s*%s\s*\]\]'
+CATEGORY_RE = re.compile(ur'\[\[\s*Category:[^]]*\]\]')
 
 # Regexes used for item powers
-noStackRe = re.compile(ur'\[no \[\[stack\]\]\]')
-noStack2Re = re.compile(ur'{{No Stack}}')
+NO_STACK_RE = re.compile(ur'\[no \[\[stack\]\]\]')
+NO_STACK_RE_2 = re.compile(ur'{{No Stack}}')
 # Separators are with, for, and to
-sepRe = re.compile(ur' with | for | to ')
+SEP_RE = re.compile(ur' with | for | to ')
 # Some follow a completely patterns
-allRe = re.compile(ur'[Aa]ll (.*) (count as .*)')
-whenRe = re.compile(ur'(.*) when (.*)')
+ALL_RE = re.compile(ur'[Aa]ll (.*) (count as .*)')
+WHEN_RE = re.compile(ur'(.*) when (.*)')
 
 # Cache to speed up fixLieutenant()
 cat_refs_map = utils.CategoryRefs()
@@ -79,11 +78,16 @@ recipe_cache = utils.RecipeCache()
 # Image cache
 image_map = utils.ImageMap()
 
-def dropParamsMatch(param1, param2):
+def drop_params_match(param1, param2):
     """
-    Compares two drop parameters.
+    Compare two drop parameters.
+
+    param1, param2 -- parameters to compare.
+
     Ignores case of first character, matches spaces with underscores,
     and reports a match if one is a link and the other isn't.
+
+    Return True if they match, False otherwise.
     """
     # Direct match first
     if param1 == param2:
@@ -101,10 +105,15 @@ def dropParamsMatch(param1, param2):
         return param1[0].lower() == param2[0].lower()
     return False
 
-def timeParamsMatch(param1, param2):
+def time_params_match(param1, param2):
     """
-    Compares two time parameters.
+    Compare two time parameters.
+
+    param1, param2 -- parameters to compare.
+
     Matches "days" with "d" and "hours" with hrs".
+
+    Return True if they match, False otherwise.
     """
     # Direct match first
     if param1 == param2:
@@ -127,10 +136,14 @@ def timeParamsMatch(param1, param2):
         return True
     return False
 
-def missingParams(all_params, mandatory_list):
+def missing_params(all_params, mandatory_list):
     """
-    Returns the set of all the parameters in mandatory_list that
-    are not represented in all_params.
+    Return a set of all missing mandatory parameter names.
+
+    all_params -- list of template parameters.
+    mandatory_list -- list of mandatory template parameter names.
+
+    Return a set of parameter names.
     """
     ret = set(mandatory_list)
     for p in all_params:
@@ -139,22 +152,34 @@ def missingParams(all_params, mandatory_list):
             ret.remove(m.group('name'))
     return ret
 
-def oneCap(string):
+def one_cap(string):
     """
-    Returns the string with the first letter capitalised and the rest left alone.
+    Return string with the first letter capitalised and the rest left alone.
     """
     return string[0].upper() + string[1:]
 
 class XrefToolkit:
 
-    def __init__(self, site, specificNeeds, debug = False):
-        self.site = site
-        self.specificNeeds = specificNeeds
+    """Ugly catch-all class with tools to manipulate wiki pages."""
+
+    def __init__(self, specific_needs, debug = False):
+        """
+        Instantiate the class.
+
+        specific_needs -- list of sub-categories of Needs Information.
+        debug -- boolean indicating whether to provide debug info.
+        """
+        self.specific_needs = specific_needs
         self.debug = debug
 
     def change(self, text, page):
         """
-        Given a wiki source code text, returns the cleaned up version.
+        Return a cleaned-up version of the page's text.
+
+        text -- text of the page.
+        page -- Page object.
+
+        Return update text.
         """
         titleWithoutNamespace = page.title(withNamespace=False)
         # Leave template pages alone
@@ -175,11 +200,11 @@ class XrefToolkit:
         refs = list(page.getReferences())
         oldText = text
         #pywikibot.output("******\nIn text:\n%s" % text)
-        text = self.fixPage(titleWithoutNamespace,
-                            text,
-                            categories,
-                            templatesWithParams,
-                            refs)
+        text = self._fix_page(titleWithoutNamespace,
+                              text,
+                              categories,
+                              templatesWithParams,
+                              refs)
         #pywikibot.output("******\nOld text:\n%s" % oldText)
         #pywikibot.output("******\nIn text:\n%s" % text)
         # Just comparing oldText with text wasn't sufficient
@@ -196,15 +221,22 @@ class XrefToolkit:
             pywikibot.showDiff(oldText, text)
         return text
 
-    def fixPage(self,
-                titleWithoutNamespace,
-                text,
-                categories,
-                templatesWithParams,
-                refs):
+    def _fix_page(self,
+                  titleWithoutNamespace,
+                  text,
+                  categories,
+                  templatesWithParams,
+                  refs):
         """
         Modify text to fix any inconsistencies in the page.
-        Returns updated text.
+
+        titleWithoutNamespace -- page title, without namespace.
+        text -- current page text.
+        categories -- categories the page belongs to.
+        templatesWithParams -- list of templates used and corresponding parameters.
+        refs -- list of pages that link to the page.
+
+        Return updated text.
         """
         # Note that these are effectively independent. Although the text gets changed,
         # the categories, templates, and parameters are not re-generated after each call
@@ -242,7 +274,11 @@ class XrefToolkit:
 
     def prependNowysiwygIfNeeded(self, text):
         """
-        Returns text with __NOWYSISYG__ prepended if it isn't already in the page.
+        Return text with __NOWYSISYG__ at the start.
+
+        text -- current page text.
+
+        Return text, amended if necessary.
         """
         keyword = u'__NOWYSIWYG__'
         if keyword in text:
@@ -251,9 +287,12 @@ class XrefToolkit:
 
     def appendCategory(self, text, category):
         """
-        Returns text with the appropriate category string appended.
-        category should be the name of the category itself.
-        This function will do all the wiki markup and return the new text.
+        Return text with the appropriate category string appended.
+
+        text -- current page text.
+        category -- the name of the category itself.
+
+        Return the new page text.
         """
         str = u'\n[[Category:%s]]' % category
         if str in text:
@@ -266,19 +305,19 @@ class XrefToolkit:
         Returns the text with the appropriate category removed.
         category should be the name of the category itself.
         """
-        Rcat = re.compile(category_re % category)
+        Rcat = re.compile(CATEGORY_RE_STR % category)
         # Remove the category
         return Rcat.sub('', text)
 
-    def fixNeedsCats(self, text, missing_params, categories, param_cat_map):
+    def fixNeedsCats(self, text, missed_params, categories, param_cat_map):
         """
         Returns the text with need categories added or removed as appropriate.
         param_cat_map is a dict, indexed by parameter, of Needs categories.
-        missing_params is a set of parameters that are missing from the page.
+        missed_params is a set of parameters that are missing from the page.
         """
         cats_needed = set()
         for (p,c) in param_cat_map.items():
-            if p in missing_params:
+            if p in missed_params:
                 cats_needed.add(c)
         for c in cats_needed:
             if not self.catInCategories(c, categories):
@@ -286,7 +325,7 @@ class XrefToolkit:
         for c in set(param_cat_map.values()):
             if self.catInCategories(c, categories) and c not in cats_needed:
                 # Only remove specific needs categories, not more general ones
-                if c in self.specificNeeds:
+                if c in self.specific_needs:
                     text = self.removeCategory(text, c)
         return text
 
@@ -295,8 +334,8 @@ class XrefToolkit:
         Returns the text with need categories added or removed as appropriate.
         param_cat_map is a dict, indexed by parameter, of Needs categories.
         """
-        missing_params = missingParams(params, param_cat_map.keys())
-        return self.fixNeedsCats(text, missing_params, categories, param_cat_map)
+        missed_params = missing_params(params, param_cat_map.keys())
+        return self.fixNeedsCats(text, missed_params, categories, param_cat_map)
 
     def findTemplate(self, text, name=None):
         """
@@ -306,7 +345,7 @@ class XrefToolkit:
         Buggy - doesn't work with nested templates
         """
         # Does the page use any templates ?
-        for match in Rtemplate.finditer(text):
+        for match in TEMPLATE_RE.finditer(text):
             found_name = match.expand(r'\g<name>')
             if (name == None) or (found_name == name):
                 return (found_name, match.start(), match.end())
@@ -321,7 +360,7 @@ class XrefToolkit:
         If level is -1 or not specified, match any level. Otherwise, only match the specified level.
         """
         headers = []
-        iterator = Rheader.finditer(text)
+        iterator = HEADER_RE.finditer(text)
         for m in iterator:
             hdr_lvl = len(m.group(1))
             headers.append({'level':hdr_lvl,
@@ -346,7 +385,7 @@ class XrefToolkit:
                     break
         if end == -1:
             # Exclude any categories
-            m = Rcategory.search(text[start:end])
+            m = CATEGORY_RE.search(text[start:end])
             if m:
                 end = start + m.start() - 1
         return (section_name, start, end, level)
@@ -359,7 +398,8 @@ class XrefToolkit:
         """
         # Is it in the specified category ?
         for this_category in categories:
-            if re.search(category_re % category, this_category.title(asLink=True)):
+            if re.search(CATEGORY_RE_STR % category,
+                         this_category.title(asLink=True)):
                 return True
         return False
 
@@ -409,7 +449,8 @@ class XrefToolkit:
                         continue
                     elif (key == u'creator'):
                         continue
-                    elif not dropParamsMatch(drop_params[key], item_params[key]):
+                    elif not drop_params_match(drop_params[key],
+                                               item_params[key]):
                         # TODO Should be able to fix some of them at least...
                         pywikibot.output("Drop parameter mismatch for %s parameter of item %s (%s vs %s)" % (key, item_name, item_params[key], drop_params[key]))
                 # Then check for any that may be missing
@@ -451,7 +492,7 @@ class XrefToolkit:
                         ip = item_params[u'def_1']
                     else:
                         ip = item_params[key]
-                    if not dropParamsMatch(dp, ip):
+                    if not drop_params_match(dp, ip):
                         pywikibot.output("Drop parameter mismatch for %s parameter of item %s (%s vs %s)" % (key, item_name, dp, ip))
                 if source not in item_params['from']:
                     pywikibot.output("Boss claims to drop %s, but is not listed on that page" % item_name)
@@ -611,15 +652,16 @@ class XrefToolkit:
                                u'lt_4': u'Needs Information',
                                u'lt_4_rarity': u'Needs Information',
                                u'recombinator': u'Needs Information'}
-        missing_params = set()
+        missed_params = set()
         for template, params in templatesWithParams:
             if template == u'Job':
-                mp = missingParams(params,
-                                   common_param_map.keys() + job_param_map.keys())
+                mp = missing_params(params,
+                                    common_param_map.keys() +
+                                        job_param_map.keys())
                 # xp_min and xp_max will do instead of xp
                 if u'xp' in mp:
                     mp.remove(u'xp')
-                    mp |= missingParams(params, xp_pair_param_map.keys())
+                    mp |= missing_params(params, xp_pair_param_map.keys())
                 # Special case for missing gear_n and gear_n_img parameters
                 got_gear = False
                 for i in range(4,0,-1):
@@ -633,17 +675,21 @@ class XrefToolkit:
                                 mp.remove(img_param)
                     else:
                         got_gear = True
-                missing_params |= mp
+                missed_params |= mp
             elif template == u'Challenge Job':
-                missing_params |= missingParams(params,
-                                                common_param_map.keys() + xp_pair_param_map.keys() + challenge_param_map.keys())
+                missed_params |= missing_params(params,
+                                                common_param_map.keys() +
+                                                    xp_pair_param_map.keys() +
+                                                    challenge_param_map.keys())
                 # TODO Check the LT rarities
-        pywikibot.output("Set of missing job parameters is %s" % missing_params)
+        pywikibot.output("Set of missing job parameters is %s" % missed_params)
         # Ensure the Needs categories are correct
         text = self.fixNeedsCats(text,
-                                 missing_params,
+                                 missed_params,
                                  categories,
-                                 dict(common_param_map.items() + job_param_map.items() + challenge_param_map.items()))
+                                 dict(common_param_map.items() +
+                                          job_param_map.items() +
+                                          challenge_param_map.items()))
 
         return text
 
@@ -671,11 +717,11 @@ class XrefToolkit:
                             u'time': u'Needs Build Time',
                             u'part_1': u'Needs Information'} #u'Needs Ingredient'}
         old_recipe_map = {u'available' : u'Needs Information'}
-        missing_params = set()
+        missed_params = set()
         for template, params in templatesWithParams:
             if u'Recipe' not in template:
                 continue
-            missing_params |= missingParams(params, recipe_param_map.keys())
+            missed_params |= missing_params(params, recipe_param_map.keys())
             # Find this item on the page
             param_dict = utils.params_to_dict(params)
             name = param_dict[u'name']
@@ -683,7 +729,7 @@ class XrefToolkit:
             pywikibot.output("Checking %s" % name)
             recipe_start = text.find(name)
             if is_old:
-                missing_params |= missingParams(params, old_recipe_map.keys())
+                missed_params |= missing_params(params, old_recipe_map.keys())
             # TODO Cross-reference against item page
             # Check images for ingredients
             n = 0
@@ -711,10 +757,10 @@ class XrefToolkit:
                     elif image != part_img:
                         # TODO Replace the image with the one from the ingredient page
                         pywikibot.output("Image mismatch. %s has %s, %s has %s" % (name, part_img, part, image))
-        pywikibot.output("Set of missing recipe parameters is %s" % missing_params)
+        pywikibot.output("Set of missing recipe parameters is %s" % missed_params)
         # Ensure the Needs categories are correct
         text = self.fixNeedsCats(text,
-                                 missing_params,
+                                 missed_params,
                                  categories,
                                  recipe_param_map)
 
@@ -765,7 +811,7 @@ class XrefToolkit:
                            u'cost': u'Needs Information', #u'Needs Skill Cost',
                            u'time': u'Needs Information'} #u'Needs Skill Time'}
         # Check each use of the Skill template
-        missing_params = set()
+        missed_params = set()
         old_level = 0
         for template,params in templatesWithParams:
             if template == u'Skill':
@@ -774,10 +820,10 @@ class XrefToolkit:
                     if (level == old_level) and (level != u'1'):
                         pywikibot.output("copy-paste error for skill level %s (%s) ?" % (level, params))
                     old_level = level
-                missing_params |= missingParams(params, skill_param_map.keys())
+                missed_params |= missing_params(params, skill_param_map.keys())
         # Ensure the Needs categories are correct
         text = self.fixNeedsCats(text,
-                                 missing_params,
+                                 missed_params,
                                  categories,
                                  skill_param_map)
 
@@ -1033,26 +1079,26 @@ class XrefToolkit:
         where multiplier may be None, and stack is a boolean.
         """
         # Does the power stack ?
-        stack = (None == noStackRe.search(power))
+        stack = (None == NO_STACK_RE.search(power))
         # Remove any "no stack" string
-        power = noStackRe.sub('', power)
+        power = NO_STACK_RE.sub('', power)
         if not stack:
-            stack = (None == noStack2Re.search(power))
+            stack = (None == NO_STACK_RE_2.search(power))
             # Remove any "no stack" string
-            power = noStack2Re.sub('', power)
+            power = NO_STACK_RE_2.sub('', power)
 
         # Try the "all" pattern
-        res = allRe.match(power)
+        res = ALL_RE.match(power)
         if res is not None:
             return (res.group(2), res.group(1), None, stack)
 
         # And the "when" pattern
-        res = whenRe.match(power)
+        res = WHEN_RE.match(power)
         if res is not None:
             return (res.group(1), res.group(2), None, stack)
 
         # Split at our separators
-        res = sepRe.split(power)
+        res = SEP_RE.split(power)
         if len(res) == 2:
             return (res[0], res[1], None, stack)
         elif len(res) == 3:
@@ -1461,9 +1507,10 @@ class XrefToolkit:
             if m:
                 src_count += 1
                 # Need to avoid matches within the Lab template part
-                iterator = Rlink.finditer(from_param[:m.start()] + from_param[m.end():])
+                iterator = LINK_RE.finditer(from_param[:m.start()] +
+                                            from_param[m.end():])
             else:
-                iterator = Rlink.finditer(from_param)
+                iterator = LINK_RE.finditer(from_param)
         else:
             iterator = []
         for m in iterator:
@@ -1536,7 +1583,7 @@ class XrefToolkit:
             text = self.addParam(text, params, u'type=' + cat + u'\n')
         else:
             # Check that the type is one we expect
-            if oneCap(type_param) not in types:
+            if one_cap(type_param) not in types:
                 pywikibot.output("Unexpected type '%s'" % type_param)
                 # Change it to Needs Type
                 # Note that this replaces every instance of the text in type_param...
@@ -1559,7 +1606,7 @@ class XrefToolkit:
             if self.catInCategories(u'Needs Minimum Level', categories):
                 text = self.removeCategory(u'Needs Minimum Level')
             gift_page = pywikibot.Page(pywikibot.Site(), u'Gift')
-            iterator = Rgift.finditer(gift_page.get())
+            iterator = GIFT_RE.finditer(gift_page.get())
             for m in iterator:
                 if m.group('item') == name:
                     if m.group('level') != from_param:
@@ -1641,7 +1688,7 @@ class XrefToolkit:
             try:
                 points_param = param_dict[u'points']
                 faction_page = pywikibot.Page(pywikibot.Site(), faction_param)
-                iterator = Rfaction.finditer(faction_page.get())
+                iterator = FACTION_RE.finditer(faction_page.get())
                 for m in iterator:
                     if m.group('item') == name:
                         if points_param != m.group('points'):
@@ -2057,14 +2104,14 @@ class XrefBot:
         # Find all the sub-categories of Needs Information
         cat = pywikibot.Category(pywikibot.Site(),
                                  u'Category:Needs Information')
-        self.specificNeeds = set(c.title(withNamespace=False) for c in cat.subcategories(recurse=True))
+        self.specific_needs = set(c.title(withNamespace=False) for c in cat.subcategories(recurse=True))
 
     def treat(self, page):
         try:
             # Show the title of the page we're working on.
             # Highlight the title in purple.
             pywikibot.output(u"\n\n>>> \03{lightpurple}%s\03{default} <<<" % page.title())
-            xrToolkit = XrefToolkit(page.site, self.specificNeeds, debug = True)
+            xrToolkit = XrefToolkit(self.specific_needs, debug = True)
             changedText = xrToolkit.change(page.get(), page)
             # TODO Modify to treat just whitespace as unchanged
             # Just comparing changedText with page.get() wasn't sufficient

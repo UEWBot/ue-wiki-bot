@@ -42,7 +42,6 @@ import pywikibot
 from pywikibot import pagegenerators
 import re
 import difflib
-from pywikibot import logging
 import utils
 
 # Summary message when using this module as a stand-alone script
@@ -933,7 +932,6 @@ class XrefBot:
         self.update_lt_rarity_table()
 
 def main():
-    #logging.basicConfig()
     bot = XrefBot()
     bot.run()
 

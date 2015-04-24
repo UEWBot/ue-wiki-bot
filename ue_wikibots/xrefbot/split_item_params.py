@@ -27,7 +27,6 @@ import pywikibot
 from pywikibot import pagegenerators
 import re
 import difflib
-from pywikibot import logging
 
 # Summary message when using this module as a stand-alone script
 summary = u'Robot: Split item parameter into separate items and counts'
@@ -105,7 +104,6 @@ class ItemBot:
         self.update_lts()
 
 def main():
-    #logging.basicConfig()
     bot = ItemBot(None)
     bot.run()
 

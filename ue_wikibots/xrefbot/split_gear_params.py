@@ -27,7 +27,6 @@ import pywikibot
 from pywikibot import pagegenerators
 import re
 import difflib
-from pywikibot import logging
 
 # Summary message when using this module as a stand-alone script
 summary = u'Robot: Split gear parameter into separate items and counts'
@@ -104,7 +103,6 @@ class GearBot:
         self.update_areas()
 
 def main():
-    #logging.basicConfig()
     bot = GearBot(None)
     bot.run()
 

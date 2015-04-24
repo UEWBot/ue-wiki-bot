@@ -113,8 +113,8 @@ class ImageMap:
     Cache class for the image filenames for items, properties, and ingredients.
     """
 
-    imgRe = re.compile(ur'\|W*image\W*=\W*(?P<image>.*)')
-    img2Re = re.compile(ur'\[\[File:(?P<image>.*\.png)\|.*\]\]')
+    _IMG_RE = re.compile(ur'\|W*image\W*=\W*(?P<image>.*)')
+    _IMG_2_RE = re.compile(ur'\[\[File:(?P<image>.*\.png)\|.*\]\]')
 
     def __init__(self):
         """Instantiate the class."""
@@ -134,9 +134,9 @@ class ImageMap:
                 m = None
                 text = pg.get(get_redirect=True)
                 # Extract the image parameter
-                m = self.imgRe.search(text)
+                m = self._IMG_RE.search(text)
                 if m is None:
-                    m = self.img2Re.search(text)
+                    m = self._IMG_2_RE.search(text)
             except pywikibot.NoPage:
                 pass
             if m is None:

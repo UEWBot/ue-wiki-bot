@@ -40,9 +40,6 @@ docuReplacements = {
 # Summary message when using this module as a stand-alone script
 summary = u'Robot: Fix cross-references and/or categories'
 
-# Copied from pywikibot.py's Rtemplate
-TEMPLATE_RE = re.compile(ur'{{(msg:)?(?P<name>[^{\|]+?)(\|(?P<params>[^{]+?))?}}')
-
 # Headers
 # This doesn't match level 1 headers, but they're rare...
 HEADER_RE = re.compile(ur'(={2,})\s*(?P<title>[^=]+)\s*\1')
@@ -336,20 +333,6 @@ class XrefToolkit:
         """
         missed_params = missing_params(params, param_cat_map.keys())
         return self.fixNeedsCats(text, missed_params, categories, param_cat_map)
-
-    def findTemplate(self, text, name=None):
-        """
-        Find a template in text.
-        If name is specified, find the named template.
-        Returns a tuple - (template name (or None), index where the template starts, index where the template ends)
-        Buggy - doesn't work with nested templates
-        """
-        # Does the page use any templates ?
-        for match in TEMPLATE_RE.finditer(text):
-            found_name = match.expand(r'\g<name>')
-            if (name == None) or (found_name == name):
-                return (found_name, match.start(), match.end())
-        return (None, -1, -1)
 
     def findSection(self, text, title=u'',level=-1):
         """
@@ -1190,8 +1173,6 @@ class XrefToolkit:
                                                                      refItems[key][0]))
                 # Add the item. No way to determine which item should be which
                 i += 1
-                #(temp, start, end) = self.findTemplate(text, the_template)
-                #assert temp != None, "Unable to find template %s in page" % the_template
                 # TODO There must be a better way to do this...
                 the_tuple = (i, key, i, refItems[key][0], i, refItems[key][1])
                 new_params = u'|item_%d=%s\n|item_%d_pwr=%s\n|item_%d_img=%s' % the_tuple

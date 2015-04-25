@@ -334,14 +334,18 @@ class XrefToolkit:
         missed_params = missing_params(params, param_cat_map.keys())
         return self.fixNeedsCats(text, missed_params, categories, param_cat_map)
 
-    def findSection(self, text, title=u'',level=-1):
+    def findSection(self, text, title):
         """
-        Find a section in text, starting with a header,
-        and ending with a header at the same level, a template, or category.
-        Returns a tuple - (section name (or u''), index where the section starts, index where the section ends, level)
-        If title is provided, only look for the specified section.
-        If level is -1 or not specified, match any level. Otherwise, only match the specified level.
+        Find a specific section in a page's text.
+
+        text -- Current page text.
+        title -- name of the section to look for.
+
+        Return a 2-tuple containing the start and end indices.
+
+        End point is a header at the same level, a template, or category.
         """
+        # TODO Merge into utils.find_specific_section()
         headers = []
         iterator = HEADER_RE.finditer(text)
         for m in iterator:
@@ -350,13 +354,14 @@ class XrefToolkit:
                             'title':m.group(u'title'),
                             'from':m.start(),
                             'to':m.end()})
-        section_name = u''
+
         start = -1
         end = -1
+        level = -1
         for hdr in headers:
             if (level == -1) or (hdr['level'] == level):
                 if start == -1:
-                    if (title == u'') or (hdr['title'] == title):
+                    if hdr['title'] == title:
                         # This is our start point
                         section_name = hdr['title']
                         start = hdr['to'] + 1
@@ -371,7 +376,7 @@ class XrefToolkit:
             m = CATEGORY_RE.search(text[start:end])
             if m:
                 end = start + m.start() - 1
-        return (section_name, start, end, level)
+        return (start, end)
 
     def catInCategories(self, category, categories):
         """
@@ -546,10 +551,10 @@ class XrefToolkit:
         sect = u'Rewards'
         sect_str = u'[[Boss Drops|Rewards]]'
         cat = u'Needs Rewards'
-        (dummy, start, end, level) = self.findSection(text, sect_str)
+        (start, end) = self.findSection(text, sect_str)
         # If we don't find one, maybe there's just a 'Rewards' section...
         if (start == -1):
-            (dummy, start, end, level) = self.findSection(text, sect)
+            (start, end) = self.findSection(text, sect)
             # Replace the header
             text = text.replace(u'=%s=' % sect, u'=%s=' % sect_str)
 
@@ -579,7 +584,7 @@ class XrefToolkit:
         """
         if not sect_str:
             sect_str = sect
-        (dummy, start, end, level) = self.findSection(text, sect_str)
+        (start, end) = self.findSection(text, sect_str)
         length = len(text[start:end])
         if self.catInCategories(cat, categories):
             if (start != -1) and (length > 0):

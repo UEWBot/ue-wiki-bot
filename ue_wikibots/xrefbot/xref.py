@@ -144,7 +144,7 @@ def missing_params(all_params, mandatory_list):
     """
     ret = set(mandatory_list)
     for p in all_params:
-        m = utils.Rparam.match(p)
+        m = utils._RE_PARAM.match(p)
         if m is not None and m.group('name') in ret:
             ret.remove(m.group('name'))
     return ret

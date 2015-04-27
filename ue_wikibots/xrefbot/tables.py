@@ -499,29 +499,22 @@ def gear_tuple(page):
         # We're only interested in certain templates
         if template_name == u'Job':
             d = utils.params_to_dict(params)
-            try:
-                g = d[u'gear']
-                if g != u'None':
-                    # There shouldn't be any of these
-                    print "Found %s in gear parameter in %s" % (g, name)
-            except:
-                pass
+            g = d.get(u'gear', u'None')
+            if g != u'None':
+                # There shouldn't be any of these
+                print "Found %s in gear parameter in %s" % (g, name)
             for i in range(1,5):
+                key = u'gear_%d' % i
                 try:
-                    key = u'gear_%d' % i
                     g = d[key]
                     n = int(d[key + u'_count'])
                     img = d[key + u'_img']
+                except KeyError, ValueError:
+                    pass
+                else:
                     # Store the largest number of each type of gear
                     if g not in needed or n > needed[g][0]:
                         needed[g] = (n, img)
-                    #try:
-                    #    if n > needed[g]:
-                    #        needed[g] = n
-                    #except:
-                    #    needed[g] = n
-                except:
-                    pass
     return (name, needed)
 
 def page_to_row(page, row_template):

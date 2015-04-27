@@ -944,14 +944,10 @@ class XrefToolkit:
 
         # Build time is required for non-FP properties only
         param_dict = utils.params_to_dict(the_params)
-        try:
-            fp_prop = param_dict[u'fp_prop']
-            try:
-                build_time = param_dict[u'time']
+        if u'fp_prop' in param_dict:
+            if u'time' in param_dict:
                 pywikibot.output("FP property has build time!")
-            except KeyError:
-                pass
-        except KeyError:
+        else:
             prop_param_map[u'time'] = u'Needs Build Time'
  
         text = self.fixNeedsCategories(text,
@@ -1026,11 +1022,12 @@ class XrefToolkit:
                     try:
                         powerParam = param_dict[u'power']
                         imageParam = param_dict[u'image']
-                        refItems[r.title(withNamespace=False)] = (powerParam,
-                                                                  imageParam)
                     except KeyError:
                         print "KeyError - itemsInRefs(). template = %s, param_dict = %s" % (template, param_dict)
                         continue
+                    else:
+                        refItems[r.title(withNamespace=False)] = (powerParam,
+                                                                  imageParam)
         return refItems
 
     def affectsLt(self, lt, rarity, faction, beneficiary):
@@ -1139,16 +1136,8 @@ class XrefToolkit:
                 # Ran out of items
 		# TODO There have been cases of Lts skipping item numbers...
                 break
-            try:
-                powerParam = param_dict[power_str]
-            except KeyError:
-                # Missing power parameter
-                powerParam = None
-            try:
-                imageParam = param_dict[image_str]
-            except KeyError:
-                # Missing image parameter
-                imageParam = None
+            powerParam = param_dict.get(power_str)
+            imageParam = param_dict.get(image_str)
             items[nameParam] = (powerParam, imageParam, i)
         i = len(items)
         # compare the two lists and address any mismatches
@@ -1673,6 +1662,11 @@ class XrefToolkit:
             faction_param = param_dict[u'faction']
             try:
                 points_param = param_dict[u'points']
+            except KeyError:
+                if not self.catInCategories(u'Needs Unlock Criterion',
+                                            categories):
+                    text = self.appendCategory(text, u'Needs Unlock Criterion')
+            else:
                 faction_page = pywikibot.Page(pywikibot.Site(), faction_param)
                 iterator = FACTION_RE.finditer(faction_page.get())
                 for m in iterator:
@@ -1681,10 +1675,6 @@ class XrefToolkit:
                             # Change the value
                             # Note that this replaces every instance of the text in points_param...
                             text = text.replace(points_param, m.group('points'))
-            except KeyError:
-                if not self.catInCategories(u'Needs Unlock Criterion',
-                                            categories):
-                    text = self.appendCategory(text, u'Needs Unlock Criterion')
         except KeyError:
             if not self.catInCategories(u'Needs Information', categories):
                 text = self.appendCategory(text, u'Needs Information') # u'Needs Faction'
@@ -1806,14 +1796,8 @@ class XrefToolkit:
 
         # Check that we have either level or district but not both
         param_dict = utils.params_to_dict(params)
-        try:
-            level_param = param_dict[u'level']
-        except KeyError:
-            level_param = None
-        try:
-            area_param = param_dict[u'district']
-        except KeyError:
-            area_param = None
+        level_param = param_dict.get(u'level')
+        area_param = param_dict.get(u'district')
         if level_param is None:
             if area_param is None:
                 pywikibot.output("Missing both level and district parameters")
@@ -1945,11 +1929,12 @@ class XrefToolkit:
         if check_image:
             try:
                 img_param = param_dict[u'image']
-                if img_param != recipe_dict[u'image']:
-                    pywikibot.output("Image parameter mismatch - %s in page, %s on Tech Lab page" % (img_param, recipe_dict[u'image']))
             except KeyError:
                 # TODO Insert missing image
                 pass
+            else:
+                if img_param != recipe_dict[u'image']:
+                    pywikibot.output("Image parameter mismatch - %s in page, %s on Tech Lab page" % (img_param, recipe_dict[u'image']))
 
         # TODO Add Needs Build Time category if appropriate
 
@@ -1957,10 +1942,11 @@ class XrefToolkit:
         for p in [u'atk', u'def']:
             try:
                 the_param = param_dict[p]
-                if the_param != recipe_dict[p]:
-                    pywikibot.output("%s parameter mismatch - %s in page, %s on Tech Lab page" % (p, the_param, recipe_dict[p]))
             except KeyError:
                 pass
+            else:
+                if the_param != recipe_dict[p]:
+                    pywikibot.output("%s parameter mismatch - %s in page, %s on Tech Lab page" % (p, the_param, recipe_dict[p]))
 
         # Check that num_parts is right, if present
         # For some Lab templates, num_parts is optional. Those should all have 5 parts
@@ -2031,6 +2017,13 @@ class XrefToolkit:
             src_param = self.one_line(src_param)
             try:
                 src = lab_dict[from_str]
+            except KeyError:
+                # Add from parameter to this page
+                new_param = u'|%s=%s' % (from_str, src_param)
+                text = text.replace(ur'|%s' % part_str,
+                                    u'%s\n|%s' % (new_param, part_str),
+                                    1)
+            else:
                 # Compare with src_param
                 if src != src_param:
                     if src in src_param:
@@ -2041,12 +2034,6 @@ class XrefToolkit:
                                             1)
                     else:
                         pywikibot.output("Source mismatch for %s - this page says %s, item page says %s\n" % (part, src, src_param))
-            except KeyError:
-                # Add from parameter to this page
-                new_param = u'|%s=%s' % (from_str, src_param)
-                text = text.replace(ur'|%s' % part_str,
-                                    u'%s\n|%s' % (new_param, part_str),
-                                    1)
         return text
 
     def parts_count(self, lab_dict):

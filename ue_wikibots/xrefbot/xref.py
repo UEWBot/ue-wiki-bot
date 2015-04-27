@@ -2034,10 +2034,11 @@ class XrefToolkit:
         while True:
             i += 1
             part_str = u'part_%d' % i
-            if part_str not in lab_dict:
+            try:
+                part = lab_dict[part_str]
+            except KeyError:
                 break
             from_str = part_str + u'_from'
-            part = lab_dict[part_str]
             try:
                 part_pg = pywikibot.Page(pywikibot.Site(), part)
             except pywikibot.NoPage:
@@ -2083,9 +2084,10 @@ class XrefToolkit:
         while True:
             i += 1
             part_str = u'part_%d' % i
-            if part_str not in lab_dict:
+            try:
+                part = lab_dict[part_str]
+            except KeyError:
                 break
-            part = lab_dict[part_str]
             num_str = part_str + u'_count'
             if num_str in lab_dict:
                 part_num = int(lab_dict[num_str])

@@ -850,9 +850,7 @@ class XrefBot:
                     if match:
                         faction = utils.param_from_params(params,
                                                           u'faction')
-                        if faction not in lieutenants:
-                            lieutenants[faction] = []
-                        lieutenants[faction].append(name)
+                        lieutenants.setdefault(faction, []).append(name)
             if lieutenants:
                 new_text += lt_faction_rarity_row(factions, rarity, lieutenants)
         new_text += summary_footer(None)

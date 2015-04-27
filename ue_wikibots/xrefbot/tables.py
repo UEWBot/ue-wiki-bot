@@ -285,7 +285,7 @@ def property_row(name, d, count, high_cost_ratios):
     if count > 10:
         unlock += u'level %d [[%s]]' % (count - 10, u'Fortress')
     if count > 1:
-        if len(unlock) > 0:
+        if unlock:
             unlock += u' and '
         unlock += u'level %d [[%s]]' % (count - 1, name)
     if u'fp_prop'in d:
@@ -723,7 +723,7 @@ class XrefBot:
         cat = pywikibot.Category(pywikibot.Site(), the_cat)
         for page in set(cat.articles(recurse=True)):
             new_rows = page_to_rows(page, row_template, lvl_to_ratio)
-            if len(new_rows):
+            if new_rows:
                 rows += new_rows
             elif page.title() == u'Fortress':
                 # Use the cached page text
@@ -853,7 +853,7 @@ class XrefBot:
                         if faction not in lieutenants:
                             lieutenants[faction] = []
                         lieutenants[faction].append(name)
-            if len(lieutenants) > 0:
+            if lieutenants:
                 new_text += lt_faction_rarity_row(factions, rarity, lieutenants)
         new_text += summary_footer(None)
         # Upload it

@@ -512,7 +512,7 @@ class XrefToolkit:
 
         # Drop out early if not a boss page
         # TODO Is there a better test ?
-        if len(the_cats) == 0:
+        if not the_cats:
             return text
         elif len(the_cats) > 1:
             pywikibot.output("Boss should be in just one of the %s categories"
@@ -1044,7 +1044,7 @@ class XrefToolkit:
         cats = parseRe.findall(beneficiary)
         print("%s: %s" % (beneficiary, cats))
 
-        if len(cats) == 0:
+        if not cats:
             return False
 
         catStr = u'Category:%s Lieutenants'
@@ -1512,7 +1512,7 @@ class XrefToolkit:
                 # Note that this is not necessarily an error, but is worth investigating
                 pywikibot.output("Page lists %s as a source, but that page doesn't list it as a drop" % src)
         # Are any changes needed ?
-        if len(source_set) > 0:
+        if source_set:
             # Add a from parameter if necessary
             if src_count == 0:
                 if len(source_set) == 1:
@@ -1728,7 +1728,7 @@ class XrefToolkit:
                 # Add a for parameter listing the recipes
                 new_param = u'for=<br/>\n*[[' + u']]\n*[['.join(recipes) + u']]\n'
                 text = self.addParam(text, params, new_param)
-            elif len(recipes) > 0:
+            elif recipes:
                 # Add a for parameter listing the recipe
                 new_param = u'for=[[' + u']], [['.join(recipes) + u']]\n'
                 text = self.addParam(text, params, new_param)

@@ -316,14 +316,14 @@ def safe_house_rows(name, text, row_template):
     # Find the info we need - income, unlock criteria, cost
     # Look for an "Income" line
     match = re.search(ur'Income: (.*)', text)
-    if match == None:
+    if match is None:
         pywikibot.output("Failed to find Income for %s" % name)
         income = u'Unknown'
     else:
         income = match.group(1)
     # Look for an "Unlock" line
     match = re.search(ur'Unlocked when (.*)', text)
-    if match == None:
+    if match is None:
         pywikibot.output("Failed to find Unlock criteria for %s" % name)
         unlock = u'Unknown'
     else:
@@ -407,14 +407,14 @@ def fortress_rows(name, text, row_template, the_dict):
     # Find the info we need - income, unlock criteria, cost
     # Look for an "Income" line
     match = re.search(ur'Income: (.*)', text)
-    if match == None:
+    if match is None:
         pywikibot.output("Failed to find Income for %s" % name)
         income = u'Unknown'
     else:
         income = match.group(1)
     # Look for a "Build Time" line
     match = re.search(ur'Build Time: (.*)hrs per level', text)
-    if match == None:
+    if match is None:
         pywikibot.output("Failed to find Build Time for %s" % name)
         time = 0
     else:

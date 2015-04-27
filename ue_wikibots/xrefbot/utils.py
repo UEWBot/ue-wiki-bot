@@ -53,7 +53,7 @@ def param_from_params(params, param):
     """
     for p in params:
         m = _RE_PARAM.match(p)
-        if m != None and m.group('name') == param:
+        if m is not None and m.group('name') == param:
             val = m.group('value')
             # People sometimes provide the parameters,
             # even though we don't know the value
@@ -72,7 +72,7 @@ def params_to_dict(params):
     result = {}
     for param in params:
         m = _RE_PARAM.match(param)
-        if m != None:
+        if m is not None:
             result[m.group('name')] = m.group('value')
     return result
 

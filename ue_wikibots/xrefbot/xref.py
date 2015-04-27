@@ -733,7 +733,7 @@ class XrefToolkit:
                 part_img = param_dict[part_img_str]
                 image = self.imageForItemOrIngredient(part)
                 if image is not None:
-                    if part_img == None:
+                    if part_img is None:
                         # Insert an appropriate part_img parameter
                         new_part = re.sub(ur'(\|\W*%s\W*=\W*%s)' % (part_str,
                                                                     utils.escape_str(part)),
@@ -773,7 +773,7 @@ class XrefToolkit:
 
         # Drop out early if not a class page
         # TODO Is there a better test ?
-        if the_params == None:
+        if the_params is None:
             return text
 
         # __NOWYSIWYG__
@@ -835,7 +835,7 @@ class XrefToolkit:
 
         # Drop out early if not an execution method page
         # TODO Is there a better test ?
-        if the_params == None:
+        if the_params is None:
             return text
 
         # __NOWYSIWYG__
@@ -927,7 +927,7 @@ class XrefToolkit:
 
         # Drop out early if not a property page
         # TODO Is there a better test ?
-        if the_params == None:
+        if the_params is None:
             return text
 
         # __NOWYSIWYG__
@@ -1067,11 +1067,11 @@ class XrefToolkit:
         where multiplier may be None, and stack is a boolean.
         """
         # Does the power stack ?
-        stack = (None == NO_STACK_RE.search(power))
+        stack = (NO_STACK_RE.search(power) is None)
         # Remove any "no stack" string
         power = NO_STACK_RE.sub('', power)
         if not stack:
-            stack = (None == NO_STACK_RE_2.search(power))
+            stack = (NO_STACK_RE_2.search(power) is None)
             # Remove any "no stack" string
             power = NO_STACK_RE_2.sub('', power)
 
@@ -1251,7 +1251,7 @@ class XrefToolkit:
 
         # Drop out early if not a lieutenant page
         # TODO Is there a better test ?
-        if the_params == None:
+        if the_params is None:
             return text
 
         # __NOWYSIWYG__
@@ -1389,7 +1389,7 @@ class XrefToolkit:
         # Drop out early if not an item page
         # This ignores Stamina Pack and Energy Pack, but that's probably fine
         # TODO Is there a better test ?
-        if the_params == None:
+        if the_params is None:
             return text
 
         # Check for explicit categories that should be implicit
@@ -1564,7 +1564,7 @@ class XrefToolkit:
         cat = u'Needs Type'
 
         type_param = utils.param_from_params(params, u'type')
-        if type_param == None:
+        if type_param is None:
             # Add a type parameter, with value Needs Type
             text = self.addParam(text, params, u'type=' + cat + u'\n')
         else:
@@ -1585,7 +1585,7 @@ class XrefToolkit:
         Returns updated text.
         """
         from_param = utils.param_from_params(params, u'from')
-        if from_param == None:
+        if from_param is None:
             if not self.catInCategories(u'Needs Minimum Level', categories):
                 text = self.appendCategory(text, u'Needs Minimum Level')
         else:
@@ -1733,7 +1733,7 @@ class XrefToolkit:
         recipes = self.recipesUsing(name)
         for_param = utils.param_from_params(params, u'for')
 
-        if for_param == None:
+        if for_param is None:
             if len(recipes) > 1:
                 # Add a for parameter listing the recipes
                 new_param = u'for=<br/>\n*[[' + u']]\n*[['.join(recipes) + u']]\n'
@@ -1814,8 +1814,8 @@ class XrefToolkit:
             area_param = param_dict[u'district']
         except KeyError:
             area_param = None
-        if level_param == None:
-            if area_param == None:
+        if level_param is None:
+            if area_param is None:
                 pywikibot.output("Missing both level and district parameters")
                 if not self.catInCategories(u'Needs Unlock Criterion',
                                             categories):
@@ -1830,7 +1830,7 @@ class XrefToolkit:
             text = self.removeCategory(text, cat)
             # Add a daily parameter, with value yes if not already present
             daily_param = param_dict[u'daily']
-            if daily_param == None:
+            if daily_param is None:
                 text = self.addParam(text, params, u'daily=yes')
 
         # Check type param
@@ -1862,7 +1862,7 @@ class XrefToolkit:
 
         # Check rank parameter against Battle Rank page
         rank_param = utils.param_from_params(params, u'rank')
-        if rank_param == None:
+        if rank_param is None:
             if not self.catInCategories(u'Needs Unlock Criterion', categories):
                 text = self.appendCategory(text, u'Needs Unlock Criterion')
         else:

@@ -31,5 +31,5 @@ for d in c.articles():
         t_name = t.title(withNamespace=False)
         if t_name == u'Special Item':
             power = param_from_params(p, u'power')
-            if power != None:
+            if power is not None:
                 print "%s: %s" % (d.title(withNamespace=False), power)

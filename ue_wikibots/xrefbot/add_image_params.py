@@ -59,7 +59,7 @@ class ImgBot:
         strRe = re.compile(ur'\|(?P<prefix>\W*%s\W*=\s*)(?P<value>[^\r]*)' % param)
 
         # If new_param not provided, use old_param plus "_img"
-        if new_param == None:
+        if new_param is None:
             new_param = param + u'_img'
 
         offset = 0

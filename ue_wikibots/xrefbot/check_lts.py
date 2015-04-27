@@ -32,7 +32,7 @@ for d in c.articles():
         if t_name == u'Job':
             lt = param_from_params(p, u'lieutenant')
             f = param_from_params(p, u'faction')
-            if lt != None and f != None:
+            if lt is not None and f is not None:
                 pg = pywikibot.Page(pywikibot.Site(), lt)
                 for t1,p1 in pg.templatesWithParams():
                     t1_name = t1.title(withNamespace=False)

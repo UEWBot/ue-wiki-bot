@@ -145,8 +145,8 @@ def missing_params(all_params, mandatory_list):
     ret = set(mandatory_list)
     for p in all_params:
         m = utils._RE_PARAM.match(p)
-        if m is not None and m.group('name') in ret:
-            ret.remove(m.group('name'))
+        if m is not None:
+            ret.discard(m.group('name'))
     return ret
 
 def one_cap(string):
@@ -674,8 +674,7 @@ class XrefToolkit:
                         if not got_gear:
                             mp.remove(root)
                             img_param = root + u'_img'
-                            if img_param in mp:
-                                mp.remove(img_param)
+                            mp.discard(img_param)
                     else:
                         got_gear = True
                 missed_params |= mp

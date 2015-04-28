@@ -236,10 +236,10 @@ class XrefToolkit:
         """
         # Note that these are effectively independent. Although the text gets changed,
         # the categories, templates, and parameters are not re-generated after each call
-        text = self.fixBoss(titleWithoutNamespace,
-                            text,
-                            categories,
-                            templatesWithParams)
+        text = self._fix_boss(titleWithoutNamespace,
+                              text,
+                              categories,
+                              templatesWithParams)
         text = self.fixItem(titleWithoutNamespace,
                             text,
                             categories,
@@ -256,14 +256,14 @@ class XrefToolkit:
                                 templatesWithParams)
         text = self.fixExecutionMethod(text, categories, templatesWithParams)
         text = self.fixClass(text, categories, templatesWithParams)
-        text = self.fixTechLab(titleWithoutNamespace,
-                               text,
-                               categories,
-                               templatesWithParams)
-        text = self.fixArea(titleWithoutNamespace,
-                            text,
-                            categories,
-                            templatesWithParams)
+        text = self._fix_tech_lab(titleWithoutNamespace,
+                                  text,
+                                  categories,
+                                  templatesWithParams)
+        text = self._fix_area(titleWithoutNamespace,
+                              text,
+                              categories,
+                              templatesWithParams)
         return text
 
     # Now a load of utility methods
@@ -411,12 +411,17 @@ class XrefToolkit:
                 return True
         return False
 
-    def checkItemParams(self, text, source, drop_params):
+    def _check_item_params(self, text, source, drop_params):
         """
-        Checks that the parameters for a drop match the item page.
-        params is a dictionary of the drop's parameters.
-        Also checks that the drop lists the source.
-        Returns modified text with missing parameters added.
+        Return text with corrected parameters for the drop.
+
+        text -- Current page text.
+        source -- the title of the page listing the drop.
+        drop_params -- a dictionary of the Drop template's parameters.
+
+        Return modified text with missing parameters added.
+
+        Print a warning if source is not listed as a source for this drop.
         """
         paramless_items = [u'Steel Beam',
                            u'Concrete Block',
@@ -503,14 +508,23 @@ class XrefToolkit:
                 pywikibot.output("Ignoring template %s" % template)
         return text
 
-    def fixBoss(self, name, text, categories, templatesWithParams):
+    def _fix_boss(self, name, text, categories, templatesWithParams):
         """
-        Fixes a Boss page.
-        If the page is in any of the five boss categories.
-        Ensures that __NOWYSIWYG__ is present.
-        Checks that the page is in exactly one of the five boss categories.
-        Checks each drop's image, type, attack, and defence.
-        Checks whether the categories Needs Completion Dialogue, Needs Rewards,
+        Fix a Boss page.
+
+        name -- page title.
+        text -- current text of the page.
+        categories -- list of categories the page belongs to.
+        templatesWithParams -- list of 2-tuples containing template Page
+                               and list of parameters.
+
+        Return updated text.
+
+        If the page is in any of the five boss categories:
+        Ensure that __NOWYSIWYG__ is present.
+        Check that the page is in exactly one of the five boss categories.
+        Check each drop's image, type, attack, and defence.
+        Check that the categories Needs Completion Dialogue, Needs Rewards,
         Needs Stages, and Needs Time Limit are used correctly.
         """
         boss_categories = [u'Job Bosses',
@@ -539,7 +553,7 @@ class XrefToolkit:
         for (template, params) in templatesWithParams:
             if template == u'Drop':
                 drop_params = utils.params_to_dict(params)
-                text = self.checkItemParams(text, name, drop_params)
+                text = self._check_item_params(text, name, drop_params)
 
         # Event Bosses are structured very differently
         if u'Event Bosses' in the_cats:
@@ -553,10 +567,10 @@ class XrefToolkit:
         # Check Needs categories
         cat = u'Needs Completion Dialogue'
         if u'Job Bosses' in the_cats:
-            text = self.checkNeedsSection(text,
-                                          categories,
-                                          u'Completion Dialogue',
-                                          cat)
+            text = self._check_needs_section(text,
+                                             categories,
+                                             u'Completion Dialogue',
+                                             cat)
         elif self._cat_in_categories(cat, categories):
             pywikibot.output("Non-Job bosses should never be categorised %s" % cat)
             text = self._remove_category(text, cat)
@@ -572,29 +586,47 @@ class XrefToolkit:
             # Replace the header
             text = text.replace(u'=%s=' % sect, u'=%s=' % sect_str)
 
-        text = self.checkNeedsSection(text, categories, sect, cat, sect_str)
+        text = self._check_needs_section(text,
+                                         categories,
+                                         sect,
+                                         cat,
+                                         sect_str)
 
-        text = self.checkNeedsSection(text,
-                                      categories,
-                                      u'Stages',
-                                      u'Needs Stages')
+        text = self._check_needs_section(text,
+                                         categories,
+                                         u'Stages',
+                                         u'Needs Stages')
 
-        text = self.checkNeedsSection(text,
-                                      categories,
-                                      u'Basic Information',
-                                      u'Needs Time Limit')
+        text = self._check_needs_section(text,
+                                         categories,
+                                         u'Basic Information',
+                                         u'Needs Time Limit')
 
         return text
 
-    def checkNeedsSection(self, text, categories, sect, cat, sect_str=None):
+    def _check_needs_section(self,
+                             text,
+                             categories,
+                             sect,
+                             cat,
+                             sect_str=None):
         """
-        Checks whether the specified section is present in the page.
-        If it is, checks that the specified category is not in categories.
-        If it isn't, checks that the specified category is in categories
+        Return text with specified category added or removed if appropriate.
+
+        text -- current page text.
+        categories -- list of categories the page belongs to.
+        sect -- name of the section to check for.
+        cat -- category that needs to be present if the section isn't,
+               and vice-versa.
+        sec_str -- optional section string to check for. Otherwise
+                   look for sect.
+
+        Return updated text.
+
+        Check whether the specified section is present in the page.
+        If it is, check that the specified category is not in categories.
+        If it isn't, check that the specified category is in categories
         and appends it to the page text if needed.
-        sect is the section name. If specified, sect_str is the text to
-        search for in the section title.
-        Returns updated text.
         """
         if not sect_str:
             sect_str = sect
@@ -610,11 +642,20 @@ class XrefToolkit:
             text = self._append_category(text, cat)
         return text
 
-    def fixArea(self, name, text, categories, templatesWithParams):
+    def _fix_area(self, name, text, categories, templatesWithParams):
         """
-        Fixes an Area page.
-        Ensures that __NOWYSIWYG__ is present.
-        Checks for mandatory template parameters or corresponding Needs category.
+        Fix an Area page.
+
+        name -- page title.
+        text -- current text of the page.
+        categories -- list of categories the page belongs to.
+        templatesWithParams -- list of 2-tuples containing template Page
+                               and list of parameters.
+
+        Return updated text.
+
+        Ensure that __NOWYSIWYG__ is present.
+        Check for mandatory template parameters or corresponding Needs category.
         """
         # Drop out if it isn't an area page
         if not self._cat_in_categories(u'Areas', categories):
@@ -694,12 +735,20 @@ class XrefToolkit:
 
         return text
 
-    def fixTechLab(self, name, text, categories, templatesWithParams):
+    def _fix_tech_lab(self, name, text, categories, templatesWithParams):
         """
-        Fixes the Tech Lab and Tech Lab - Historic pages.
-        Ensures that __NOWYSIWYG__ is present.
-        Checks for mandatory template parameters or corresponding Needs category.
-        Returns updated text.
+        Fix the Tech Lab and Tech Lab - Historic pages.
+
+        name -- page title.
+        text -- current text of the page.
+        categories -- list of categories the page belongs to.
+        templatesWithParams -- list of 2-tuples containing template Page
+                               and list of parameters.
+
+        Return updated text.
+
+        Ensure that __NOWYSIWYG__ is present.
+        Check for mandatory template parameters or corresponding Needs category.
         """
         if u'Tech Lab' not in name:
             return text

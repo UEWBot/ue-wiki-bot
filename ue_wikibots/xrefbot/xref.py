@@ -66,7 +66,7 @@ SEP_RE = re.compile(ur' with | for | to ')
 ALL_RE = re.compile(ur'[Aa]ll (.*) (count as .*)')
 WHEN_RE = re.compile(ur'(.*) when (.*)')
 
-# Cache to speed up fixLieutenant()
+# Cache to speed up _fix_lieutenant()
 cat_refs_map = utils.CategoryRefs()
 
 # Cache to speed up finding recipes
@@ -245,11 +245,11 @@ class XrefToolkit:
                             categories,
                             templatesWithParams,
                             refs)
-        text = self.fixLieutenant(titleWithoutNamespace,
-                                  text,
-                                  categories,
-                                  templatesWithParams,
-                                  refs)
+        text = self._fix_lieutenant(titleWithoutNamespace,
+                                    text,
+                                    categories,
+                                    templatesWithParams,
+                                    refs)
         text = self._fix_property(titleWithoutNamespace,
                                   text,
                                   categories,
@@ -1065,10 +1065,17 @@ class XrefToolkit:
 
         return text
 
-    def fixLtSources(self, name, text, categories, the_params, refs):
+    def _fix_lt_sources(self, name, text, categories, the_params, refs):
         """
         Fix the list of sources on a Lieutenant page.
-        Returns the modified text parameter.
+
+        name -- page title.
+        text -- current text of the page.
+        categories -- list of categories the page belongs to.
+        the_params -- list of parameters to rhe lieutenant template.
+        refs -- list of pages that link to the page to be fixed.
+
+        Return the modified text parameter.
         """
         fromParam = utils.param_from_params(the_params, u'from')
         # Check where the Lt can be obtained from
@@ -1116,10 +1123,14 @@ class XrefToolkit:
 
         return text
 
-    def itemsInRefs(self, refs):
+    def _items_in_refs(self, refs):
         """
-        Returns a dict with an entry for each item page in refs.
-        Key is the item name. Value is a (power, image) tuple.
+        Return a dict with an entry for each item page in refs.
+
+        refs -- list of pages that link to the page to be fixed.
+
+        Key is the item name. Value is a 2-tuple containing power
+        and image
         """
         refItems = {}
         for r in refs:
@@ -1131,16 +1142,23 @@ class XrefToolkit:
                         powerParam = param_dict[u'power']
                         imageParam = param_dict[u'image']
                     except KeyError:
-                        print "KeyError - itemsInRefs(). template = %s, param_dict = %s" % (template, param_dict)
+                        print "KeyError - _items_in_refs(). template = %s, param_dict = %s" % (template, param_dict)
                         continue
                     else:
                         refItems[r.title(withNamespace=False)] = (powerParam,
                                                                   imageParam)
         return refItems
 
-    def affectsLt(self, lt, rarity, faction, beneficiary):
+    def _affects_lt(self, lt, rarity, faction, beneficiary):
         """
-        Returns True if the specified Lt matches the criteria in beneficiary.
+        Return whether an item benefits the specified Lt.
+
+        lt -- name of the lieutenant of interest.
+        rarity -- rarity of the Lt of interest.
+        faction -- faction of the Lt of interest.
+        beneficiary -- text specifying who the item helps.
+
+        Return True if the specified Lt matches the criteria in beneficiary.
         """
         # If the LT's name appears, that's an easy one
         if lt in beneficiary:
@@ -1166,10 +1184,17 @@ class XrefToolkit:
                 return False
         return True
 
-    def splitPower(self, power):
+    def _split_power(self, power):
         """
-        Returns a (effect, beneficiary, multiplier, stack) tuple for the power,
-        where multiplier may be None, and stack is a boolean.
+        Split the text of a power into its components parts.
+
+        power -- item power string.
+
+        Return a 4-tuple containing:
+            effect of the item (str)
+            beneficiaries (str)
+            multiplier (str or None)
+            stack (True/False)
         """
         # Does the power stack ?
         stack = (NO_STACK_RE.search(power) is None)
@@ -1198,18 +1223,25 @@ class XrefToolkit:
             return (res[0], res[1], res[2], stack)
         return (power, None, None, stack)
 
-    def fixLtItems(self, name, text, the_template, the_params, refs):
+    def _fix_lt_items(self, name, text, the_template, the_params, refs):
         """
-        Checks the list of items that affect this Lt.
-        Returns the modified text parameter.
+        Check the list of items that affect this Lt.
+
+        name -- page title.
+        text -- current text of the page.
+        the_template -- name of the primary template used on the page.
+        the_params -- list of parameters to the template.
+        refs -- list of pages that link to the page.
+
+        Return the modified text parameter.
         """
         # Validate items parameters, if present
         # Check for items that affect every Lt
         lt_refs = cat_refs_map.refs_for(u'Lieutenants')
-        refItems = self.itemsInRefs(lt_refs)
+        refItems = self._items_in_refs(lt_refs)
 
         # Check for any items that have a power that affects this Lt
-        refItems2 = self.itemsInRefs(refs)
+        refItems2 = self._items_in_refs(refs)
         # Does the item have a power that affects this Lt ?
         x = {k: v for k, v in refItems2.iteritems() if v[0] is not None and name in v[0]}
         refItems.update(x)
@@ -1217,19 +1249,19 @@ class XrefToolkit:
         # Check for items that affect all Lts of this rarity
         rarity = the_template.split()[1]
         rarity_refs = cat_refs_map.refs_for(u'%s Lieutenants' % rarity)
-        refItems.update(self.itemsInRefs(rarity_refs))
+        refItems.update(self._items_in_refs(rarity_refs))
 
         # Check for items that affect the entire faction
         param_dict = utils.params_to_dict(the_params)
         faction = param_dict[u'faction']
         faction_refs = cat_refs_map.refs_for(u'%s Lieutenants' % faction)
-        refItems.update(self.itemsInRefs(faction_refs))
+        refItems.update(self._items_in_refs(faction_refs))
 
         # TODO Filter out any items that don't affect this Lt
-        refItems = {k: v for k, v in refItems.iteritems() if self.affectsLt(name,
-                                                                            rarity,
-                                                                            faction,
-                                                                            self.splitPower(v[0])[1])}
+        refItems = {k: v for k, v in refItems.iteritems() if self._affects_lt(name,
+                                                                              rarity,
+                                                                              faction,
+                                                                              self._split_power(v[0])[1])}
 
         items = {}
         i = 0
@@ -1283,10 +1315,20 @@ class XrefToolkit:
         pass
         return text
 
-    def fixLtNeedsParams(self, text, the_params, categories, is_tech_lab_item):
+    def _fix_lt_needs_params(self,
+                             text,
+                             the_params,
+                             categories,
+                             is_tech_lab_item):
         """
         Fix the "Needs" categories on a Lieutenant page.
-        Returns modified version of text parameter.
+
+        text -- current text of the page.
+        the_params -- list of parameters to the primary template.
+        categories -- list of categories the page belongs to.
+        is_tech_lab_item -- True if the Lt has a Tech Lab recipe.
+
+        Return modified version of text parameter.
         """
         # Check mandatory parameters
         lt_param_map = {u'description': u'Needs Description',
@@ -1312,16 +1354,31 @@ class XrefToolkit:
                                           categories,
                                           lt_param_map)
 
-    def fixLieutenant(self, name, text, categories, templatesWithParams, refs):
+    def _fix_lieutenant(self,
+                        name,
+                        text,
+                        categories,
+                        templatesWithParams,
+                        refs):
         """
-        If the page uses any of the templates 'Lieutenant Common', 'Lieutenant Uncommon',
-        'Lieutenant Rare, or 'Lieutenant Epic':
-        Ensures that __NOWYSIWYG__ is present.
-        Checks that the page doesn't explictly list any categories that should be
+        Fix a Lieutenant page.
+
+        name -- name of the Lieutenant (page title).
+        text -- current page text.
+        categories -- a list of category Pages the page is current in.
+        templatesWithParams -- list of templates used and corresponding parameters.
+        refs -- list of pages that link to the page.
+
+        Return updated text.
+
+        If the page uses any of the templates 'Lieutenant Common',
+        'Lieutenant Uncommon', 'Lieutenant Rare, or 'Lieutenant Epic':
+        Ensure that __NOWYSIWYG__ is present.
+        Check that the page doesn't explictly list any categories that should be
         assigned by the template.
-        Removes any empty stat or power parameters, and any (old) item parameters.
-        Adds missing sources.
-        Checks items and adds missing ones.
+        Remove any empty stat or power parameters, and any (old) item parameters.
+        Add any missing sources.
+        Check items and add missing ones.
         """
         # Does the page use a lieutenant template ?
         the_params = None
@@ -1376,13 +1433,17 @@ class XrefToolkit:
         for i in to_nuke:
             the_params.remove(i)
 
-        text = self.fixLtNeedsParams(text,
-                                     the_params,
-                                     categories,
-                                     is_tech_lab_item)
+        text = self._fix_lt_needs_params(text,
+                                         the_params,
+                                         categories,
+                                         is_tech_lab_item)
 
         if not is_tech_lab_item:
-            text = self.fixLtSources(name, text, categories, the_params, refs)
+            text = self._fix_lt_sources(name,
+                                        text,
+                                        categories,
+                                        the_params,
+                                        refs)
 
         # Do special checks for any Epic Research Items
         if is_tech_lab_item:
@@ -1394,7 +1455,7 @@ class XrefToolkit:
                                        False)
 
         # Validate items parameters, if present
-        text = self.fixLtItems(name, text, the_template, the_params, refs)
+        text = self._fix_lt_items(name, text, the_template, the_params, refs)
 
         return text
 

@@ -143,10 +143,9 @@ def missing_params(all_params, mandatory_list):
     Return a set of parameter names.
     """
     ret = set(mandatory_list)
-    for p in all_params:
-        m = utils._RE_PARAM.match(p)
-        if m is not None:
-            ret.discard(m.group('name'))
+    param_dict = utils.params_to_dict(all_params)
+    for k in param_dict.keys():
+        ret.discard(k)
     return ret
 
 def one_cap(string):

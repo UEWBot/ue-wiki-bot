@@ -1020,10 +1020,8 @@ class XrefToolkit:
         # Does the page use a property template ?
         the_params = None
         for template,params in templatesWithParams:
-            if template == u'Income Property':
-                the_template = template
-                the_params = params
-            elif template == u'Upgrade Property':
+            if template in [u'Income Property',
+                            u'Upgrade Property']:
                 the_template = template
                 the_params = params
 
@@ -1393,16 +1391,10 @@ class XrefToolkit:
                 is_tech_lab_item = True
                 ingredients = params
 
-            if template == u'Lieutenant Common':
-                the_template = template
-                the_params = params
-            elif template == u'Lieutenant Uncommon':
-                the_template = template
-                the_params = params
-            elif template == u'Lieutenant Rare':
-                the_template = template
-                the_params = params
-            elif template == u'Lieutenant Epic':
+            if template in [u'Lieutenant Common',
+                            u'Lieutenant Uncommon',
+                            u'Lieutenant Rare',
+                            u'Lieutenant Epic']:
                 the_template = template
                 the_params = params
 
@@ -1525,25 +1517,13 @@ class XrefToolkit:
                 is_tech_lab_item = True
                 ingredients = params
 
-            if template == u'Gift Item':
-                the_template = template
-                the_params = params
-            elif template == u'Mystery Gift Item':
-                the_template = template
-                the_params = params
-            elif template == u'Faction Item':
-                the_template = template
-                the_params = params
-            elif template == u'Special Item':
-                the_template = template
-                the_params = params
-            elif template == u'Basic Item':
-                the_template = template
-                the_params = params
-            elif template == u'Battle Rank Item':
-                the_template = template
-                the_params = params
-            elif template == u'Ingredient':
+            if template in [u'Gift Item',
+                            u'Mystery Gift Item',
+                            u'Faction Item',
+                            u'Special Item',
+                            u'Basic Item',
+                            u'Battle Rank Item',
+                            u'Ingredient']:
                 the_template = template
                 the_params = params
 

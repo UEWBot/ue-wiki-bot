@@ -250,12 +250,14 @@ class XrefToolkit:
                                   categories,
                                   templatesWithParams,
                                   refs)
-        text = self.fixProperty(titleWithoutNamespace,
-                                text,
-                                categories,
-                                templatesWithParams)
-        text = self.fixExecutionMethod(text, categories, templatesWithParams)
-        text = self.fixClass(text, categories, templatesWithParams)
+        text = self._fix_property(titleWithoutNamespace,
+                                  text,
+                                  categories,
+                                  templatesWithParams)
+        text = self._fix_execution_method(text,
+                                          categories,
+                                          templatesWithParams)
+        text = self._fix_class(text, categories, templatesWithParams)
         text = self._fix_tech_lab(titleWithoutNamespace,
                                   text,
                                   categories,
@@ -822,15 +824,23 @@ class XrefToolkit:
 
         return text
 
-    def fixClass(self, text, categories, templatesWithParams):
+    def _fix_class(self, text, categories, templatesWithParams):
         """
+        Fix a class page.
+
+        text -- current text of the page.
+        categories -- list of categories the page belongs to.
+        templatesWithParams -- list of 2-tuples containing template Page
+                               and list of parameters.
+
+        Return updated text.
+
         If the page uses the template 'Class':
-        Ensures that __NOWYSIWYG__ is present.
-        Checks that the page doesn't explictly list any categories that should be
+        Ensure that __NOWYSIWYG__ is present.
+        Check that the page doesn't explictly list any categories that should be
         assigned by the template.
-        Checks for mandatory template parameters or corresponding Needs category.
-        Checks for increasing skill levels.
-        Returns updated text.
+        Check for mandatory template parameters or corresponding Needs category.
+        Check for increasing skill levels.
         """
         # Does the page use the Class template ?
         the_params = None
@@ -885,14 +895,22 @@ class XrefToolkit:
 
         return text
 
-    def fixExecutionMethod(self, text, categories, templatesWithParams):
+    def _fix_execution_method(self, text, categories, templatesWithParams):
         """
+        Fix an execution method page.
+
+        text -- current text of the page.
+        categories -- list of categories the page belongs to.
+        templatesWithParams -- list of 2-tuples containing template Page
+                               and list of parameters.
+
+        Return updated text.
+
         If the page uses the template 'Execution Method':
-        Ensures that __NOWYSIWYG__ is present.
-        Checks that the page doesn't explictly list any categories that should be
+        Ensure that __NOWYSIWYG__ is present.
+        Check that the page doesn't explictly list any categories that should be
         assigned by the template.
-        Checks for mandatory template parameters or corresponding Needs category.
-        Returns updated text.
+        Check for mandatory template parameters or corresponding Needs category.
         """
         # Does the page use the execution method template ?
         the_params = None
@@ -924,20 +942,32 @@ class XrefToolkit:
 
         return text
 
-    def fixSafeHouse(self, text, categories):
+    def _fix_safe_house(self, text, categories):
         """
-        Checks that the page includes appropriate information (like Upgrade properties).
-        Checks that the cost table matches the template for upgrade properties.
-        Returns updated text.
+        Fix the Safe House page.
+
+        text -- current text of the page.
+        categories -- list of categories the page belongs to.
+
+        Return updated text.
+
+        Check that the page includes appropriate information (like Upgrade properties).
+        Check that the cost table matches the template for upgrade properties.
         """
         # TODO implement this function
         return text
 
-    def fixFortress(self, text, categories):
+    def _fix_fortress(self, text, categories):
         """
-        Checks that the page includes appropriate information (like Upgrade properties).
-        Checks that the cost table matches the template for upgrade properties.
-        Returns updated text.
+        Fix the Fortress page.
+
+        text -- current text of the page.
+        categories -- list of categories the page belongs to.
+
+        Return updated text.
+
+        Check that the page includes appropriate information (like Upgrade properties).
+        Check that the cost table matches the template for upgrade properties.
         """
         # TODO implement this function
         # First, retrieve the expected cost ratios from the template
@@ -968,14 +998,24 @@ class XrefToolkit:
                                                                          expected_cost))
         return text
 
-    def fixProperty(self, name, text, categories, templatesWithParams):
+    def _fix_property(self, name, text, categories, templatesWithParams):
         """
-        If the page uses either of the templates 'Income Property' or 'Upgrade Property':
-        Ensures that __NOWYSIWYG__ is present.
-        Checks that the page doesn't explictly list any categories that should be
+        Fix a property page.
+
+        name -- page title.
+        text -- current text of the page.
+        categories -- list of categories the page belongs to.
+        templatesWithParams -- list of 2-tuples containing template Page
+                               and list of parameters.
+
+        Return updated text.
+
+        If the page uses either of the templates 'Income Property'
+        or 'Upgrade Property':
+        Ensure that __NOWYSIWYG__ is present.
+        Check that the page doesn't explictly list any categories that should be
         assigned by the template.
-        Checks for mandatory template parameters or corresponding Needs category.
-        Returns updated text.
+        Check for mandatory template parameters or corresponding Needs category.
         """
         # Does the page use a property template ?
         the_params = None
@@ -989,9 +1029,9 @@ class XrefToolkit:
 
         # Fortress and Safe House are special
         if name == u'Safe House':
-            return self.fixSafeHouse(text, categories)
+            return self._fix_safe_house(text, categories)
         elif name == u'Fortress':
-            return self.fixFortress(text, categories)
+            return self._fix_fortress(text, categories)
 
         # Drop out early if not a property page
         # TODO Is there a better test ?

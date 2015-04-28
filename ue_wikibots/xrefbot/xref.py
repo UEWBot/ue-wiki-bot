@@ -455,7 +455,7 @@ class XrefToolkit:
                 key = u'for'
                 try:
                     # Should be a single line in the drop template
-                    item_params[key] = self.one_line(item_params[key])
+                    item_params[key] = self._one_line(item_params[key])
                 except KeyError:
                     pass
                 # Check the drop parameters we do have
@@ -1343,7 +1343,7 @@ class XrefToolkit:
             lt_param_map[u'def_%d' % i] = u'Needs Stats'
 
         # If it's a tech lab lieutenant, don't bother checking what it's made from.
-        # That will be done in fixTechLabItem.
+        # That will be done in _fix_tech_lab_item.
         if not is_tech_lab_item:
             lt_param_map[u'from'] = u'Needs Source'
  
@@ -1439,12 +1439,12 @@ class XrefToolkit:
 
         # Do special checks for any Epic Research Items
         if is_tech_lab_item:
-            text = self.fixTechLabItem(name,
-                                       text,
-                                       the_params,
-                                       categories,
-                                       ingredients,
-                                       False)
+            text = self._fix_tech_lab_item(name,
+                                           text,
+                                           the_params,
+                                           categories,
+                                           ingredients,
+                                           False)
 
         # Validate items parameters, if present
         text = self._fix_lt_items(name, text, the_template, the_params, refs)
@@ -1568,29 +1568,29 @@ class XrefToolkit:
         elif the_template == u'Faction Item':
             text = self._fix_faction_item(name, text, the_params, categories)
         elif the_template == u'Special Item':
-            text = self.fixSpecialItem(name,
-                                       text,
-                                       the_params,
-                                       categories,
-                                       is_tech_lab_item)
+            text = self._fix_special_item(name,
+                                          text,
+                                          the_params,
+                                          categories,
+                                          is_tech_lab_item)
         elif the_template == u'Basic Item':
-            text = self.fixBasicItem(text, the_params, categories)
+            text = self._fix_basic_item(text, the_params, categories)
         elif the_template == u'Battle Rank Item':
-            text = self.fixBattleItem(name, text, the_params, categories)
+            text = self._fix_battle_item(name, text, the_params, categories)
         elif the_template == u'Ingredient':
-            text = self.fixIngredient(name,
-                                      text,
-                                      the_params,
-                                      categories,
-                                      is_tech_lab_item)
+            text = self._fix_ingredient(name,
+                                        text,
+                                        the_params,
+                                        categories,
+                                        is_tech_lab_item)
 
         # Do special checks for any Epic Research Items
         if is_tech_lab_item:
-            text = self.fixTechLabItem(name,
-                                       text,
-                                       the_params,
-                                       categories,
-                                       ingredients)
+            text = self._fix_tech_lab_item(name,
+                                           text,
+                                           the_params,
+                                           categories,
+                                           ingredients)
 
         return text
 
@@ -1948,7 +1948,7 @@ class XrefToolkit:
         """
         Fix an item that may be an ingredient in Tech Lab recipes.
 
-        name -- name of the faction item (page title).
+        name -- name of the item (page title).
         text -- current text of the page.
         params -- list of parameters to the primary template.
         categories -- list of categories the page belongs to.
@@ -1984,12 +1984,27 @@ class XrefToolkit:
 
         return text
 
-    def fixSpecialItem(self, name, text, params, categories, is_tech_lab_item):
+    def _fix_special_item(self,
+                          name,
+                          text,
+                          params,
+                          categories,
+                          is_tech_lab_item):
         """
-        Ensures that special items have description, image, atk, def, cost, rarity, type
-        and from params or appropriate "Needs" category.
-        Assumes that the page uses the Special Item template.
+        Fix a special item page.
+
+        name -- name of the special item (page title).
+        text -- current text of the page.
+        params -- list of parameters to the primary template.
+        categories -- list of categories the page belongs to.
+        is_tech_lab_item -- pass True if the item has or had a recipe in
+                            the Tech Lab.
+
         Returns updated text.
+
+        Ensure that special items have description, image, atk, def, cost,
+        rarity, type and from params or appropriate "Needs" category.
+        Assume that the page uses the Special Item template.
         """
         # Check mandatory parameters
         special_param_map = {u'description': u'Needs Description',
@@ -1999,7 +2014,7 @@ class XrefToolkit:
                              u'rarity': u'Needs Rarity',
                              u'image': u'Needs Improvement'} #u'Needs Image'}
         # If it's a tech lab item, don't bother checking what it's made from.
-        # That will be done in fixTechLabItem.
+        # That will be done in _fix_tech_lab_item.
         if not is_tech_lab_item:
             special_param_map[u'from'] = u'Needs Source'
  
@@ -2015,14 +2030,21 @@ class XrefToolkit:
 
         return text
 
-    def fixBasicItem(self, text, params, categories):
+    def _fix_basic_item(self, text, params, categories):
         """
-        Ensures that basic items have description, image, atk, def, cost, rarity, quote
-        and time params or appropriate "Needs" category.
-        Checks that either level or area is specified.
-        Checks that it not explicitly in Daily Rewards category.
-        Assumes that the page uses the Basic Item template.
+        Fix a basic item page.
+
+        text -- current text of the page.
+        params -- list of parameters to the primary template.
+        categories -- list of categories the page belongs to.
+
         Returns updated text.
+
+        Ensure that basic items have description, image, atk, def, cost,
+        rarity, quote and time params or appropriate "Needs" category.
+        Check that either level or area is specified.
+        Check that it not explicitly in Daily Rewards category.
+        Assume that the page uses the Basic Item template.
         """
         # Check mandatory parameters
         basic_param_map = {u'description': u'Needs Description',
@@ -2068,13 +2090,22 @@ class XrefToolkit:
 
         return text
 
-    def fixBattleItem(self, name, text, params, categories):
+    def _fix_battle_item(self, name, text, params, categories):
         """
-        Ensures that battle rank items have description, image, atk, def, cost, rarity params
-        or appropriate "Needs" category.
-        Checks that the battle rank is specified, and that it matches what the Battle Rank page says.
-        Assumes that the page uses the Battle Rank Item template.
+        Fix a battle rank item page.
+
+        name -- name of the battle rank item (page title).
+        text -- current text of the page.
+        params -- list of parameters to the primary template.
+        categories -- list of categories the page belongs to.
+
         Returns updated text.
+
+        Ensure that battle rank items have description, image, atk, def,
+        cost, rarity params or appropriate "Needs" category.
+        Check that the battle rank is specified, and that it matches what
+        the Battle Rank page says.
+        Assume that the page uses the Battle Rank Item template.
         """
         # Check mandatory parameters
         battle_param_map = {u'description': u'Needs Description',
@@ -2113,13 +2144,28 @@ class XrefToolkit:
 
         return text
 
-    def fixIngredient(self, name, text, params, categories, is_tech_lab_item):
+    def _fix_ingredient(self,
+                        name,
+                        text,
+                        params,
+                        categories,
+                        is_tech_lab_item):
         """
-        Ensures that ingredient items have image, rarity, from and for params
-        or appropriate "Needs" category.
-        Checks that the item is listed on the from and for pages.
-        Assumes that the page uses the Ingredient template.
+        Fix a special item page.
+
+        name -- name of the special item (page title).
+        text -- current text of the page.
+        params -- list of parameters to the primary template.
+        categories -- list of categories the page belongs to.
+        is_tech_lab_item -- pass True if the item has or had a recipe in
+                            the Tech Lab.
+
         Returns updated text.
+
+        Ensure that ingredient items have image, rarity, from and for params
+        or appropriate "Needs" category.
+        Check that the item is listed on the from and for pages.
+        Assume that the page uses the Ingredient template.
         """
         # Check mandatory parameters
         ingr_param_map = {u'rarity': u'Needs Rarity',
@@ -2142,18 +2188,29 @@ class XrefToolkit:
 
         return text
 
-    def fixTechLabItem(self,
-                       name,
-                       text,
-                       params,
-                       categories,
-                       lab_params,
-                       check_image=True):
+    def _fix_tech_lab_item(self,
+                           name,
+                           text,
+                           params,
+                           categories,
+                           lab_params,
+                           check_image=True):
         """
-        Check that it is listed as made in the same way on its page and the Tech Lab page.
-        Check that atk and def match what the Tech Lab page says.
-        If check_image is True, also check that the image matches the one on the Tech Lab page.
+        Fix the page of something that has or had a tech lab recipe.
+
+        name -- name of the item or lt.
+        text -- current text of the page.
+        params -- list of parameters to the primary template.
+        categories -- list of categories the page belongs to.
+        lab_params -- list of parameters to the Lab template, or None.
+        check_image -- pass True to check that the image matches the one
+                       on the Tech Lab page.
+
         Returns updated text.
+
+        Check that it is listed as made in the same way on its page and
+        the Tech Lab page.
+        Check that atk and def match what the Tech Lab page says.
         """
         # Find this recipe on one of the tech lab pages
         recipe_dict = utils.params_to_dict(recipe_cache.recipe_for(name))
@@ -2208,7 +2265,7 @@ class XrefToolkit:
             num_parts = int(lab_dict[u'num_parts'])
         except KeyError, TypeError:
             num_parts = 5
-        total = self.parts_count(lab_dict)
+        total = self._parts_count(lab_dict)
         if total != num_parts:
             # Fix num_parts, if present, else flag missing ingredient(s)
             # TODO This assumes no spaces in the parameter setting
@@ -2237,14 +2294,18 @@ class XrefToolkit:
                                     1)
 
         # Check any Lab "from" parameters are correct
-        text = self.fixTLItemSource(text, lab_dict)
+        text = self._fix_TL_item_source(text, lab_dict)
 
         return text
 
-    def fixTLItemSource(self, text, lab_dict):
+    def _fix_TL_item_source(self, text, lab_dict):
         """
-        Checks that the sources listed for ingredients are correct.
-        Returns updated text.
+        Check that the sources listed for ingredients are correct.
+
+        text -- current text of the page.
+        lab_dict -- dictionary of parameters to the Lab template.
+
+        Return updated text.
         """
         i = 0
         while True:
@@ -2269,7 +2330,7 @@ class XrefToolkit:
                 # Ingredient page doesn't say where to get it
                 continue
             # Map it to a more suitable format
-            src_param = self.one_line(src_param)
+            src_param = self._one_line(src_param)
             try:
                 src = lab_dict[from_str]
             except KeyError:
@@ -2291,9 +2352,11 @@ class XrefToolkit:
                         pywikibot.output("Source mismatch for %s - this page says %s, item page says %s\n" % (part, src, src_param))
         return text
 
-    def parts_count(self, lab_dict):
+    def _parts_count(self, lab_dict):
         """
-        Counts the total number of parts and returns that total.
+        Return the total number of parts.
+
+        lab_dict -- dictionary of parameters to the Lab template.
         """
         total = 0
         i = 0
@@ -2312,10 +2375,11 @@ class XrefToolkit:
             total += part_num
         return total
 
-    def one_line(self, src_list):
+    def _one_line(self, src_list):
         """
-        Converts a possibly mutli-line block of text listing sources for an item
-        into a single line.
+        Convert a possibly multi-line block of text into a single line.
+
+        src_list -- text string to convert.
         """
         labre = re.compile(ur'{{Lab[^}]*}}', re.MULTILINE | re.DOTALL)
         text = src_list.replace(u'<br/>\n', u'')

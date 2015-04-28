@@ -450,6 +450,12 @@ class XrefToolkit:
                 item_params = utils.params_to_dict(params)
                 if template == u'Ingredient':
                     item_params[u'type'] = u'Ingredients'
+                key = u'for'
+                try:
+                    # Should be a single line in the drop template
+                    item_params[key] = self.one_line(item_params[key])
+                except KeyError:
+                    pass
                 # Check the drop parameters we do have
                 for key in drop_params.keys():
                     if (key == u'name'):

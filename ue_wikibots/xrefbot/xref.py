@@ -1943,6 +1943,7 @@ class XrefToolkit:
                                  name,
                                  text,
                                  params,
+                                 categories,
                                  for_mandatory=False):
         """
         Fix an item that may be an ingredient in Tech Lab recipes.
@@ -1950,6 +1951,7 @@ class XrefToolkit:
         name -- name of the faction item (page title).
         text -- current text of the page.
         params -- list of parameters to the primary template.
+        categories -- list of categories the page belongs to.
         for_mandatory -- pass True to indicate that there must be a "for"
                          parameter.
 
@@ -2009,7 +2011,7 @@ class XrefToolkit:
         # Check type param
         text = self._fix_item_type(text, params, categories)
 
-        text = self._fix_possible_ingredient(name, text, params)
+        text = self._fix_possible_ingredient(name, text, params, categories)
 
         return text
 
@@ -2132,7 +2134,11 @@ class XrefToolkit:
                                           categories,
                                           ingr_param_map)
 
-        text = self._fix_possible_ingredient(name, text, params, True)
+        text = self._fix_possible_ingredient(name,
+                                             text,
+                                             params,
+                                             categories,
+                                             True)
 
         return text
 

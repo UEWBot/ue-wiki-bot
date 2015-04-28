@@ -240,11 +240,11 @@ class XrefToolkit:
                               text,
                               categories,
                               templatesWithParams)
-        text = self.fixItem(titleWithoutNamespace,
-                            text,
-                            categories,
-                            templatesWithParams,
-                            refs)
+        text = self._fix_item(titleWithoutNamespace,
+                              text,
+                              categories,
+                              templatesWithParams,
+                              refs)
         text = self._fix_lieutenant(titleWithoutNamespace,
                                     text,
                                     categories,
@@ -1451,17 +1451,27 @@ class XrefToolkit:
 
         return text
 
-    def fixItem(self, name, text, categories, templatesWithParams, refs):
+    def _fix_item(self, name, text, categories, templatesWithParams, refs):
         """
-        If the page uses any of the templates 'Item', 'Gift Item', 'Mystery Gift Item', 
-        'Faction Item', 'Special Item', 'Basic Item', 'Battle Rank Item', or 'Ingredient':
-        Ensures that __NOWYSIWYG__ is present.
-        Checks that the page doesn't explictly list any categories that should be
+        Fix an Item page.
+
+        name -- name of the Item (page title).
+        text -- current page text.
+        categories -- a list of category Pages the page is current in.
+        templatesWithParams -- list of templates used and corresponding parameters.
+        refs -- list of pages that link to the page.
+
+        Return updated text.
+
+        If the page uses any of the templates 'Item', 'Gift Item',
+        'Mystery Gift Item', 'Faction Item', 'Special Item', 'Basic Item',
+        'Battle Rank Item', or 'Ingredient':
+        Ensure that __NOWYSIWYG__ is present.
+        Check that the page doesn't explictly list any categories that should be
         assigned by the template.
-        Checks that the item is listed everywhere it says it can be obtained.
-        Checks whether the categories Needs Cost and Needs Type are used correctly.
-        Calls the appropriate fix function for the specific type of item.
-        Returns updated text.
+        Check that the item is listed everywhere it says it can be obtained.
+        Check whether the categories Needs Cost and Needs Type are used correctly.
+        Call the appropriate fix function for the specific type of item.
         """
         # All these categories should be added by the various templates
         # Note that Daily Rewards also logically belongs here, but we do clever stuff for that one
@@ -1545,15 +1555,18 @@ class XrefToolkit:
         # (Mystery) Gift Item template uses from with a different meaning
         if template != u'Gift Item' and template != u'Mystery Gift Item':
             from_param = utils.param_from_params(the_params, u'from')
-            text = self.fixDrop(name, text, from_param, refs)
+            text = self._fix_drop(name, text, from_param, refs)
 
         # Do more detailed checks for specific sub-types
         if the_template == u'Gift Item':
-            text = self.fixGiftItem(name, text, the_params, categories)
+            text = self._fix_gift_item(name, text, the_params, categories)
         elif the_template == u'Mystery Gift Item':
-            text = self.fixMysteryGiftItem(name, text, the_params, categories)
+            text = self._fix_mystery_gift_item(name,
+                                               text,
+                                               the_params,
+                                               categories)
         elif the_template == u'Faction Item':
-            text = self.fixFactionItem(name, text, the_params, categories)
+            text = self._fix_faction_item(name, text, the_params, categories)
         elif the_template == u'Special Item':
             text = self.fixSpecialItem(name,
                                        text,
@@ -1581,12 +1594,16 @@ class XrefToolkit:
 
         return text
 
-    def fixDrop(self, name, text, from_param, refs):
+    def _fix_drop(self, name, text, from_param, refs):
         """
         Check that the page lists the right places it can be obtained from.
-        Adds any that are missing
-        from_param may be None
-        Returns updated text.
+
+        name -- item name.
+        text -- current text of the page.
+        from_param -- value of the "from" template parameter (or None).
+        refs -- list of pages that link to this one.
+
+        Return text with any missing sources added.
         """
         # First, find pages that list this item as a drop
         # Starting with the list of pages that link here
@@ -1689,11 +1706,17 @@ class XrefToolkit:
                                 from_param + u'%s[[%s]]' % (new_str, src))
         return text
 
-    def fixItemType(self, text, params, categories):
+    def _fix_item_type(self, text, params, categories):
         """
-        Checks the type parameter.
-        Adds or removes the Needs Type category.
-        Returns updated text.
+        Check the type parameter.
+
+        text -- current page text.
+        params -- list of parameters to the primary template.
+        categories -- list of categories the page belongs to.
+
+        Return updated text.
+
+        Add or remove the Needs Type category.
         """
         types = [u'Gear',
                  u'Vehicles',
@@ -1707,7 +1730,7 @@ class XrefToolkit:
         type_param = utils.param_from_params(params, u'type')
         if type_param is None:
             # Add a type parameter, with value Needs Type
-            text = self.addParam(text, params, u'type=' + cat + u'\n')
+            text = self._add_param(text, params, u'type=' + cat + u'\n')
         else:
             # Check that the type is one we expect
             if one_cap(type_param) not in types:
@@ -1718,12 +1741,20 @@ class XrefToolkit:
 
         return text
 
-    def fixGiftLevel(self, name, text, params, categories):
+    def _fix_gift_level(self, name, text, params, categories):
         """
-        Checks the from parameter.
-        Adds or removes Needs Minimum Level category.
-        Warns if the from parameter differs from what the Gift page says.
-        Returns updated text.
+        Fix the minimum level for a gift item.
+
+        name -- name of the gift item (page title).
+        text -- current text of the page.
+        params -- list of parameters to the primary template.
+        categories -- list of categories the page belongs to.
+
+        Return updated text.
+
+        Check the from parameter.
+        Add or remove Needs Minimum Level category.
+        Warn if the from parameter differs from what the Gift page says.
         """
         from_param = utils.param_from_params(params, u'from')
         if from_param is None:
@@ -1742,14 +1773,22 @@ class XrefToolkit:
                         pywikibot.output("Minimum level mismatch - Gift page says %s, this page says %s" % (m.group('level'), from_param))
         return text
 
-    def fixGiftItem(self, name, text, params, categories):
+    def _fix_gift_item(self, name, text, params, categories):
         """
-        Ensures that gift items have description, image, atk, def, cost, rarity, and from
-        parameters, or appropriate "Needs" category.
-        Trusts that type param will be checked elsewhere.
-        Checks that the minimum level is specified, and that it matches what the Gift page says.
-        Assumes that that page uses the Gift Item template.
-        Returns updated text.
+        Fix a gift item page.
+
+        name -- name of the gift item (page title).
+        text -- current text of the page.
+        params -- list of parameters to the primary template.
+        categories -- list of categories the page belongs to.
+
+        Return updated text.
+
+        Ensure that gift items have description, image, atk, def, cost,
+        rarity, and from parameters, or appropriate "Needs" category.
+        Trust that type param will be checked elsewhere.
+        Check that the minimum level is specified, and that it matches what the Gift page says.
+        Assume that that page uses the Gift Item template.
         """
         # Check mandatory parameters
         gift_param_map = {u'description': u'Needs Description',
@@ -1765,20 +1804,28 @@ class XrefToolkit:
                                           gift_param_map)
 
         # Check from parameter against the Gift page
-        text = self.fixGiftLevel(name, text, params, categories)
+        text = self._fix_gift_level(name, text, params, categories)
 
         # Check type param
-        text = self.fixItemType(text, params, categories)
+        text = self._fix_item_type(text, params, categories)
 
         return text
 
-    def fixMysteryGiftItem(self, name, text, params, categories):
+    def _fix_mystery_gift_item(self, name, text, params, categories):
         """
-        Ensures that mystery gift items have image, from, item_1, and item_2
+        Fix a mystery gift item page.
+
+        name -- name of the mystery gift item (page title).
+        text -- current text of the page.
+        params -- list of parameters to the primary template.
+        categories -- list of categories the page belongs to.
+
+        Return updated text.
+
+        Ensure that mystery gift items have image, from, item_1, and item_2
         parameters, or appropriate "Needs" category.
-        Checks that the minimum level is specified, and that it matches what the Gift page says.
-        Assumes that that page uses the Mystery Gift Item template.
-        Returns updated text.
+        Check that the minimum level is specified, and that it matches what the Gift page says.
+        Assume that that page uses the Mystery Gift Item template.
         """
         # Check mandatory parameters
         gift_param_map = {u'item_1': u'Needs Information', #u'Needs Item',
@@ -1791,17 +1838,26 @@ class XrefToolkit:
                                           gift_param_map)
 
         # Check from parameter against the Gift page
-        text = self.fixGiftLevel(name, text, params, categories)
+        text = self._fix_gift_level(name, text, params, categories)
 
         return text
 
-    def fixFactionItem(self, name, text, params, categories):
+    def _fix_faction_item(self, name, text, params, categories):
         """
-        Ensures that faction items have description, image, atk, def, cost, rarity params
-        or appropriate "Needs" category.
-        Checks that the faction is specified, and that the item is listed on that page, and
-        that the points param is right.
-        Assumes that the page uses the Faction Item template.
+        Fix a faction item page.
+
+        name -- name of the faction item (page title).
+        text -- current text of the page.
+        params -- list of parameters to the primary template.
+        categories -- list of categories the page belongs to.
+
+        Return updated text.
+
+        Ensure that faction items have description, image, atk, def, cost,
+        rarity params or appropriate "Needs" category.
+        Check that the faction is specified, and that the item is listed on
+        that page, and that the points param is right.
+        Assume that the page uses the Faction Item template.
         """
         # Check mandatory parameters
         faction_param_map = {u'description': u'Needs Description',
@@ -1843,13 +1899,16 @@ class XrefToolkit:
                                              u'Needs Information') # u'Needs Faction'
 
         # Check type param
-        text = self.fixItemType(text, params, categories)
+        text = self._fix_item_type(text, params, categories)
 
         return text
 
-    def recipesUsing(self, name):
+    def _recipes_using(self, name):
         """
-        Returns a set of items that this item is an ingredient for.
+        Return a set of item names that this item is an ingredient for.
+
+        name -- name of the item of interest.
+
         Only checks recipe_cache (i.e. Tech Lab pages).
         """
         retval = set()
@@ -1861,11 +1920,15 @@ class XrefToolkit:
 
         return retval
 
-    def addParam(self, text, params, new_param):
+    def _add_param(self, text, params, new_param):
         """
         Add a parameter to the parameters of a template.
-        new_param should take the form u'<name>=<value>'.
-        Returns the modified text.
+
+        text -- current page content.
+        params -- list of template parameters to add to.
+        new_param -- item to add. Should take the form u'<name>=<value>'.
+
+        Return the modified page text.
         """
         # Note that this just finds the first instance of params[0]...
         start = text.find(params[0])
@@ -1876,25 +1939,38 @@ class XrefToolkit:
 
         return text
 
-    def fixPossibleIngredient(self, name, text, params, for_mandatory=False):
+    def _fix_possible_ingredient(self,
+                                 name,
+                                 text,
+                                 params,
+                                 for_mandatory=False):
         """
         Fix an item that may be an ingredient in Tech Lab recipes.
-        Checks any for parameter. Modifies it or adds a category as needed.
+
+        name -- name of the faction item (page title).
+        text -- current text of the page.
+        params -- list of parameters to the primary template.
+        for_mandatory -- pass True to indicate that there must be a "for"
+                         parameter.
+
+        Return updated page text.
+
+        Check any for parameter. Modify it or add a category as needed.
         If for_mandatory is True, a Needs category will be added if no for
         parameter is present and one can't be derived.
         """
-        recipes = self.recipesUsing(name)
+        recipes = self._recipes_using(name)
         for_param = utils.param_from_params(params, u'for')
 
         if for_param is None:
             if len(recipes) > 1:
                 # Add a for parameter listing the recipes
                 new_param = u'for=<br/>\n*[[' + u']]\n*[['.join(recipes) + u']]\n'
-                text = self.addParam(text, params, new_param)
+                text = self._add_param(text, params, new_param)
             elif recipes:
                 # Add a for parameter listing the recipe
                 new_param = u'for=[[' + u']], [['.join(recipes) + u']]\n'
-                text = self.addParam(text, params, new_param)
+                text = self._add_param(text, params, new_param)
             elif for_mandatory and not self._cat_in_categories(u'Needs Information',
                                                                categories):
                 # It should be for something, but we don't know what
@@ -1931,9 +2007,9 @@ class XrefToolkit:
                                           special_param_map)
 
         # Check type param
-        text = self.fixItemType(text, params, categories)
+        text = self._fix_item_type(text, params, categories)
 
-        text = self.fixPossibleIngredient(name, text, params)
+        text = self._fix_possible_ingredient(name, text, params)
 
         return text
 
@@ -1983,10 +2059,10 @@ class XrefToolkit:
             # Add a daily parameter, with value yes if not already present
             daily_param = param_dict[u'daily']
             if daily_param is None:
-                text = self.addParam(text, params, u'daily=yes')
+                text = self._add_param(text, params, u'daily=yes')
 
         # Check type param
-        text = self.fixItemType(text, params, categories)
+        text = self._fix_item_type(text, params, categories)
 
         return text
 
@@ -2031,7 +2107,7 @@ class XrefToolkit:
                         pywikibot.output("Minimum battle rank mismatch - Battle Rank page says %s, this page says %s" % (rank, rank_param))
 
         # Check type param
-        text = self.fixItemType(text, params, categories)
+        text = self._fix_item_type(text, params, categories)
 
         return text
 
@@ -2056,7 +2132,7 @@ class XrefToolkit:
                                           categories,
                                           ingr_param_map)
 
-        text = self.fixPossibleIngredient(name, text, params, True)
+        text = self._fix_possible_ingredient(name, text, params, True)
 
         return text
 

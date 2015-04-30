@@ -7,11 +7,15 @@ Consists of the following files:
 Scripts run regularly:
 - tables.py - Generates summary tables from other wiki pages.
 - xref.py - Performs various maintanance checks on the specified pages.
+
 Utility code:
 - utils.py - Utility code used by other scripts
 - user-config.py - Used to configure the pywikibot framework
+
 Scripts for one-off transformations or to study wiki content:
 - add_image_params.py - Script used to add image parameters to correspond to item or gear parameters.
 - check_lts.py - Script to compare the faction of job LTs to the faction of the jobs themselves.
+- find_item_powers.py - Script to list all the items with special powers.
+- sort_template_params.py - Script to re-order the parameters to Lt templates.
 - split_gear_params.py - Script to split multi-item gear parameters into separate gear_1..n.
 - split_item_params.py - Script to split multi-item item parameters into separate item_1..n.

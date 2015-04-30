@@ -27,7 +27,7 @@ import pywikibot
 import re
 
 # Separate the name and value for a template parameter
-_RE_PARAM = re.compile(ur'\s*(?P<name>[^\s=]+)\s*=\s*(?P<value>.*)', re.DOTALL)
+_PARAM_RE = re.compile(ur'\s*(?P<name>[^\s=]+)\s*=\s*(?P<value>.*)', re.DOTALL)
 
 def escape_str(string):
     """
@@ -52,7 +52,7 @@ def param_from_params(params, param):
     param -- parameter to find the value for.
     """
     for p in params:
-        m = _RE_PARAM.match(p)
+        m = _PARAM_RE.match(p)
         if m is not None and m.group('name') == param:
             val = m.group('value')
             # People sometimes provide the parameters,
@@ -71,7 +71,7 @@ def params_to_dict(params):
     """
     result = {}
     for param in params:
-        m = _RE_PARAM.match(param)
+        m = _PARAM_RE.match(param)
         if m is not None:
             result[m.group('name')] = m.group('value')
     return result

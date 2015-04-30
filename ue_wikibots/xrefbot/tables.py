@@ -509,7 +509,7 @@ def gear_tuple(page):
                     g = d[key]
                     n = int(d[key + u'_count'])
                     img = d[key + u'_img']
-                except KeyError, ValueError:
+                except (KeyError, ValueError):
                     pass
                 else:
                     # Store the largest number of each type of gear

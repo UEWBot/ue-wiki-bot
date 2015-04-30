@@ -2263,7 +2263,7 @@ class XrefToolkit:
         # For some Lab templates, num_parts is optional. Those should all have 5 parts
         try:
             num_parts = int(lab_dict[u'num_parts'])
-        except KeyError, TypeError:
+        except (KeyError, TypeError):
             num_parts = 5
         total = self._parts_count(lab_dict)
         if total != num_parts:

@@ -2151,7 +2151,7 @@ class XrefToolkit:
                         categories,
                         is_tech_lab_item):
         """
-        Fix a special item page.
+        Fix an ingredient page.
 
         name -- name of the special item (page title).
         text -- current text of the page.

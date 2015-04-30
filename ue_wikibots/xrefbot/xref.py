@@ -25,6 +25,7 @@ import sys
 import os
 import operator
 sys.path.append(os.environ['HOME'] + '/ue/ue_wikibots/core')
+from itertools import chain
 
 import pywikibot
 from pywikibot import pagegenerators
@@ -1622,6 +1623,12 @@ class XrefToolkit:
                 elif template == u'Execution Method':
                     if name in utils.param_from_params(params, u'bonus'):
                         source_set.add(r.title(withNamespace=False))
+                elif template == u'Challenge Job' and u'Recombinator' in name:
+                    # Challenge Jobs drop Recombinators
+                    if utils.param_from_params(params, u'recombinator') in name:
+                        source_set.add(u'{{Job Link|district=%s|job=%s}}' %
+                                           (r.title(withNamespace=False),
+                                            utils.param_from_params(params, u'name')))
             # TODO Pages referenced from HQ can either be requirements
             # to build improvements, or drops after Wars with Shadow Broker.
             # Assume any page linked to from the Favor Point page is available from the Black Market
@@ -1651,10 +1658,11 @@ class XrefToolkit:
             if m:
                 src_count += 1
                 # Need to avoid matches within the Lab template part
-                iterator = LINK_RE.finditer(from_param[:m.start()] +
-                                            from_param[m.end():])
+                from_str = from_param[:m.start()] + from_param[m.end():]
             else:
-                iterator = LINK_RE.finditer(from_param)
+                from_str = from_param
+            iterator = chain(LINK_RE.finditer(from_str),
+                             re.finditer(ur'(?P<page>{{.*}})', from_str))
         else:
             iterator = []
         for m in iterator:
@@ -1702,8 +1710,13 @@ class XrefToolkit:
         for src in source_set:
             if src == u'Achievements#Daily':
                 src = u'Achievements#Daily|Daily Achievements'
+            if src.startswith(u'{{'):
+                # Assume templates will include square brackets
+                base = u'%s%s'
+            else:
+                base = u'%s[[%s]]'
             text = text.replace(from_param,
-                                from_param + u'%s[[%s]]' % (new_str, src))
+                                from_param + base % (new_str, src))
         return text
 
     def _fix_item_type(self, text, params, categories):

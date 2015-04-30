@@ -2391,7 +2391,17 @@ class XrefToolkit:
         return text
 
 class XrefBot:
+
+    """Main Xref WikiBot class."""
+
     def __init__(self, generator, acceptall = False):
+        """
+        Class constructor.
+
+        generator -- iterator to generate Pages to process.
+        acceptall -- pass True to not prompt the user whether to accept
+                     changes, but to go ahead and apply all changes.
+        """
         self.generator = generator
         self.acceptall = acceptall
         # Find all the sub-categories of Needs Information
@@ -2400,6 +2410,11 @@ class XrefBot:
         self.specific_needs = set(c.title(withNamespace=False) for c in cat.subcategories(recurse=True))
 
     def treat(self, page):
+        """
+        Check and update a single page.
+
+        page -- Page object to be checked and possibly updated.
+        """
         try:
             # Show the title of the page we're working on.
             # Highlight the title in purple.
@@ -2435,6 +2450,7 @@ class XrefBot:
             pywikibot.output("Page %s is locked?!" % page.title(asLink=True))
 
     def run(self):
+        """Process each Page in turn."""
         for page in self.generator:
             self.treat(page)
 

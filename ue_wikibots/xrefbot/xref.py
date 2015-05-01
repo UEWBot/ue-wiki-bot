@@ -482,9 +482,6 @@ class XrefToolkit:
                 key = u'for'
                 if key not in drop_params and key in item_params:
                     # "for" parameter only needed where the item is a Tech Lab ingredient
-                    # TODO This isn't quite right. The Drop template treats its "for"
-                    #      parameter differently than the Item and Ingredient templates.
-                    #      It's probably the Drop template that needs to change, though...
                     # TODO There should be a better way to do this...
                     if item_name not in paramless_items and not self._cat_in_categories(u'Recombinators', item.categories()):
                         # TODO Need to also remove type=Ingredients

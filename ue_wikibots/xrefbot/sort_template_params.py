@@ -24,7 +24,6 @@ import operator
 sys.path.append(os.environ['HOME'] + '/ue/ue_wikibots/core')
 
 import pywikibot
-from pywikibot import pagegenerators
 import re
 import difflib
 
@@ -98,8 +97,7 @@ def sort_lab_params(text, template, params):
     return templateRe.sub(new_text, text, count=1)
 
 class ItemBot:
-    def __init__(self, generator, acceptall = False):
-        self.generator = generator
+    def __init__(self, acceptall = False):
         self.acceptall = acceptall
 
     def update_or_create_page(self, old_page, new_text):
@@ -162,7 +160,7 @@ class ItemBot:
         self.update_lts()
 
 def main():
-    bot = ItemBot(None)
+    bot = ItemBot()
     bot.run()
 
 if __name__ == "__main__":

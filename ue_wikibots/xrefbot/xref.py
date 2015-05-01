@@ -441,7 +441,10 @@ class XrefToolkit:
                                u'Epic',
                                u'Rare',
                                u'Uncommon',
-                               u'Common']
+                               u'Common',
+                               u'Lab',
+                               u'Lab Four Of A Kind',
+                               u'Lab Full House']
         item_name = drop_params[u'name']
         item = pywikibot.Page(pywikibot.Site(), item_name)
         templatesWithParams = item.templatesWithParams()

@@ -1,0 +1,233 @@
+# Copyright (C) 2015 Chris Brand
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#! /usr/bin/python
+
+"""
+Script to add a new area page to the UE Wiki.
+
+Arguments:
+name of the new area
+boss name
+name of the area it comes after
+"""
+
+import sys
+import os
+import operator
+sys.path.append(os.environ['HOME'] + '/ue/ue_wikibots/core')
+
+import argparse
+import pywikibot
+import parse
+import difflib
+import utils
+
+# Summary message when using this module as a stand-alone script
+summary = u'Robot: Insert new area'
+
+number_map = {
+    1: u'first',
+    2: u'second',
+    3: u'third',
+    4: u'fourth',
+    5: u'fifth',
+    6: u'sixth',
+    7: u'seventh',
+    8: u'eighth',
+    9: u'ninth',
+    10: u'tenth',
+    11: u'eleventh',
+    12: u'twelfth',
+    13: u'thirteenth',
+    14: u'fourteenth',
+    15: u'fifteenth',
+    16: u'sixteenth',
+    17: u'seventeenth',
+    18: u'eighteenth',
+    19: u'nineteenth',
+    20: u'twentieth',
+}
+
+class AreaBot:
+
+    """Class to deal with adding a new area page to the UE wiki."""
+
+    def __init__(self, area_name, after, boss_name, acceptall = False):
+        self.area_name = area_name
+        self.after = after
+        self.boss_name = boss_name
+        self.acceptall = acceptall
+        self.area_cat = pywikibot.Category(pywikibot.Site(), u'Areas')
+        self.jobs_page = pywikibot.Page(pywikibot.Site(), u'Jobs')
+        self.jobs_page_text = self.jobs_page.get()
+        self.areas_list = utils.areas_in_order(self.jobs_page_text)
+        self.new_number = self.areas_list.index(self.after) + 1
+
+    def _area_image_name(self):
+        """Return the area image string filename."""
+        return u'district %s.png' % self.area_name.lower()
+
+    def _boss_image_name(self):
+        """Return the boss image string filename."""
+        return u'boss %s.png' % self.boss_name.lower()
+
+    def _add_to_jobs_page(self):
+        """Add the new area to the Jobs page."""
+        areas = len(self.areas_list)
+        new_line = u'#[[%s]] ([[%s]] boss)\n' % (self.area_name, self.boss_name)
+        text = self.jobs_page_text.replace(u'There are currently %d [[' % areas,
+                                           u'There are currently %d [[' % (areas + 1))
+        line_after = u'#[[%s]] ' % self.areas_list[self.new_number]
+        text = text.replace(line_after, new_line + line_after)
+        self._update_page(self.jobs_page, self.jobs_page_text, text)
+
+    def _add_to_bosses_page(self):
+        areas = len(self.areas_list)
+        new_line = u'*[[File:%s|100px]] [[%s]] in the [[%s]] area' % (self._boss_image_name(),
+                                                                      self.boss_name,
+                                                                      self.area_name)
+        page = pywikibot.Page(pywikibot.Site(), u'Bosses')
+        text = old_text = page.get()
+        intro = u'There are currently %s bosses in the game, %s'
+        bosses = parse.search(intro % (u'{:d}', u''), text).fixed[0]
+        line_before = u' in the [[%s]] area' % self.after
+        intro = intro % (u'%d', u'%d')
+        text = text.replace(intro % (bosses, areas),
+                            intro % ((bosses + 1, areas + 1)))
+        text = text.replace(line_before,
+                            line_before + u'\n' + new_line)
+        self._update_page(page, old_text, text)
+
+    def _update_area_numbers(self):
+        """Update the number of every later area page."""
+        for i in range(self.new_number + 1, len(self.areas_list)):
+            page = pywikibot.Page(pywikibot.Site(), self.areas_list[i])
+            old_text = page.get()
+            text = old_text.replace(number_map[i + 1], number_map[i + 2])
+            self._update_page(page, old_text, text)
+
+    def _update_previous_area(self):
+        """Update the area before the new one."""
+        page = pywikibot.Page(pywikibot.Site(), self.after)
+        old_text = page.get()
+        link = u'Completing %s job unlocks the [[%s]] area.'
+        job = parse.search(link % (u'{}', self.areas_list[self.new_number]),
+                           old_text).fixed[0]
+        link = link % (job, u'%s')
+        text = old_text.replace(link % self.areas_list[self.new_number],
+                                link % self.area_name)
+        self._update_page(page, old_text, text)
+
+    def _update_next_area(self):
+        """
+        Update the area after the new one.
+
+        Return the unlock link for the new area.
+        """
+        page = pywikibot.Page(pywikibot.Site(),
+                              self.areas_list[self.new_number])
+        old_text = page.get()
+        # Also replace the area number while we're there
+        i = self.new_number + 1
+        text = old_text.replace(number_map[i], number_map[i+1])
+        # Some have this phrase in it's own sentence, others don't
+        link = u'nlocked once you have completed %s in [[%s]].'
+        job = parse.search(link % (u'{}', self.after),
+                           old_text).fixed[0]
+        old_link = link % (job, self.after)
+        text = text.replace(old_link,
+                            link % (u'some job', self.area_name))
+        self._update_page(page, old_text, text)
+        # Return the link so it can go in the new page
+        return old_link
+
+    def _add_area_page(self):
+        """
+        Adds the new area page.
+        """
+        # Find and modify the link from the preceding area
+        self._update_previous_area()
+        # Find and modify the link from the subsequent area
+        link = self._update_next_area()
+        # Change the ordinal of all subsequent areas
+        self._update_area_numbers()
+        # Update the list on the Jobs page
+        self._add_to_jobs_page()
+        # Update the list on the Bosses page
+        self._add_to_bosses_page()
+        # TODO Insert the new area page
+        pass
+        # TODO Insert the new boss page
+        pass
+
+    def _update_page(self, page, old_text, new_text):
+        """
+        Update the specified page.
+
+        page -- page to update.
+        old_text -- original page text.
+        new_text -- new text for the page.
+        """
+        try:
+            # Show the title of the page we're working on.
+            # Highlight the title in purple.
+            pywikibot.output(u"\n\n>>> \03{lightpurple}%s\03{default} <<<" % page.title())
+            pywikibot.showDiff(old_text, new_text)
+            # TODO Modify to treat just whitespace as unchanged
+            # Just comparing text with page.get() wasn't sufficient
+            changes = False
+            for diffline in difflib.ndiff(old_text.splitlines(),
+                                          new_text.splitlines()):
+                if not diffline.startswith(u'  '):
+                    changes = True
+                    break
+            if changes:
+                if not self.acceptall:
+                    choice = pywikibot.input_choice(u'Do you want to accept these changes?',
+                                                    [('Yes', 'Y'),
+                                                     ('No', 'n'),
+                                                     ('All', 'a')],
+                                                    'N')
+                    if choice == 'a':
+                        self.acceptall = True
+                if self.acceptall or choice == 'y':
+                    page.put(new_text, summary)
+            else:
+                pywikibot.output('No changes were necessary in %s' % page.title())
+        except pywikibot.NoPage:
+            pywikibot.output("Page %s does not exist?!" % page.title(asLink=True))
+        except pywikibot.IsRedirectPage:
+            pywikibot.output("Page %s is a redirect; skipping." % page.title(asLink=True))
+        except pywikibot.LockedPage:
+            pywikibot.output("Page %s is locked?!" % page.title(asLink=True))
+
+    def run(self):
+        self._add_area_page()
+
+def main(area_name, after, boss_name):
+    bot = AreaBot(area_name, after, boss_name)
+    bot.run()
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description='Add an area page to the wiki')
+    parser.add_argument('area_name', help="Name of the new area")
+    parser.add_argument('after', help="Name of the area before the new one")
+    parser.add_argument('boss_name', help="Name of the new boss")
+    args = parser.parse_args()
+    try:
+        main(args.area_name, args.after, args.boss_name)
+    finally:
+        pywikibot.stopme()
+

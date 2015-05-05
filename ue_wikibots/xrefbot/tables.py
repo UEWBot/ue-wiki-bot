@@ -632,20 +632,10 @@ def prop_row_key(text):
 
 def areas_in_order():
     """Return a list of Area pages in in=game order."""
-    # Just parse it from the end of the Jobs page
+    # Utils provides a function that does most of the work
     jobs_page = pywikibot.Page(pywikibot.Site(), u'Jobs')
-    text = jobs_page.get()
+    return utils.areas_in_order(jobs_page.get())
 
-    areas = []
-
-    # Find the "Areas" section
-    (start, end) = utils.find_specific_section(text, u'Areas')
-
-    # Find and add each one in turn
-    for m in re.finditer(ur'#\s*\[\[([^]]*)\]\]', text[start:end]):
-        areas.append(m.group(1))
-
-    return areas
 
 class XrefBot:
     """Class to create/update pages summarising sets of pages on the wiki."""

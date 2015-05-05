@@ -107,6 +107,24 @@ def find_specific_section(text, section):
         return (list_start, list_end)
     return (-1, -1)
 
+def areas_in_order(jobs_page_text):
+    """
+    Return a list of Area pages in in=game order.
+
+    jobs_page_text -- the text of the Jobs page of the wiki.
+    """
+    # Just parse it from the end of the Jobs page
+    areas = []
+
+    # Find the "Areas" section
+    (start, end) = find_specific_section(jobs_page_text, u'Areas')
+
+    # Find and add each one in turn
+    for m in re.finditer(ur'#\s*\[\[([^]]*)\]\]', jobs_page_text[start:end]):
+        areas.append(m.group(1))
+
+    return areas
+
 
 class ImageMap:
     """

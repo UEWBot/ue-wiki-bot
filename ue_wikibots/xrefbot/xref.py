@@ -651,6 +651,14 @@ class XrefToolkit:
             text = self._append_category(text, cat)
         return text
 
+    def _lt_rarity(self, name):
+        """Return the rarity of the specified Lt."""
+        page = pywikibot.Page(pywikibot.Site(), name)
+        for template,params in page.templatesWithParams():
+            title = template.title(withNamespace=False)
+            if title.startswith(u'Lieutenant'):
+                return title.split()[1]
+
     def _fix_area(self, name, text, categories, templatesWithParams):
         """
         Fix an Area page.
@@ -728,11 +736,22 @@ class XrefToolkit:
                         got_gear = True
                 missed_params |= mp
             elif template == u'Challenge Job':
-                missed_params |= missing_params(params,
-                                                common_param_map.keys() +
-                                                    xp_pair_param_map.keys() +
-                                                    challenge_param_map.keys())
-                # TODO Check the LT rarities
+                mp = missing_params(params,
+                                    common_param_map.keys() +
+                                        xp_pair_param_map.keys() +
+                                        challenge_param_map.keys())
+                # Look up any missing Lt rarities
+                for i in range(1,5):
+                    root = u'lt_%d' % i
+                    rare_param = root + u'_rarity'
+                    if root not in mp and rare_param in mp:
+                        rarity = self._lt_rarity(utils.param_from_params(params,
+                                                                         root))
+                        text = self._add_param(text,
+                                               params,
+                                               rare_param + u'=%s' % rarity)
+                        mp.discard(rare_param)
+                missed_params |= mp
         pywikibot.output("Set of missing job parameters is %s" % missed_params)
         # Ensure the Needs categories are correct
         text = self._fix_needs_cats(text,

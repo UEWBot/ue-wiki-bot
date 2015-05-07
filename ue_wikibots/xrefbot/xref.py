@@ -656,7 +656,7 @@ class XrefToolkit:
         page = pywikibot.Page(pywikibot.Site(), name)
         for template,params in page.templatesWithParams():
             title = template.title(withNamespace=False)
-            if title.startswith(u'Lieutenant'):
+            if title.startswith(u'Lieutenant '):
                 return title.split()[1]
 
     def _fix_area(self, name, text, categories, templatesWithParams):
@@ -1407,14 +1407,11 @@ class XrefToolkit:
             if template == u'Lieutenant':
                 pywikibot.output("Directly uses Lieutenant template")
 
-            if u'Lab' in template:
+            elif u'Lab' in template:
                 is_tech_lab_item = True
                 ingredients = params
 
-            if template in [u'Lieutenant Common',
-                            u'Lieutenant Uncommon',
-                            u'Lieutenant Rare',
-                            u'Lieutenant Epic']:
+            elif template.startswith(u'Lieutenant '):
                 the_template = template
                 the_params = params
 

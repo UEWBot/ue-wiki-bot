@@ -118,6 +118,21 @@ class AreaBot:
             text = old_text.replace(number_map[i + 1], number_map[i + 2])
             self._update_page(page, old_text, text)
 
+    def _update_achievements(self):
+        """Update the "5-star an area" achievements."""
+        # This doesn't add any new achievements
+        page = pywikibot.Page(pywikibot.Site(), u'Achievements')
+        text = old_text = page.get()
+        # We don't insert an achievement for the new area
+        for i in range(self.new_number, len(self.areas_list) + 1):
+            name = self.areas_list[i - 1]
+            print u'[[%s|Area %d]]' % (name, i)
+            print u'[[%s|Area %d]]' % (name, i + 1)
+            text = text.replace(u'[[%s|Area %d]]' % (name, i),
+                                u'[[%s|Area %d]]' % (name, i + 1))
+        # We also don't add any achievements for the new boss
+        self._update_page(page, old_text, text)
+
     def _update_previous_area(self):
         """Update the area before the new one."""
         page = pywikibot.Page(pywikibot.Site(), self.after)
@@ -167,6 +182,8 @@ class AreaBot:
         self._add_to_jobs_page()
         # Update the list on the Bosses page
         self._add_to_bosses_page()
+        # Update Achievements page
+        self._update_achievements()
         # TODO Insert the new area page
         pass
         # TODO Insert the new boss page

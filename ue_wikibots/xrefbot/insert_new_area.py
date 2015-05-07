@@ -60,6 +60,36 @@ number_map = {
     20: u'twentieth',
 }
 
+stub_area_page = u"""
+__NOWYSIWYG__
+[[File:district_%s.jpg|thumb|400px|Map of the %s area]]
+''<intro text>''
+
+This is the %s [[:Category:Areas|area]] in the game, u%s Completing some job unlocks the [[%s]] area.
+
+There are some number of jobs in this area, including the [[#Challenge Job|challenge job]], plus an additional 16 [[#Secret Jobs - 1|secret jobs]] (not yet available).
+
+Completing some job makes the [[%s]] boss available.
+
+==Main Jobs==
+{{Job
+}}
+
+==Challenge Job==
+The challenge job becomes available when you have completed some job.
+{{Challenge Job
+}}
+
+==Secret Jobs - 1==
+The secret jobs area(s) cannot currently be accessed, but will presumably unlock when all regular jobs have been completed to five [[Stars (Job)|stars]]. Secret jobs within one secret area have to be completed in sequence. The next one becomes available when the previous one has been completed to 5 stars. It contains the following jobs:
+
+==Secret Jobs - 2==
+The secret jobs area(s) cannot currently be accessed, but will presumably unlock when all regular jobs have been completed to five [[Stars (Job)|stars]]. Secret jobs within one secret area have to be completed in sequence. The next one becomes available when the previous one has been completed to 5 stars. It contains the following jobs:
+
+[[Category:Areas]]
+[[Category:Needs Information]]
+"""
+
 class AreaBot:
 
     """Class to deal with adding a new area page to the UE wiki."""
@@ -168,9 +198,24 @@ class AreaBot:
         # Return the link so it can go in the new page
         return old_link
 
-    def _add_area_page(self):
+    def _add_new_area_page(self, link):
         """
-        Adds the new area page.
+        Add the actual area page itself.
+
+        link -- text to use to link to the following area page.
+        """
+        page = pywikibot.Page(pywikibot.Site(), self.area_name)
+        text = stub_area_page % (self.area_name.lower(),
+                                 self.area_name,
+                                 number_map[self.new_number],
+                                 link,
+                                 self.areas_list[self.new_number],
+                                 self.boss_name)
+        self._update_page(page, u'', text)
+
+    def _add_area(self):
+        """
+        Adds the new area.
         """
         # Find and modify the link from the preceding area
         self._update_previous_area()
@@ -184,7 +229,8 @@ class AreaBot:
         self._add_to_bosses_page()
         # Update Achievements page
         self._update_achievements()
-        # TODO Insert the new area page
+        # Insert the new area page
+        self._add_new_area_page(link)
         pass
         # TODO Insert the new boss page
         pass
@@ -231,7 +277,7 @@ class AreaBot:
             pywikibot.output("Page %s is locked?!" % page.title(asLink=True))
 
     def run(self):
-        self._add_area_page()
+        self._add_area()
 
 def main(area_name, after, boss_name):
     bot = AreaBot(area_name, after, boss_name)

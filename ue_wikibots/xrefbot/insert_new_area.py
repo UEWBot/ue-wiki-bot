@@ -90,6 +90,40 @@ The secret jobs area(s) cannot currently be accessed, but will presumably unlock
 [[Category:Needs Information]]
 """
 
+stub_boss_page = """
+__NOWYSIWYG__
+[[File:boss_%s.png|right|300px]]
+''%s'' is available when you have completed some job in the [[%s]] [[:Category:Areas|area]], giving you some item.
+==Basic Information==
+Up to some number of people may participate in the fight.
+
+You have some number of hours to complete the fight.
+==Speed Kills==
+:1 Star :
+:2 Star :
+:3 Star :
+==Stages==
+
+==Recommended Class==
+
+==[[Boss Rewards|Rewards]]==
+==={{Epic}} Thresholds===
+# points
+# points
+# points
+==={{Epic}} Rewards===
+{{drop}}
+==={{Rare}} Rewards===
+{{drop}}
+==={{Uncommon}} Rewards===
+{{drop}}
+==={{Common}} Rewards===
+{{drop}}
+==Completion Dialogue==
+[[Category:Job Bosses]]
+[[Category:Needs Information]]
+"""
+
 class AreaBot:
 
     """Class to deal with adding a new area page to the UE wiki."""
@@ -213,6 +247,14 @@ class AreaBot:
                                  self.boss_name)
         self._update_page(page, u'', text)
 
+    def _add_new_boss_page(self):
+        """Add the new boss page."""
+        page = pywikibot.Page(pywikibot.Site(), self.boss_name)
+        text = stub_boss_page % (self.boss_name.lower(),
+                                 self.boss_name,
+                                 self.area_name)
+        self._update_page(page, u'', text)
+
     def _add_area(self):
         """
         Adds the new area.
@@ -231,9 +273,8 @@ class AreaBot:
         self._update_achievements()
         # Insert the new area page
         self._add_new_area_page(link)
-        pass
-        # TODO Insert the new boss page
-        pass
+        # Insert the new boss page
+        self._add_new_boss_page()
 
     def _update_page(self, page, old_text, new_text):
         """

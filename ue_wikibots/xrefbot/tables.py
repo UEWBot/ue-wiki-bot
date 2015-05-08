@@ -481,19 +481,18 @@ def sort_lts(row, area):
                     rarities[i] = u'Rare'
     return row
 
-def gear_tuple(page):
+def gear_needed(page):
     """
-    Return a 2-tuple representing the gear required for the area page.
+    Return a dict representing the gear required for the area page.
 
-    page -- text of the Area page.
+    page -- Area Page object.
 
-    Return a 2-tuple with the area name and a dict, keyed by item or property,
+    Return a a dict, keyed by item or property,
     of 2-tuples containing the number of each item/property required to
     complete all the jobs in that area, and the image for the item/property.
     """
     needed = {}
     templatesWithParams = page.templatesWithParams()
-    name = page.title()
     for (template, params) in templatesWithParams:
         template_name = template.title(withNamespace=False)
         # We're only interested in certain templates
@@ -502,7 +501,7 @@ def gear_tuple(page):
             g = d.get(u'gear', u'None')
             if g != u'None':
                 # There shouldn't be any of these
-                print "Found %s in gear parameter in %s" % (g, name)
+                print "Found %s in gear parameter in %s" % (g, page.title())
             for i in range(1,5):
                 key = u'gear_%d' % i
                 try:
@@ -515,7 +514,7 @@ def gear_tuple(page):
                     # Store the largest number of each type of gear
                     if g not in needed or n > needed[g][0]:
                         needed[g] = (n, img)
-    return (name, needed)
+    return needed
 
 def page_to_row(page, row_template):
     """
@@ -748,14 +747,14 @@ class XrefBot:
         """
         Return the text of the Area Gear Table page.
 
-        gear_dict -- a dictionary, indexed by area name, of dictionaries,
+        gear_dict -- a dict, indexed by area Page, of dicts,
                      indexed by item/property name, of 2-tuples containing the
                      number of that item/property required and its image.
         """
         text = u'<!-- This page was generated/modified by software -->\n'
         text += u'This page lists the gear required to complete all the jobs in each area (including secret jobs). Details are pulled from the individual [[:Category:Areas|Area]] pages, so any errors or omissions there will be reflected here.\n'
         for area in sorted(gear_dict.keys(), key=self._area_key):
-            text += u'==[[%s]]==\n' % area
+            text += u'==[[%s]]==\n' % area.title()
             the_gear = gear_dict[area]
             for gear in sorted(the_gear.keys()):
                 (n, img) = the_gear[gear]
@@ -790,7 +789,7 @@ class XrefBot:
             job_rows += page_to_rows(page, job_row_template)
             dice_rows.append(page_to_row(page, dice_row_template))
             # Add an entry to gear_dict for this page
-            gear_dict.update([gear_tuple(page)])
+            gear_dict.update({page: gear_needed(page)})
 
         # Start the new page text
         new_job_text = summary_header(job_row_template)

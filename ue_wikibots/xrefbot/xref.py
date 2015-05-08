@@ -1101,7 +1101,7 @@ class XrefToolkit:
         sources = []
         for r in refs:
             if self._cat_in_categories(u'Crates', r.categories()):
-                sources.append(u'[[%s]]' % r.title(withNamespace=False))
+                sources.append(u'[[%s]]' % r.title())
                 # Check that it's in Crate Lieutenants
                 c = u'Crate Lieutenants'
                 if not self._cat_in_categories(c, categories):
@@ -1109,7 +1109,7 @@ class XrefToolkit:
             elif self._cat_in_categories(u'Events',
                                          r.categories()) or self._cat_in_categories(u'Giveaways',
                                                                                     r.categories()):
-                sources.append(u'[[%s]]' % r.title(withNamespace=False))
+                sources.append(u'[[%s]]' % r.title())
                 # Check that it's in Event Lieutenants
                 c = u'Event Lieutenants'
                 if not self._cat_in_categories(c, categories):
@@ -1117,7 +1117,7 @@ class XrefToolkit:
             for temp,params in r.templatesWithParams():
                 template = temp.title(withNamespace=False)
                 if template == u'Challenge Job':
-                    area = r.title(withNamespace=False)
+                    area = r.title()
                     job = utils.param_from_params(params, u'name')
                     for p in params:
                         if p.startswith(u'lt_') and name in p:
@@ -1163,8 +1163,8 @@ class XrefToolkit:
                         print "KeyError - _items_in_refs(). template = %s, param_dict = %s" % (template, param_dict)
                         continue
                     else:
-                        refItems[r.title(withNamespace=False)] = (powerParam,
-                                                                  imageParam)
+                        refItems[r.title()] = (powerParam,
+                                               imageParam)
         return refItems
 
     def _affects_lt(self, lt, rarity, faction, beneficiary):
@@ -1631,27 +1631,27 @@ class XrefToolkit:
                 if template == u'Drop':
                     if utils.param_from_params(params, u'name') == name:
                         # TODO If it has creator=true, need to ensure that's reflected on this page
-                        source_set.add(r.title(withNamespace=False))
+                        source_set.add(r.title())
                 elif template == u'Mystery Gift Item':
                     gift_params = utils.params_to_dict(params)
                     if name in gift_params.values():
-                        source_set.add(r.title(withNamespace=False))
+                        source_set.add(r.title())
                 elif template == u'Execution Method':
                     if name in utils.param_from_params(params, u'bonus'):
-                        source_set.add(r.title(withNamespace=False))
+                        source_set.add(r.title())
                 elif template == u'Challenge Job' and u'Recombinator' in name:
                     # Challenge Jobs drop Recombinators
                     if utils.param_from_params(params, u'recombinator') in name:
                         source_set.add(u'{{Job Link|district=%s|job=%s}}' %
-                                           (r.title(withNamespace=False),
+                                           (r.title(),
                                             utils.param_from_params(params, u'name')))
             # TODO Pages referenced from HQ can either be requirements
             # to build improvements, or drops after Wars with Shadow Broker.
             # Assume any page linked to from the Favor Point page is available from the Black Market
-            if r.title(withNamespace=False) == u'Favor Point':
+            if r.title() == u'Favor Point':
                 source_set.add(u'Black Market')
             # If it's linked frm the Achievements page, it's a Daily achievement reward
-            elif r.title(withNamespace=False) == u'Achievements':
+            elif r.title() == u'Achievements':
                 # Check whether it's a daily achievement reward
                 r_text = r.get()
                 (s,e) = utils.find_specific_section(r_text, u'Daily Rewards')
@@ -1664,7 +1664,7 @@ class XrefToolkit:
             elif self._cat_in_categories(u'Events',
                                          r.categories()) or self._cat_in_categories(u'Giveaways',
                                                                                     r.categories()):
-                source_set.add(r.title(withNamespace=False))
+                source_set.add(r.title())
         # Then, find the places listed as sources in this page
         # Remove any that match from the source list, leaving missing sources
         # Count the number of sources already in the list as we go

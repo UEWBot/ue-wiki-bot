@@ -328,10 +328,9 @@ class XrefToolkit:
             if p in missed_params:
                 cats_needed.add(c)
         for c in cats_needed:
-            if not self._cat_in_categories(c, categories):
-                text = self._append_category(text, c)
+            text = self._append_category(text, c)
         for c in set(param_cat_map.values()):
-            if self._cat_in_categories(c, categories) and c not in cats_needed:
+            if c not in cats_needed:
                 # Only remove specific needs categories, not more general ones
                 if c in self.specific_needs:
                     text = self._remove_category(text, c)
@@ -568,8 +567,7 @@ class XrefToolkit:
         if u'Event Bosses' in the_cats:
             # Should also be in the 'Events' category
             cat = u'Events'
-            if not self._cat_in_categories(cat, categories):
-                text = self._append_category(text, cat)
+            text = self._append_category(text, cat)
             # Don't check other 'Needs' categories
             return text
 
@@ -580,8 +578,8 @@ class XrefToolkit:
                                              categories,
                                              u'Completion Dialogue',
                                              cat)
-        elif self._cat_in_categories(cat, categories):
-            pywikibot.output("Non-Job bosses should never be categorised %s" % cat)
+        else:
+            #Non-Job bosses should never be in this category
             text = self._remove_category(text, cat)
 
         # We should find a section called Rewards that links to the Boss Drops page
@@ -1102,18 +1100,16 @@ class XrefToolkit:
         for r in refs:
             if self._cat_in_categories(u'Crates', r.categories()):
                 sources.append(u'[[%s]]' % r.title())
-                # Check that it's in Crate Lieutenants
+                # Ensure that it's in Crate Lieutenants
                 c = u'Crate Lieutenants'
-                if not self._cat_in_categories(c, categories):
-                    text = self._append_category(text, c)
+                text = self._append_category(text, c)
             elif self._cat_in_categories(u'Events',
                                          r.categories()) or self._cat_in_categories(u'Giveaways',
                                                                                     r.categories()):
                 sources.append(u'[[%s]]' % r.title())
-                # Check that it's in Event Lieutenants
+                # Ensure that it's in Event Lieutenants
                 c = u'Event Lieutenants'
-                if not self._cat_in_categories(c, categories):
-                    text = self._append_category(text, c)
+                text = self._append_category(text, c)
             for temp,params in r.templatesWithParams():
                 template = temp.title(withNamespace=False)
                 if template == u'Challenge Job':
@@ -1127,9 +1123,8 @@ class XrefToolkit:
                     if name == utils.param_from_params(params, u'lieutenant'):
                         sources.append(u'[[Black Market]]')
                         c = u'Favor Point Lieutenants'
-                        # Check that it's in Favor Point Lieutenants
-                        if not self._cat_in_categories(c, categories):
-                            text = self._append_category(text, c)
+                        # Ensure that it's in Favor Point Lieutenants
+                        text = self._append_category(text, c)
         for s in sources:
             if s not in fromParam:
                 pywikibot.output("***Need to add %s" % s)
@@ -1562,8 +1557,7 @@ class XrefToolkit:
 
         # Check for explicit categories that should be implicit
         for cat in implicit_categories:
-            if self._cat_in_categories(cat, categories):
-                text = self._remove_category(text, cat)
+            text = self._remove_category(text, cat)
 
         # __NOWYSIWYG__
         text = self._prepend_NOWYSIWYG_if_needed(text)
@@ -1787,13 +1781,9 @@ class XrefToolkit:
         """
         from_param = utils.param_from_params(params, u'from')
         if from_param is None:
-            if not self._cat_in_categories(u'Needs Minimum Level',
-                                           categories):
-                text = self._append_category(text, u'Needs Minimum Level')
+            text = self._append_category(text, u'Needs Minimum Level')
         else:
-            if self._cat_in_categories(u'Needs Minimum Level',
-                                       categories):
-                text = self._remove_category(u'Needs Minimum Level')
+            text = self._remove_category(text, u'Needs Minimum Level')
             gift_page = pywikibot.Page(pywikibot.Site(), u'Gift')
             iterator = GIFT_RE.finditer(gift_page.get())
             for m in iterator:
@@ -1908,10 +1898,8 @@ class XrefToolkit:
             try:
                 points_param = param_dict[u'points']
             except KeyError:
-                if not self._cat_in_categories(u'Needs Unlock Criterion',
-                                               categories):
-                    text = self._append_category(text,
-                                                 u'Needs Unlock Criterion')
+                text = self._append_category(text,
+                                             u'Needs Unlock Criterion')
             else:
                 faction_page = pywikibot.Page(pywikibot.Site(), faction_param)
                 iterator = FACTION_RE.finditer(faction_page.get())
@@ -1922,10 +1910,8 @@ class XrefToolkit:
                             # Note that this replaces every instance of the text in points_param...
                             text = text.replace(points_param, m.group('points'))
         except KeyError:
-            if not self._cat_in_categories(u'Needs Information',
-                                           categories):
-                text = self._append_category(text,
-                                             u'Needs Information') # u'Needs Faction'
+            text = self._append_category(text,
+                                         u'Needs Information') # u'Needs Faction'
 
         # Check type param
         text = self._fix_item_type(text, params, categories)
@@ -2002,8 +1988,7 @@ class XrefToolkit:
                 # Add a for parameter listing the recipe
                 new_param = u'for=[[' + u']], [['.join(recipes) + u']]\n'
                 text = self._add_param(text, params, new_param)
-            elif for_mandatory and not self._cat_in_categories(u'Needs Information',
-                                                               categories):
+            elif for_mandatory:
                 # It should be for something, but we don't know what
                 text = self._append_category(text,
                                              u'Needs Information') # u'Needs Purpose'
@@ -2097,10 +2082,8 @@ class XrefToolkit:
         if level_param is None:
             if area_param is None:
                 pywikibot.output("Missing both level and district parameters")
-                if not self._cat_in_categories(u'Needs Unlock Criterion',
-                                               categories):
-                    text = self._append_category(text,
-                                                 u'Needs Unlock Criterion')
+                text = self._append_category(text,
+                                             u'Needs Unlock Criterion')
         else:
             if area_param is not None:
                 pywikibot.output("Both level and district parameters are present")
@@ -2153,9 +2136,7 @@ class XrefToolkit:
         # Check rank parameter against Battle Rank page
         rank_param = utils.param_from_params(params, u'rank')
         if rank_param is None:
-            if not self._cat_in_categories(u'Needs Unlock Criterion',
-                                           categories):
-                text = self._append_category(text, u'Needs Unlock Criterion')
+            text = self._append_category(text, u'Needs Unlock Criterion')
         else:
             rank_page = pywikibot.Page(pywikibot.Site(), u'Battle Rank')
             templatesWithParams = rank_page.templatesWithParams()

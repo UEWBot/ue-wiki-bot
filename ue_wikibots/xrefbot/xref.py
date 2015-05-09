@@ -248,20 +248,15 @@ class XrefToolkit:
                               refs)
         text = self._fix_lieutenant(titleWithoutNamespace,
                                     text,
-                                    categories,
                                     templatesWithParams,
                                     refs)
         text = self._fix_property(titleWithoutNamespace,
                                   text,
-                                  categories,
                                   templatesWithParams)
-        text = self._fix_execution_method(text,
-                                          categories,
-                                          templatesWithParams)
-        text = self._fix_class(text, categories, templatesWithParams)
+        text = self._fix_execution_method(text, templatesWithParams)
+        text = self._fix_class(text, templatesWithParams)
         text = self._fix_tech_lab(titleWithoutNamespace,
                                   text,
-                                  categories,
                                   templatesWithParams)
         text = self._fix_area(titleWithoutNamespace,
                               text,
@@ -312,13 +307,12 @@ class XrefToolkit:
         # Remove the category
         return Rcat.sub('', text)
 
-    def _fix_needs_cats(self, text, missed_params, categories, param_cat_map):
+    def _fix_needs_cats(self, text, missed_params, param_cat_map):
         """
         Return the text with need categories added or removed as appropriate.
 
         text -- current page text.
         missed_params -- a set of parameters that are missing from the page.
-        categories -- a list of category Pages the page is current in.
         param_cat_map -- a dict, indexed by parameter, of Needs categories.
 
         Return the new page text.
@@ -336,13 +330,12 @@ class XrefToolkit:
                     text = self._remove_category(text, c)
         return text
 
-    def _fix_needs_categories(self, text, params, categories, param_cat_map):
+    def _fix_needs_categories(self, text, params, param_cat_map):
         """
         Return the text with need categories added or removed as appropriate.
 
         text -- current page text.
         params -- list of template parameters.
-        categories -- a list of category Pages the page is current in.
         param_cat_map is a dict, indexed by parameter, of Needs categories.
 
         Return the new page text.
@@ -350,7 +343,6 @@ class XrefToolkit:
         missed_params = missing_params(params, param_cat_map.keys())
         return self._fix_needs_cats(text,
                                     missed_params,
-                                    categories,
                                     param_cat_map)
 
     def _find_section(self, text, title):
@@ -754,20 +746,18 @@ class XrefToolkit:
         # Ensure the Needs categories are correct
         text = self._fix_needs_cats(text,
                                     missed_params,
-                                    categories,
                                     dict(common_param_map.items() +
                                              job_param_map.items() +
                                              challenge_param_map.items()))
 
         return text
 
-    def _fix_tech_lab(self, name, text, categories, templatesWithParams):
+    def _fix_tech_lab(self, name, text, templatesWithParams):
         """
         Fix the Tech Lab and Tech Lab - Historic pages.
 
         name -- page title.
         text -- current text of the page.
-        categories -- list of categories the page belongs to.
         templatesWithParams -- list of 2-tuples containing template Page
                                and list of parameters.
 
@@ -837,17 +827,15 @@ class XrefToolkit:
         # Ensure the Needs categories are correct
         text = self._fix_needs_cats(text,
                                     missed_params,
-                                    categories,
                                     recipe_param_map)
 
         return text
 
-    def _fix_class(self, text, categories, templatesWithParams):
+    def _fix_class(self, text, templatesWithParams):
         """
         Fix a class page.
 
         text -- current text of the page.
-        categories -- list of categories the page belongs to.
         templatesWithParams -- list of 2-tuples containing template Page
                                and list of parameters.
 
@@ -887,7 +875,6 @@ class XrefToolkit:
  
         text = self._fix_needs_categories(text,
                                           the_params,
-                                          categories,
                                           class_param_map)
 
         skill_param_map = {u'level': u'Needs Information', #u'Needs Skill Level',
@@ -908,17 +895,15 @@ class XrefToolkit:
         # Ensure the Needs categories are correct
         text = self._fix_needs_cats(text,
                                     missed_params,
-                                    categories,
                                     skill_param_map)
 
         return text
 
-    def _fix_execution_method(self, text, categories, templatesWithParams):
+    def _fix_execution_method(self, text, templatesWithParams):
         """
         Fix an execution method page.
 
         text -- current text of the page.
-        categories -- list of categories the page belongs to.
         templatesWithParams -- list of 2-tuples containing template Page
                                and list of parameters.
 
@@ -955,17 +940,15 @@ class XrefToolkit:
  
         text = self._fix_needs_categories(text,
                                           the_params,
-                                          categories,
                                           method_param_map)
 
         return text
 
-    def _fix_safe_house(self, text, categories):
+    def _fix_safe_house(self, text):
         """
         Fix the Safe House page.
 
         text -- current text of the page.
-        categories -- list of categories the page belongs to.
 
         Return updated text.
 
@@ -975,12 +958,11 @@ class XrefToolkit:
         # TODO implement this function
         return text
 
-    def _fix_fortress(self, text, categories):
+    def _fix_fortress(self, text):
         """
         Fix the Fortress page.
 
         text -- current text of the page.
-        categories -- list of categories the page belongs to.
 
         Return updated text.
 
@@ -1016,13 +998,12 @@ class XrefToolkit:
                                                                          expected_cost))
         return text
 
-    def _fix_property(self, name, text, categories, templatesWithParams):
+    def _fix_property(self, name, text, templatesWithParams):
         """
         Fix a property page.
 
         name -- page title.
         text -- current text of the page.
-        categories -- list of categories the page belongs to.
         templatesWithParams -- list of 2-tuples containing template Page
                                and list of parameters.
 
@@ -1045,9 +1026,9 @@ class XrefToolkit:
 
         # Fortress and Safe House are special
         if name == u'Safe House':
-            return self._fix_safe_house(text, categories)
+            return self._fix_safe_house(text)
         elif name == u'Fortress':
-            return self._fix_fortress(text, categories)
+            return self._fix_fortress(text)
 
         # Drop out early if not a property page
         # TODO Is there a better test ?
@@ -1076,18 +1057,16 @@ class XrefToolkit:
  
         text = self._fix_needs_categories(text,
                                           the_params,
-                                          categories,
                                           prop_param_map)
 
         return text
 
-    def _fix_lt_sources(self, name, text, categories, the_params, refs):
+    def _fix_lt_sources(self, name, text, the_params, refs):
         """
         Fix the list of sources on a Lieutenant page.
 
         name -- page title.
         text -- current text of the page.
-        categories -- list of categories the page belongs to.
         the_params -- list of parameters to rhe lieutenant template.
         refs -- list of pages that link to the page to be fixed.
 
@@ -1331,14 +1310,12 @@ class XrefToolkit:
     def _fix_lt_needs_params(self,
                              text,
                              the_params,
-                             categories,
                              is_tech_lab_item):
         """
         Fix the "Needs" categories on a Lieutenant page.
 
         text -- current text of the page.
         the_params -- list of parameters to the primary template.
-        categories -- list of categories the page belongs to.
         is_tech_lab_item -- True if the Lt has a Tech Lab recipe.
 
         Return modified version of text parameter.
@@ -1364,13 +1341,11 @@ class XrefToolkit:
  
         return self._fix_needs_categories(text,
                                           the_params,
-                                          categories,
                                           lt_param_map)
 
     def _fix_lieutenant(self,
                         name,
                         text,
-                        categories,
                         templatesWithParams,
                         refs):
         """
@@ -1378,7 +1353,6 @@ class XrefToolkit:
 
         name -- name of the Lieutenant (page title).
         text -- current page text.
-        categories -- a list of category Pages the page is current in.
         templatesWithParams -- list of templates used and corresponding parameters.
         refs -- list of pages that link to the page.
 
@@ -1439,13 +1413,11 @@ class XrefToolkit:
 
         text = self._fix_lt_needs_params(text,
                                          the_params,
-                                         categories,
                                          is_tech_lab_item)
 
         if not is_tech_lab_item:
             text = self._fix_lt_sources(name,
                                         text,
-                                        categories,
                                         the_params,
                                         refs)
 
@@ -1454,7 +1426,6 @@ class XrefToolkit:
             text = self._fix_tech_lab_item(name,
                                            text,
                                            the_params,
-                                           categories,
                                            ingredients,
                                            False)
 
@@ -1570,29 +1541,26 @@ class XrefToolkit:
 
         # Do more detailed checks for specific sub-types
         if the_template == u'Gift Item':
-            text = self._fix_gift_item(name, text, the_params, categories)
+            text = self._fix_gift_item(name, text, the_params)
         elif the_template == u'Mystery Gift Item':
             text = self._fix_mystery_gift_item(name,
                                                text,
-                                               the_params,
-                                               categories)
+                                               the_params)
         elif the_template == u'Faction Item':
-            text = self._fix_faction_item(name, text, the_params, categories)
+            text = self._fix_faction_item(name, text, the_params)
         elif the_template == u'Special Item':
             text = self._fix_special_item(name,
                                           text,
                                           the_params,
-                                          categories,
                                           is_tech_lab_item)
         elif the_template == u'Basic Item':
             text = self._fix_basic_item(text, the_params, categories)
         elif the_template == u'Battle Rank Item':
-            text = self._fix_battle_item(name, text, the_params, categories)
+            text = self._fix_battle_item(name, text, the_params)
         elif the_template == u'Ingredient':
             text = self._fix_ingredient(name,
                                         text,
                                         the_params,
-                                        categories,
                                         is_tech_lab_item)
 
         # Do special checks for any Epic Research Items
@@ -1600,7 +1568,6 @@ class XrefToolkit:
             text = self._fix_tech_lab_item(name,
                                            text,
                                            the_params,
-                                           categories,
                                            ingredients)
 
         return text
@@ -1729,13 +1696,12 @@ class XrefToolkit:
                                 from_param + base % (new_str, src))
         return text
 
-    def _fix_item_type(self, text, params, categories):
+    def _fix_item_type(self, text, params):
         """
         Check the type parameter.
 
         text -- current page text.
         params -- list of parameters to the primary template.
-        categories -- list of categories the page belongs to.
 
         Return updated text.
 
@@ -1764,14 +1730,13 @@ class XrefToolkit:
 
         return text
 
-    def _fix_gift_level(self, name, text, params, categories):
+    def _fix_gift_level(self, name, text, params):
         """
         Fix the minimum level for a gift item.
 
         name -- name of the gift item (page title).
         text -- current text of the page.
         params -- list of parameters to the primary template.
-        categories -- list of categories the page belongs to.
 
         Return updated text.
 
@@ -1792,14 +1757,13 @@ class XrefToolkit:
                         pywikibot.output("Minimum level mismatch - Gift page says %s, this page says %s" % (m.group('level'), from_param))
         return text
 
-    def _fix_gift_item(self, name, text, params, categories):
+    def _fix_gift_item(self, name, text, params):
         """
         Fix a gift item page.
 
         name -- name of the gift item (page title).
         text -- current text of the page.
         params -- list of parameters to the primary template.
-        categories -- list of categories the page belongs to.
 
         Return updated text.
 
@@ -1819,25 +1783,23 @@ class XrefToolkit:
  
         text = self._fix_needs_categories(text,
                                           params,
-                                          categories,
                                           gift_param_map)
 
         # Check from parameter against the Gift page
-        text = self._fix_gift_level(name, text, params, categories)
+        text = self._fix_gift_level(name, text, params)
 
         # Check type param
-        text = self._fix_item_type(text, params, categories)
+        text = self._fix_item_type(text, params)
 
         return text
 
-    def _fix_mystery_gift_item(self, name, text, params, categories):
+    def _fix_mystery_gift_item(self, name, text, params):
         """
         Fix a mystery gift item page.
 
         name -- name of the mystery gift item (page title).
         text -- current text of the page.
         params -- list of parameters to the primary template.
-        categories -- list of categories the page belongs to.
 
         Return updated text.
 
@@ -1853,22 +1815,20 @@ class XrefToolkit:
  
         text = self._fix_needs_categories(text,
                                           params,
-                                          categories,
                                           gift_param_map)
 
         # Check from parameter against the Gift page
-        text = self._fix_gift_level(name, text, params, categories)
+        text = self._fix_gift_level(name, text, params)
 
         return text
 
-    def _fix_faction_item(self, name, text, params, categories):
+    def _fix_faction_item(self, name, text, params):
         """
         Fix a faction item page.
 
         name -- name of the faction item (page title).
         text -- current text of the page.
         params -- list of parameters to the primary template.
-        categories -- list of categories the page belongs to.
 
         Return updated text.
 
@@ -1888,7 +1848,6 @@ class XrefToolkit:
  
         text = self._fix_needs_categories(text,
                                           params,
-                                          categories,
                                           faction_param_map)
 
         # Check points against corresponding faction page
@@ -1914,7 +1873,7 @@ class XrefToolkit:
                                          u'Needs Information') # u'Needs Faction'
 
         # Check type param
-        text = self._fix_item_type(text, params, categories)
+        text = self._fix_item_type(text, params)
 
         return text
 
@@ -1958,7 +1917,6 @@ class XrefToolkit:
                                  name,
                                  text,
                                  params,
-                                 categories,
                                  for_mandatory=False):
         """
         Fix an item that may be an ingredient in Tech Lab recipes.
@@ -1966,7 +1924,6 @@ class XrefToolkit:
         name -- name of the item (page title).
         text -- current text of the page.
         params -- list of parameters to the primary template.
-        categories -- list of categories the page belongs to.
         for_mandatory -- pass True to indicate that there must be a "for"
                          parameter.
 
@@ -2002,7 +1959,6 @@ class XrefToolkit:
                           name,
                           text,
                           params,
-                          categories,
                           is_tech_lab_item):
         """
         Fix a special item page.
@@ -2010,7 +1966,6 @@ class XrefToolkit:
         name -- name of the special item (page title).
         text -- current text of the page.
         params -- list of parameters to the primary template.
-        categories -- list of categories the page belongs to.
         is_tech_lab_item -- pass True if the item has or had a recipe in
                             the Tech Lab.
 
@@ -2034,13 +1989,12 @@ class XrefToolkit:
  
         text = self._fix_needs_categories(text,
                                           params,
-                                          categories,
                                           special_param_map)
 
         # Check type param
-        text = self._fix_item_type(text, params, categories)
+        text = self._fix_item_type(text, params)
 
-        text = self._fix_possible_ingredient(name, text, params, categories)
+        text = self._fix_possible_ingredient(name, text, params)
 
         return text
 
@@ -2072,7 +2026,6 @@ class XrefToolkit:
  
         text = self._fix_needs_categories(text,
                                           params,
-                                          categories,
                                           basic_param_map)
 
         # Check that we have either level or district but not both
@@ -2098,18 +2051,17 @@ class XrefToolkit:
                 text = self._add_param(text, params, u'daily=yes')
 
         # Check type param
-        text = self._fix_item_type(text, params, categories)
+        text = self._fix_item_type(text, params)
 
         return text
 
-    def _fix_battle_item(self, name, text, params, categories):
+    def _fix_battle_item(self, name, text, params):
         """
         Fix a battle rank item page.
 
         name -- name of the battle rank item (page title).
         text -- current text of the page.
         params -- list of parameters to the primary template.
-        categories -- list of categories the page belongs to.
 
         Returns updated text.
 
@@ -2130,7 +2082,6 @@ class XrefToolkit:
  
         text = self._fix_needs_categories(text,
                                           params,
-                                          categories,
                                           battle_param_map)
 
         # Check rank parameter against Battle Rank page
@@ -2150,7 +2101,7 @@ class XrefToolkit:
                         pywikibot.output("Minimum battle rank mismatch - Battle Rank page says %s, this page says %s" % (rank, rank_param))
 
         # Check type param
-        text = self._fix_item_type(text, params, categories)
+        text = self._fix_item_type(text, params)
 
         return text
 
@@ -2158,7 +2109,6 @@ class XrefToolkit:
                         name,
                         text,
                         params,
-                        categories,
                         is_tech_lab_item):
         """
         Fix an ingredient page.
@@ -2166,7 +2116,6 @@ class XrefToolkit:
         name -- name of the special item (page title).
         text -- current text of the page.
         params -- list of parameters to the primary template.
-        categories -- list of categories the page belongs to.
         is_tech_lab_item -- pass True if the item has or had a recipe in
                             the Tech Lab.
 
@@ -2187,13 +2136,11 @@ class XrefToolkit:
 
         text = self._fix_needs_categories(text,
                                           params,
-                                          categories,
                                           ingr_param_map)
 
         text = self._fix_possible_ingredient(name,
                                              text,
                                              params,
-                                             categories,
                                              True)
 
         return text
@@ -2202,7 +2149,6 @@ class XrefToolkit:
                            name,
                            text,
                            params,
-                           categories,
                            lab_params,
                            check_image=True):
         """
@@ -2211,7 +2157,6 @@ class XrefToolkit:
         name -- name of the item or lt.
         text -- current text of the page.
         params -- list of parameters to the primary template.
-        categories -- list of categories the page belongs to.
         lab_params -- list of parameters to the Lab template, or None.
         check_image -- pass True to check that the image matches the one
                        on the Tech Lab page.

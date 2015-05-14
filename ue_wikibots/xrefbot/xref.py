@@ -265,6 +265,7 @@ class XrefToolkit:
         return text
 
     # Now a load of utility methods
+    # First ones that are used by multiple types of pages
 
     def _prepend_NOWYSIWYG_if_needed(self, text):
         """
@@ -404,6 +405,330 @@ class XrefToolkit:
                          this_category.title(asLink=True)):
                 return True
         return False
+
+    def _one_line(self, src_list):
+        """
+        Convert a possibly multi-line block of text into a single line.
+
+        src_list -- text string to convert.
+        """
+        labre = re.compile(ur'{{Lab[^}]*}}', re.MULTILINE | re.DOTALL)
+        text = src_list.replace(u'<br/>\n', u'')
+        text = text.replace(u'<br />\n', u'')
+        text = text.replace(ur'*', u'')
+        # Convert any use of a Lab template to a link to the Tech Lab page
+        text = labre.sub(u'made in [[Tech Lab]]', text)
+        text = text.replace(u'\n', u', ')
+        return text
+
+    # The next few are each specific to one type of page
+
+    def _fix_tech_lab(self, name, text, templatesWithParams):
+        """
+        Fix the Tech Lab and Tech Lab - Historic pages.
+
+        name -- page title.
+        text -- current text of the page.
+        templatesWithParams -- list of 2-tuples containing template Page
+                               and list of parameters.
+
+        Return updated text.
+
+        Ensure that __NOWYSIWYG__ is present.
+        Check for mandatory template parameters or corresponding Needs category.
+        """
+        if u'Tech Lab' not in name:
+            return text
+
+        # Is this a historic recipe ?
+        is_old = (u'Historic' in name)
+
+        # __NOWYSIWYG__
+        text = self._prepend_NOWYSIWYG_if_needed(text)
+
+        # Check each recipe
+        recipe_param_map = {u'name': u'Needs Information', #u'Needs Item Name',
+                            u'image': u'Needs Improvement', #u'Needs Image',
+                            u'atk': u'Needs Stats',
+                            u'def': u'Needs Stats',
+                            u'time': u'Needs Build Time',
+                            u'part_1': u'Needs Information'} #u'Needs Ingredient'}
+        old_recipe_map = {u'available' : u'Needs Information'}
+        missed_params = set()
+        for template, params in templatesWithParams:
+            if u'Recipe' not in template:
+                continue
+            missed_params |= missing_params(params, recipe_param_map.keys())
+            # Find this item on the page
+            param_dict = utils.params_to_dict(params)
+            name = param_dict[u'name']
+            # This can take a while, so reassure the user
+            pywikibot.output("Checking %s" % name)
+            recipe_start = text.find(name)
+            if is_old:
+                missed_params |= missing_params(params, old_recipe_map.keys())
+            # TODO Cross-reference against item page
+            # Check images for ingredients
+            n = 0
+            while True:
+                n += 1
+                part_str = u'part_%s' % n
+                try:
+                    part = param_dict[part_str]
+                except KeyError:
+                    # Ran out of parts
+                    break
+                part_img_str = part_str + u'_img'
+                part_img = param_dict[part_img_str]
+                image = image_map.image_for(part)
+                if image is not None:
+                    if part_img is None:
+                        # Insert an appropriate part_img parameter
+                        new_part = re.sub(ur'(\|\W*%s\W*=\W*%s)' % (part_str,
+                                                                    utils.escape_str(part)),
+                                          ur'\1\n|%s=%s' % (part_img_str,
+                                                            image),
+                                          text[recipe_start:],
+                                          1)
+                        text = text[:recipe_start] + new_part
+                    elif image != part_img:
+                        # TODO Replace the image with the one from the ingredient page
+                        pywikibot.output("Image mismatch. %s has %s, %s has %s" % (name, part_img, part, image))
+        pywikibot.output("Set of missing recipe parameters is %s" % missed_params)
+        # Ensure the Needs categories are correct
+        text = self._fix_needs_cats(text,
+                                    missed_params,
+                                    recipe_param_map)
+
+        return text
+
+    def _fix_class(self, text, templatesWithParams):
+        """
+        Fix a class page.
+
+        text -- current text of the page.
+        templatesWithParams -- list of 2-tuples containing template Page
+                               and list of parameters.
+
+        Return updated text.
+
+        If the page uses the template 'Class':
+        Ensure that __NOWYSIWYG__ is present.
+        Check that the page doesn't explictly list any categories that should be
+        assigned by the template.
+        Check for mandatory template parameters or corresponding Needs category.
+        Check for increasing skill levels.
+        """
+        # Does the page use the Class template ?
+        the_params = None
+        for template,params in templatesWithParams:
+            if template == u'Class':
+                the_template = template
+                the_params = params
+
+        # Drop out early if not a class page
+        # TODO Is there a better test ?
+        if the_params is None:
+            return text
+
+        # __NOWYSIWYG__
+        text = self._prepend_NOWYSIWYG_if_needed(text)
+
+        # Check mandatory parameters of the Class template
+        class_param_map = {u'description': u'Needs Description',
+                           u'short_description': u'Needs Information', #u'Needs Short Description',
+                           u'image': u'Needs Improvement', #u'Needs Image',
+                           u'weapons': u'Needs Information', #u'Needs Weapons',
+                           u'strength': u'Needs Information', #u'Needs Strength',
+                           u'special_atk_name': u'Needs Information', #u'Needs Special Attack Name',
+                           u'special_atk_effect': u'Needs Information', #u'Needs Special Attack Effect',
+                           u'help_text': u'Needs Information'} #u'Needs Help Text'}
+
+        text = self._fix_needs_categories(text,
+                                          the_params,
+                                          class_param_map)
+
+        skill_param_map = {u'level': u'Needs Information', #u'Needs Skill Level',
+                           u'effect': u'Needs Information', #u'Needs Skill Effect',
+                           u'cost': u'Needs Information', #u'Needs Skill Cost',
+                           u'time': u'Needs Information'} #u'Needs Skill Time'}
+        # Check each use of the Skill template
+        missed_params = set()
+        old_level = 0
+        for template,params in templatesWithParams:
+            if template == u'Skill':
+                level = utils.param_from_params(params, u'level')
+                if level is not None:
+                    if (level == old_level) and (level != u'1'):
+                        pywikibot.output("copy-paste error for skill level %s (%s) ?" % (level, params))
+                    old_level = level
+                missed_params |= missing_params(params, skill_param_map.keys())
+        # Ensure the Needs categories are correct
+        text = self._fix_needs_cats(text,
+                                    missed_params,
+                                    skill_param_map)
+
+        return text
+
+    def _fix_execution_method(self, text, templatesWithParams):
+        """
+        Fix an execution method page.
+
+        text -- current text of the page.
+        templatesWithParams -- list of 2-tuples containing template Page
+                               and list of parameters.
+
+        Return updated text.
+
+        If the page uses the template 'Execution Method':
+        Ensure that __NOWYSIWYG__ is present.
+        Check that the page doesn't explictly list any categories that should be
+        assigned by the template.
+        Check for mandatory template parameters or corresponding Needs category.
+        """
+        # Does the page use the execution method template ?
+        the_params = None
+        for template,params in templatesWithParams:
+            if template == u'Execution Method':
+                the_template = template
+                the_params = params
+
+        # Drop out early if not an execution method page
+        # TODO Is there a better test ?
+        if the_params is None:
+            return text
+
+        # __NOWYSIWYG__
+        text = self._prepend_NOWYSIWYG_if_needed(text)
+
+        # Check mandatory parameters
+        method_param_map = {u'cost': u'Needs Stamina Cost',
+                            u'success': u'Needs Initial Success',
+                            u'image': u'Needs Improvement', #u'Needs Image',
+                            u'chance': u'Needs Information', #u'Needs Bonus Chance',
+                            u'bonus': u'Needs Information', #u'Needs Bonus',
+                            u'need': u'Needs Information'} #u'Needs Prerequisite'}
+
+        text = self._fix_needs_categories(text,
+                                          the_params,
+                                          method_param_map)
+
+        return text
+
+    # The next few methods are only used on Area pages
+
+    def _lt_rarity(self, name):
+        """Return the rarity of the specified Lt."""
+        page = pywikibot.Page(pywikibot.Site(), name)
+        for template,params in page.templatesWithParams():
+            title = template.title(withNamespace=False)
+            if title.startswith(u'Lieutenant '):
+                return title.split()[1]
+
+    def _fix_area(self, name, text, categories, templatesWithParams):
+        """
+        Fix an Area page.
+
+        name -- page title.
+        text -- current text of the page.
+        categories -- list of categories the page belongs to.
+        templatesWithParams -- list of 2-tuples containing template Page
+                               and list of parameters.
+
+        Return updated text.
+
+        Ensure that __NOWYSIWYG__ is present.
+        Check for mandatory template parameters or corresponding Needs category.
+        """
+        # Drop out if it isn't an area page
+        if not self._cat_in_categories(u'Areas', categories):
+            return text
+
+        # __NOWYSIWYG__
+        text = self._prepend_NOWYSIWYG_if_needed(text)
+
+        # Check each template
+        common_param_map = {u'name': u'Needs Information', #u'Needs Job Name',
+                            u'image': u'Needs Improvement', #u'Needs Image',
+                            u'description': u'Needs Information', #u'Needs Job Description',
+                            u'energy': u'Needs Information', #u'Needs Job Energy',
+                            u'total_energy': u'Needs Total Energy',
+                            u'cash_min': u'Needs Information', #u'Needs Job Cash',
+                            u'cash_max': u'Needs Information'} #u'Needs Job Cash'}
+        job_param_map = {u'lieutenant': u'Needs Information', #u'Needs Job Lieutenant',
+                         # Special code for XP below
+                         u'xp': u'Needs Information', #u'Needs Job XP',
+                         u'gear_1': u'Needs Item Requirements',
+                         u'gear_1_img': u'Needs Information',
+                         u'gear_2': u'Needs Item Requirements',
+                         u'gear_2_img': u'Needs Information',
+                         u'gear_3': u'Needs Item Requirements',
+                         u'gear_3_img': u'Needs Information',
+                         u'gear_4': u'Needs Item Requirements',
+                         u'gear_4_img': u'Needs Information',
+                         u'faction': u'Needs Job Faction'}
+        xp_pair_param_map = {u'xp_min': u'Needs Information', #u'Needs Job XP',
+                             u'xp_max': u'Needs Information'} #u'Needs Job XP'}
+        challenge_param_map = {u'lt_1': u'Needs Information',
+                               u'lt_1_rarity': u'Needs Information',
+                               u'lt_2': u'Needs Information',
+                               u'lt_2_rarity': u'Needs Information',
+                               u'lt_3': u'Needs Information',
+                               u'lt_3_rarity': u'Needs Information',
+                               u'lt_4': u'Needs Information',
+                               u'lt_4_rarity': u'Needs Information',
+                               u'recombinator': u'Needs Information'}
+        missed_params = set()
+        for template, params in templatesWithParams:
+            if template == u'Job':
+                mp = missing_params(params,
+                                    common_param_map.keys() +
+                                        job_param_map.keys())
+                # xp_min and xp_max will do instead of xp
+                if u'xp' in mp:
+                    mp.remove(u'xp')
+                    mp |= missing_params(params, xp_pair_param_map.keys())
+                # Special case for missing gear_n and gear_n_img parameters
+                got_gear = False
+                for i in range(4,0,-1):
+                    root = u'gear_%d' % i
+                    if root in mp:
+                        # Shouldn't have higher number without lower
+                        if not got_gear:
+                            mp.remove(root)
+                            img_param = root + u'_img'
+                            mp.discard(img_param)
+                    else:
+                        got_gear = True
+                missed_params |= mp
+            elif template == u'Challenge Job':
+                mp = missing_params(params,
+                                    common_param_map.keys() +
+                                        xp_pair_param_map.keys() +
+                                        challenge_param_map.keys())
+                # Look up any missing Lt rarities
+                for i in range(1,5):
+                    root = u'lt_%d' % i
+                    rare_param = root + u'_rarity'
+                    if root not in mp and rare_param in mp:
+                        rarity = self._lt_rarity(utils.param_from_params(params,
+                                                                         root))
+                        text = self._add_param(text,
+                                               params,
+                                               rare_param + u'=%s' % rarity)
+                        mp.discard(rare_param)
+                missed_params |= mp
+        pywikibot.output("Set of missing job parameters is %s" % missed_params)
+        # Ensure the Needs categories are correct
+        text = self._fix_needs_cats(text,
+                                    missed_params,
+                                    dict(common_param_map.items() +
+                                             job_param_map.items() +
+                                             challenge_param_map.items()))
+
+        return text
+
+    # The next few methods are only used on Boss pages
 
     def _check_item_params(self, text, source, drop_params):
         """
@@ -641,308 +966,7 @@ class XrefToolkit:
             text = self._append_category(text, cat)
         return text
 
-    def _lt_rarity(self, name):
-        """Return the rarity of the specified Lt."""
-        page = pywikibot.Page(pywikibot.Site(), name)
-        for template,params in page.templatesWithParams():
-            title = template.title(withNamespace=False)
-            if title.startswith(u'Lieutenant '):
-                return title.split()[1]
-
-    def _fix_area(self, name, text, categories, templatesWithParams):
-        """
-        Fix an Area page.
-
-        name -- page title.
-        text -- current text of the page.
-        categories -- list of categories the page belongs to.
-        templatesWithParams -- list of 2-tuples containing template Page
-                               and list of parameters.
-
-        Return updated text.
-
-        Ensure that __NOWYSIWYG__ is present.
-        Check for mandatory template parameters or corresponding Needs category.
-        """
-        # Drop out if it isn't an area page
-        if not self._cat_in_categories(u'Areas', categories):
-            return text
-
-        # __NOWYSIWYG__
-        text = self._prepend_NOWYSIWYG_if_needed(text)
-
-        # Check each template
-        common_param_map = {u'name': u'Needs Information', #u'Needs Job Name',
-                            u'image': u'Needs Improvement', #u'Needs Image',
-                            u'description': u'Needs Information', #u'Needs Job Description',
-                            u'energy': u'Needs Information', #u'Needs Job Energy',
-                            u'total_energy': u'Needs Total Energy',
-                            u'cash_min': u'Needs Information', #u'Needs Job Cash',
-                            u'cash_max': u'Needs Information'} #u'Needs Job Cash'}
-        job_param_map = {u'lieutenant': u'Needs Information', #u'Needs Job Lieutenant',
-                         # Special code for XP below
-                         u'xp': u'Needs Information', #u'Needs Job XP',
-                         u'gear_1': u'Needs Item Requirements',
-                         u'gear_1_img': u'Needs Information',
-                         u'gear_2': u'Needs Item Requirements',
-                         u'gear_2_img': u'Needs Information',
-                         u'gear_3': u'Needs Item Requirements',
-                         u'gear_3_img': u'Needs Information',
-                         u'gear_4': u'Needs Item Requirements',
-                         u'gear_4_img': u'Needs Information',
-                         u'faction': u'Needs Job Faction'}
-        xp_pair_param_map = {u'xp_min': u'Needs Information', #u'Needs Job XP',
-                             u'xp_max': u'Needs Information'} #u'Needs Job XP'}
-        challenge_param_map = {u'lt_1': u'Needs Information',
-                               u'lt_1_rarity': u'Needs Information',
-                               u'lt_2': u'Needs Information',
-                               u'lt_2_rarity': u'Needs Information',
-                               u'lt_3': u'Needs Information',
-                               u'lt_3_rarity': u'Needs Information',
-                               u'lt_4': u'Needs Information',
-                               u'lt_4_rarity': u'Needs Information',
-                               u'recombinator': u'Needs Information'}
-        missed_params = set()
-        for template, params in templatesWithParams:
-            if template == u'Job':
-                mp = missing_params(params,
-                                    common_param_map.keys() +
-                                        job_param_map.keys())
-                # xp_min and xp_max will do instead of xp
-                if u'xp' in mp:
-                    mp.remove(u'xp')
-                    mp |= missing_params(params, xp_pair_param_map.keys())
-                # Special case for missing gear_n and gear_n_img parameters
-                got_gear = False
-                for i in range(4,0,-1):
-                    root = u'gear_%d' % i
-                    if root in mp:
-                        # Shouldn't have higher number without lower
-                        if not got_gear:
-                            mp.remove(root)
-                            img_param = root + u'_img'
-                            mp.discard(img_param)
-                    else:
-                        got_gear = True
-                missed_params |= mp
-            elif template == u'Challenge Job':
-                mp = missing_params(params,
-                                    common_param_map.keys() +
-                                        xp_pair_param_map.keys() +
-                                        challenge_param_map.keys())
-                # Look up any missing Lt rarities
-                for i in range(1,5):
-                    root = u'lt_%d' % i
-                    rare_param = root + u'_rarity'
-                    if root not in mp and rare_param in mp:
-                        rarity = self._lt_rarity(utils.param_from_params(params,
-                                                                         root))
-                        text = self._add_param(text,
-                                               params,
-                                               rare_param + u'=%s' % rarity)
-                        mp.discard(rare_param)
-                missed_params |= mp
-        pywikibot.output("Set of missing job parameters is %s" % missed_params)
-        # Ensure the Needs categories are correct
-        text = self._fix_needs_cats(text,
-                                    missed_params,
-                                    dict(common_param_map.items() +
-                                             job_param_map.items() +
-                                             challenge_param_map.items()))
-
-        return text
-
-    def _fix_tech_lab(self, name, text, templatesWithParams):
-        """
-        Fix the Tech Lab and Tech Lab - Historic pages.
-
-        name -- page title.
-        text -- current text of the page.
-        templatesWithParams -- list of 2-tuples containing template Page
-                               and list of parameters.
-
-        Return updated text.
-
-        Ensure that __NOWYSIWYG__ is present.
-        Check for mandatory template parameters or corresponding Needs category.
-        """
-        if u'Tech Lab' not in name:
-            return text
-
-        # Is this a historic recipe ?
-        is_old = (u'Historic' in name)
-
-        # __NOWYSIWYG__
-        text = self._prepend_NOWYSIWYG_if_needed(text)
-
-        # Check each recipe
-        recipe_param_map = {u'name': u'Needs Information', #u'Needs Item Name',
-                            u'image': u'Needs Improvement', #u'Needs Image',
-                            u'atk': u'Needs Stats',
-                            u'def': u'Needs Stats',
-                            u'time': u'Needs Build Time',
-                            u'part_1': u'Needs Information'} #u'Needs Ingredient'}
-        old_recipe_map = {u'available' : u'Needs Information'}
-        missed_params = set()
-        for template, params in templatesWithParams:
-            if u'Recipe' not in template:
-                continue
-            missed_params |= missing_params(params, recipe_param_map.keys())
-            # Find this item on the page
-            param_dict = utils.params_to_dict(params)
-            name = param_dict[u'name']
-            # This can take a while, so reassure the user
-            pywikibot.output("Checking %s" % name)
-            recipe_start = text.find(name)
-            if is_old:
-                missed_params |= missing_params(params, old_recipe_map.keys())
-            # TODO Cross-reference against item page
-            # Check images for ingredients
-            n = 0
-            while True:
-                n += 1
-                part_str = u'part_%s' % n
-                try:
-                    part = param_dict[part_str]
-                except KeyError:
-                    # Ran out of parts
-                    break
-                part_img_str = part_str + u'_img'
-                part_img = param_dict[part_img_str]
-                image = image_map.image_for(part)
-                if image is not None:
-                    if part_img is None:
-                        # Insert an appropriate part_img parameter
-                        new_part = re.sub(ur'(\|\W*%s\W*=\W*%s)' % (part_str,
-                                                                    utils.escape_str(part)),
-                                          ur'\1\n|%s=%s' % (part_img_str,
-                                                            image),
-                                          text[recipe_start:],
-                                          1)
-                        text = text[:recipe_start] + new_part
-                    elif image != part_img:
-                        # TODO Replace the image with the one from the ingredient page
-                        pywikibot.output("Image mismatch. %s has %s, %s has %s" % (name, part_img, part, image))
-        pywikibot.output("Set of missing recipe parameters is %s" % missed_params)
-        # Ensure the Needs categories are correct
-        text = self._fix_needs_cats(text,
-                                    missed_params,
-                                    recipe_param_map)
-
-        return text
-
-    def _fix_class(self, text, templatesWithParams):
-        """
-        Fix a class page.
-
-        text -- current text of the page.
-        templatesWithParams -- list of 2-tuples containing template Page
-                               and list of parameters.
-
-        Return updated text.
-
-        If the page uses the template 'Class':
-        Ensure that __NOWYSIWYG__ is present.
-        Check that the page doesn't explictly list any categories that should be
-        assigned by the template.
-        Check for mandatory template parameters or corresponding Needs category.
-        Check for increasing skill levels.
-        """
-        # Does the page use the Class template ?
-        the_params = None
-        for template,params in templatesWithParams:
-            if template == u'Class':
-                the_template = template
-                the_params = params
-
-        # Drop out early if not a class page
-        # TODO Is there a better test ?
-        if the_params is None:
-            return text
-
-        # __NOWYSIWYG__
-        text = self._prepend_NOWYSIWYG_if_needed(text)
-
-        # Check mandatory parameters of the Class template
-        class_param_map = {u'description': u'Needs Description',
-                           u'short_description': u'Needs Information', #u'Needs Short Description',
-                           u'image': u'Needs Improvement', #u'Needs Image',
-                           u'weapons': u'Needs Information', #u'Needs Weapons',
-                           u'strength': u'Needs Information', #u'Needs Strength',
-                           u'special_atk_name': u'Needs Information', #u'Needs Special Attack Name',
-                           u'special_atk_effect': u'Needs Information', #u'Needs Special Attack Effect',
-                           u'help_text': u'Needs Information'} #u'Needs Help Text'}
- 
-        text = self._fix_needs_categories(text,
-                                          the_params,
-                                          class_param_map)
-
-        skill_param_map = {u'level': u'Needs Information', #u'Needs Skill Level',
-                           u'effect': u'Needs Information', #u'Needs Skill Effect',
-                           u'cost': u'Needs Information', #u'Needs Skill Cost',
-                           u'time': u'Needs Information'} #u'Needs Skill Time'}
-        # Check each use of the Skill template
-        missed_params = set()
-        old_level = 0
-        for template,params in templatesWithParams:
-            if template == u'Skill':
-                level = utils.param_from_params(params, u'level')
-                if level is not None:
-                    if (level == old_level) and (level != u'1'):
-                        pywikibot.output("copy-paste error for skill level %s (%s) ?" % (level, params))
-                    old_level = level
-                missed_params |= missing_params(params, skill_param_map.keys())
-        # Ensure the Needs categories are correct
-        text = self._fix_needs_cats(text,
-                                    missed_params,
-                                    skill_param_map)
-
-        return text
-
-    def _fix_execution_method(self, text, templatesWithParams):
-        """
-        Fix an execution method page.
-
-        text -- current text of the page.
-        templatesWithParams -- list of 2-tuples containing template Page
-                               and list of parameters.
-
-        Return updated text.
-
-        If the page uses the template 'Execution Method':
-        Ensure that __NOWYSIWYG__ is present.
-        Check that the page doesn't explictly list any categories that should be
-        assigned by the template.
-        Check for mandatory template parameters or corresponding Needs category.
-        """
-        # Does the page use the execution method template ?
-        the_params = None
-        for template,params in templatesWithParams:
-            if template == u'Execution Method':
-                the_template = template
-                the_params = params
-
-        # Drop out early if not an execution method page
-        # TODO Is there a better test ?
-        if the_params is None:
-            return text
-
-        # __NOWYSIWYG__
-        text = self._prepend_NOWYSIWYG_if_needed(text)
-
-        # Check mandatory parameters
-        method_param_map = {u'cost': u'Needs Stamina Cost',
-                            u'success': u'Needs Initial Success',
-                            u'image': u'Needs Improvement', #u'Needs Image',
-                            u'chance': u'Needs Information', #u'Needs Bonus Chance',
-                            u'bonus': u'Needs Information', #u'Needs Bonus',
-                            u'need': u'Needs Information'} #u'Needs Prerequisite'}
- 
-        text = self._fix_needs_categories(text,
-                                          the_params,
-                                          method_param_map)
-
-        return text
+    # The next few methods are only used on Property pages
 
     def _fix_safe_house(self, text):
         """
@@ -1054,12 +1078,14 @@ class XrefToolkit:
                 pywikibot.output("FP property has build time!")
         else:
             prop_param_map[u'time'] = u'Needs Build Time'
- 
+
         text = self._fix_needs_categories(text,
                                           the_params,
                                           prop_param_map)
 
         return text
+
+    # The next few methods are only used on Lieutenant pages
 
     def _fix_lt_sources(self, name, text, the_params, refs):
         """
@@ -1338,7 +1364,7 @@ class XrefToolkit:
         # That will be done in _fix_tech_lab_item.
         if not is_tech_lab_item:
             lt_param_map[u'from'] = u'Needs Source'
- 
+
         return self._fix_needs_categories(text,
                                           the_params,
                                           lt_param_map)
@@ -1433,6 +1459,8 @@ class XrefToolkit:
         text = self._fix_lt_items(name, text, the_template, the_params, refs)
 
         return text
+
+    # The next few methods are only used on Item pages
 
     def _fix_item(self, name, text, categories, templatesWithParams, refs):
         """
@@ -1780,7 +1808,7 @@ class XrefToolkit:
                           u'cost': u'Needs Cost',
                           u'rarity': u'Needs Rarity',
                           u'image': u'Needs Improvement'} #u'Needs Image'}
- 
+
         text = self._fix_needs_categories(text,
                                           params,
                                           gift_param_map)
@@ -1812,7 +1840,7 @@ class XrefToolkit:
         gift_param_map = {u'item_1': u'Needs Information', #u'Needs Item',
                           u'item_2': u'Needs Information', #u'Needs Item',
                           u'image': u'Needs Improvement'} #u'Needs Image'}
- 
+
         text = self._fix_needs_categories(text,
                                           params,
                                           gift_param_map)
@@ -1845,7 +1873,7 @@ class XrefToolkit:
                              u'cost': u'Needs Cost',
                              u'rarity': u'Needs Rarity',
                              u'image': u'Needs Improvement'} #u'Needs Image'}
- 
+
         text = self._fix_needs_categories(text,
                                           params,
                                           faction_param_map)
@@ -1986,7 +2014,7 @@ class XrefToolkit:
         # That will be done in _fix_tech_lab_item.
         if not is_tech_lab_item:
             special_param_map[u'from'] = u'Needs Source'
- 
+
         text = self._fix_needs_categories(text,
                                           params,
                                           special_param_map)
@@ -2023,7 +2051,7 @@ class XrefToolkit:
                            u'quote': u'Needs Quote',
                            u'time': u'Needs Build Time',
                            u'image': u'Needs Improvement'} #u'Needs Image'}
- 
+
         text = self._fix_needs_categories(text,
                                           params,
                                           basic_param_map)
@@ -2079,7 +2107,7 @@ class XrefToolkit:
                             u'rarity': u'Needs Rarity',
                             u'time': u'Needs Build Time',
                             u'image': u'Needs Improvement'} #u'Needs Image'}
- 
+
         text = self._fix_needs_categories(text,
                                           params,
                                           battle_param_map)
@@ -2129,7 +2157,7 @@ class XrefToolkit:
         # Check mandatory parameters
         ingr_param_map = {u'rarity': u'Needs Rarity',
                           u'image': u'Needs Improvement'} #u'Needs Image'}
- 
+
         # If it's a tech lab item, from parameter will be misleading
         if not is_tech_lab_item:
             ingr_param_map[u'from'] = u'Needs Source'
@@ -2144,6 +2172,8 @@ class XrefToolkit:
                                              True)
 
         return text
+
+    # The remaining methods are used on both Lieutenant and Item pages
 
     def _fix_tech_lab_item(self,
                            name,
@@ -2329,21 +2359,6 @@ class XrefToolkit:
                 part_num = 1
             total += part_num
         return total
-
-    def _one_line(self, src_list):
-        """
-        Convert a possibly multi-line block of text into a single line.
-
-        src_list -- text string to convert.
-        """
-        labre = re.compile(ur'{{Lab[^}]*}}', re.MULTILINE | re.DOTALL)
-        text = src_list.replace(u'<br/>\n', u'')
-        text = text.replace(u'<br />\n', u'')
-        text = text.replace(ur'*', u'')
-        # Convert any use of a Lab template to a link to the Tech Lab page
-        text = labre.sub(u'made in [[Tech Lab]]', text)
-        text = text.replace(u'\n', u', ')
-        return text
 
 class XrefBot:
 

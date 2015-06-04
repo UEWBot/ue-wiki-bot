@@ -284,6 +284,70 @@ class XrefToolkit:
             return text
         return keyword + u'\n' + text
 
+    def _remove_implicit_categories(self, text, template=None):
+        """
+        Return text with any implicit categories removed.
+
+        text -- current page text.
+        template -- name of template to remove categories for.
+                    If no template is provided, remove categories added
+                    by any template.
+
+        "Implicit categories" are those that are automatically added to
+        a page by a template.
+
+        Return text, amended if necessary.
+        """
+        # All these categories should be added by the various templates
+        # Note that Daily Rewards also logically belongs here, but we do clever stuff for that one
+        implicit_categories = [u'Items',
+                               u'Common Items',
+                               u'Uncommon Items',
+                               u'Rare Items',
+                               u'Epic Items',
+                               u'Legendary Items',
+                               u'Special Items',
+                               u'Basic Items',
+                               u'Battle Rank Items',
+                               u'Ingredients',
+                               u'Gear',
+                               u'Vehicles',
+                               u'Weapons',
+                               u'Rifle',
+                               u'Heavy Weapons',
+                               u'Handguns',
+                               u'Melee Weapons',
+                               u'Gift Items',
+                               u'Faction Items',
+                               u'Dragon Syndicate Items',
+                               u'Street Items',
+                               u'The Cartel Items',
+                               u'The Mafia Items',
+                               u'Epic Research Items',
+                               u'Needs Type',
+                               u'Classes',
+                               u'Income Properties',
+                               u'Upgrade Properties',
+                               u'Execution Methods',
+                               u'Lieutenants',
+                               u'Common Lieutenants',
+                               u'Uncommon Lieutenants',
+                               u'Rare Lieutenants',
+                               u'Epic Lieutenants',
+                               u'Dragon Syndicate Lieutenants',
+                               u'Street Lieutenants',
+                               u'The Cartel Lieutenants',
+                               u'The Mafia Lieutenants',
+                               u'Insignias']
+
+        if template != None:
+            pywikibot.output("Unsupported template %s" % template)
+
+        for cat in implicit_categories:
+            text = self._remove_category(text, cat)
+
+        return text
+
     def _append_category(self, text, category):
         """
         Return text with the appropriate category string appended.
@@ -636,13 +700,6 @@ class XrefToolkit:
         assigned by the template.
         Check that the item is listed everywhere it says it can be obtained.
         """
-        implicit_categories = [u'Insignias',
-                               u'Common Items',
-                               u'Uncommon Items',
-                               u'Rare Items',
-                               u'Epic Items',
-                               u'Legendary Items']
-
         # Does the page use the Class template ?
         the_params = None
         for template,params in templatesWithParams:
@@ -656,8 +713,7 @@ class XrefToolkit:
             return text
 
         # Check for explicit categories that should be implicit
-        for cat in implicit_categories:
-            text = self._remove_category(text, cat)
+        text = self._remove_implicit_categories(text)
 
         # __NOWYSIWYG__
         text = self._prepend_NOWYSIWYG_if_needed(text)
@@ -1539,47 +1595,6 @@ class XrefToolkit:
         Check whether the categories Needs Cost and Needs Type are used correctly.
         Call the appropriate fix function for the specific type of item.
         """
-        # All these categories should be added by the various templates
-        # Note that Daily Rewards also logically belongs here, but we do clever stuff for that one
-        implicit_categories = [u'Items',
-                               u'Common Items',
-                               u'Uncommon Items',
-                               u'Rare Items',
-                               u'Epic Items',
-                               u'Legendary Items',
-                               u'Special Items',
-                               u'Basic Items',
-                               u'Battle Rank Items',
-                               u'Ingredients',
-                               u'Gear',
-                               u'Vehicles',
-                               u'Weapons',
-                               u'Rifle',
-                               u'Heavy Weapons',
-                               u'Handguns',
-                               u'Melee Weapons',
-                               u'Gift Items',
-                               u'Faction Items',
-                               u'Dragon Syndicate Items',
-                               u'Street Items',
-                               u'The Cartel Items',
-                               u'The Mafia Items',
-                               u'Epic Research Items',
-                               u'Needs Type',
-                               u'Classes',
-                               u'Income Properties',
-                               u'Upgrade Properties',
-                               u'Execution Methods',
-                               u'Lieutenants',
-                               u'Common Lieutenants',
-                               u'Uncommon Lieutenants',
-                               u'Rare Lieutenants',
-                               u'Epic Lieutenants',
-                               u'Dragon Syndicate Lieutenants',
-                               u'Street Lieutenants',
-                               u'The Cartel Lieutenants',
-                               u'The Mafia Lieutenants']
-
         # Does the page use an item template ?
         the_params = None
         ingredients = None
@@ -1610,8 +1625,7 @@ class XrefToolkit:
             return text
 
         # Check for explicit categories that should be implicit
-        for cat in implicit_categories:
-            text = self._remove_category(text, cat)
+        text = self._remove_implicit_categories(text)
 
         # __NOWYSIWYG__
         text = self._prepend_NOWYSIWYG_if_needed(text)
@@ -1694,7 +1708,7 @@ class XrefToolkit:
             # Assume any page linked to from the Favor Point page is available from the Black Market
             if r.title() == u'Favor Point':
                 source_set.add(u'Black Market')
-            # If it's linked frm the Achievements page, it's a Daily achievement reward
+            # If it's linked from the Achievements page, it's a Daily achievement reward
             elif r.title() == u'Achievements':
                 # Check whether it's a daily achievement reward
                 r_text = r.get()

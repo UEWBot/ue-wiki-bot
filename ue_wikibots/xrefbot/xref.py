@@ -246,6 +246,10 @@ class XrefToolkit:
                               categories,
                               templatesWithParams,
                               refs)
+        text = self._fix_insignia(titleWithoutNamespace,
+                                  text,
+                                  templatesWithParams,
+                                  refs)
         text = self._fix_lieutenant(titleWithoutNamespace,
                                     text,
                                     templatesWithParams,
@@ -615,6 +619,55 @@ class XrefToolkit:
 
         return text
 
+    def _fix_insignia(self, name, text, templatesWithParams, refs):
+        """
+        Fix an Insignia page.
+
+        name -- name of the Insignia (page title).
+        text -- current page text.
+        templatesWithParams -- list of templates used and corresponding parameters.
+        refs -- list of pages that link to the page.
+
+        Return updated text.
+
+        If the page uses the template 'Insignia':
+        Ensure that __NOWYSIWYG__ is present.
+        Check that the page doesn't explictly list any categories that should be
+        assigned by the template.
+        Check that the item is listed everywhere it says it can be obtained.
+        """
+        implicit_categories = [u'Insignias',
+                               u'Common Items',
+                               u'Uncommon Items',
+                               u'Rare Items',
+                               u'Epic Items',
+                               u'Legendary Items']
+
+        # Does the page use the Class template ?
+        the_params = None
+        for template,params in templatesWithParams:
+            if template == u'Insignia':
+                the_template = template
+                the_params = params
+
+        # Drop out early if not an insignia page
+        # TODO Is there a better test ?
+        if the_params is None:
+            return text
+
+        # Check for explicit categories that should be implicit
+        for cat in implicit_categories:
+            text = self._remove_category(text, cat)
+
+        # __NOWYSIWYG__
+        text = self._prepend_NOWYSIWYG_if_needed(text)
+
+        # If the item comes from somewhere special, do cross-ref check
+        from_param = utils.param_from_params(the_params, u'from')
+        text = self._fix_drop(name, text, from_param, refs)
+
+        return text
+
     # The next few methods are only used on Area pages
 
     def _lt_rarity(self, name):
@@ -768,10 +821,12 @@ class XrefToolkit:
             template = temp.title(withNamespace=False)
             #pywikibot.output("Template %s" % template)
             # TODO Clean this code up
-            if (u'Item' in template) or (template == u'Ingredient'):
+            if (u'Item' in template) or (template == u'Ingredient') or (template == u'Insignia'):
                 item_params = utils.params_to_dict(params)
                 if template == u'Ingredient':
                     item_params[u'type'] = u'Ingredients'
+                elif template == u'Insignia':
+                    item_params[u'type'] = u'Insignias'
                 key = u'for'
                 try:
                     # Should be a single line in the drop template

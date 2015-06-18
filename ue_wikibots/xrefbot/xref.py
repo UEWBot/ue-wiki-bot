@@ -1417,20 +1417,34 @@ class XrefToolkit:
                     pywikibot.output("Mismatch in power for %s - %s vs %s" % (key,
                                                                               refItems[key][0],
                                                                               items[key][0]))
-                    # This regex assumes that the parameter has a line to itself
-                    text = re.sub(ur'item_%d_pwr\s*=\s*.*' % items[key][2],
-                                  u'item_%d_pwr=%s\n' % (items[key][2],
-                                                         refItems[key][0]),
-                                  text)
+                    if items[key][0]:
+                        # This regex assumes that the parameter has a line to itself
+                        text = re.sub(ur'item_%d_pwr\s*=\s*.*' % items[key][2],
+                                      u'item_%d_pwr=%s\n' % (items[key][2],
+                                                             refItems[key][0]),
+                                      text)
+                    else:
+                        text = re.sub(ur'item_%d\s*=' % items[key][2],
+                                      u'item_%d_pwr=%s\n|item_%d=' % (items[key][2],
+                                                                      refItems[key][0],
+                                                                      items[key][2]),
+                                      text)
                 if refItems[key][1] != items[key][1]:
                     pywikibot.output("Mismatch in image for %s - %s vs %s" % (key,
                                                                               refItems[key][1],
                                                                               items[key][1]))
-                    # This regex assumes that the parameter has a line to itself
-                    text = re.sub(ur'item_%d_img\s*=\s*.*' % items[key][2],
-                                  u'item_%d_img=%s\n' % (items[key][2],
-                                                         refItems[key][1]),
-                                  text)
+                    if items[key][1]:
+                        # This regex assumes that the parameter has a line to itself
+                        text = re.sub(ur'item_%d_img\s*=\s*.*' % items[key][2],
+                                      u'item_%d_img=%s\n' % (items[key][2],
+                                                             refItems[key][1]),
+                                      text)
+                    else:
+                        text = re.sub(ur'item_%d\s*=' % items[key][2],
+                                      u'item_%d_img=%s\n|item_%d=' % (items[key][2],
+                                                                      refItems[key][1],
+                                                                      items[key][2]),
+                                      text)
             else:
                 pywikibot.output("Missing item %s which gives %s" % (key,
                                                                      refItems[key][0]))

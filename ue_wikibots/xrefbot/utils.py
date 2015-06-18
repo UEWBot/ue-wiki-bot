@@ -126,6 +126,59 @@ def areas_in_order(jobs_page_text):
     return areas
 
 
+class Achievements:
+    """
+    Class to facilitate identifying relevant achievements.
+    """
+
+    def __init__(self):
+        """Instantiate the class."""
+        self._parsed_page = False
+        self._daily_rewards = []
+
+    def _any_to_items(self, item_name):
+        """Return a list of items included in an 'Any' item"""
+        retval = []
+        pg = pywikibot.Page(pywikibot.Site(), item_name)
+        if u'Aggregations' not in [c.title(withNamespace=False) for c in pg.categories()]:
+            pywikibot.output("%s not in category Aggregations" % item_name)
+            return [item_name]
+        text = pg.get(get_redirect=True)
+        # Format is "* [[<image>]] [[<page>]] - from <<sources>>"
+        for m in re.finditer(ur' \[\[([^]]*)\]\] - from ', text):
+            retval.append(m.group(1))
+        return retval
+
+    def _parse_page(self):
+        """Parse the Achievements page."""
+        if self._parsed_page:
+            return
+        pg = pywikibot.Page(pywikibot.Site(), u'Achievements')
+        # Parse out the possible daily rewards
+        text = pg.get(get_redirect=True)
+        (start, end) = find_specific_section(text, u'Daily Rewards')
+        for m in re.finditer(ur'\[\[([^]]*)\]\]', text[start:end]):
+            item = m.group(1)
+            if item.startswith(u'Any '):
+                self._daily_rewards += self._any_to_items(item)
+            else:
+                self._daily_rewards.append(item)
+        # Insignia Parts aren't listed with most Daily Rewards
+        self._daily_rewards.append(u'Insignia Parts')
+        self._parsed_page = True
+
+    def is_daily_reward(self, item_name):
+        """
+        Return whether the item can be obtained as a daily reward
+
+        item_name -- item of interest
+
+        Return True or False.
+        """
+        self._parse_page()
+        return item_name in self._daily_rewards
+
+
 class ImageMap:
     """
     Cache class for the image filenames for items, properties, and ingredients.

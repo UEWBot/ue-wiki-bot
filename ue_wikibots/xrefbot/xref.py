@@ -76,6 +76,9 @@ recipe_cache = utils.RecipeCache()
 # Image cache
 image_map = utils.ImageMap()
 
+# Parsed Achievements page
+ach = utils.Achievements()
+
 def drop_params_match(param1, param2):
     """
     Compare two drop parameters.
@@ -1722,13 +1725,6 @@ class XrefToolkit:
             # Assume any page linked to from the Favor Point page is available from the Black Market
             if r.title() == u'Favor Point':
                 source_set.add(u'Black Market')
-            # If it's linked from the Achievements page, it's a Daily achievement reward
-            elif r.title() == u'Achievements':
-                # Check whether it's a daily achievement reward
-                r_text = r.get()
-                (s,e) = utils.find_specific_section(r_text, u'Daily Rewards')
-                if (s != -1) and (name in r_text[s:e]):
-                        source_set.add(u'Achievements#Daily')
             # Don't call r.categories() for redirects
             elif r.isRedirectPage():
                 pass
@@ -1737,6 +1733,9 @@ class XrefToolkit:
                                          r.categories()) or self._cat_in_categories(u'Giveaways',
                                                                                     r.categories()):
                 source_set.add(r.title())
+        # Check whether it's a daily achievement reward
+        if ach.is_daily_reward(name):
+            source_set.add(u'Achievements#Daily')
         # Then, find the places listed as sources in this page
         # Remove any that match from the source list, leaving missing sources
         # Count the number of sources already in the list as we go

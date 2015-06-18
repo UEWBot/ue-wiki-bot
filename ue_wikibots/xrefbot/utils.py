@@ -208,8 +208,7 @@ class RecipeCache:
         for p in page_names:
             page = pywikibot.Page(pywikibot.Site(), p)
             for template, params in page.templatesWithParams():
-                template_name = template.title(withNamespace=False)
-                if template_name.find(u'Recipe') != -1:
+                if template.title(withNamespace=False).startswith(u'Recipe'):
                     item = param_from_params(params, u'name')
                     self._recipes[item] = params
 

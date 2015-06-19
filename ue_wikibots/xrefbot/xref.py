@@ -1321,7 +1321,6 @@ class XrefToolkit:
 
         # What categories of Lt does the item help ?
         cats = parseRe.findall(beneficiary)
-        print("%s: %s" % (beneficiary, cats))
 
         if not cats:
             return False

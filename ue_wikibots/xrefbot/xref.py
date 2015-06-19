@@ -158,6 +158,27 @@ def one_cap(string):
     """
     return string[0].upper() + string[1:]
 
+def achievement_text(ach_list):
+    """
+    Return the list of achievements in text form.
+
+    ach_list -- list of 2-tuple (description, section) achievements
+
+    Return a string suitable for inclusion in an item page.
+    """
+    # We assume that the achievements are all in the same section
+    sect = ach_list[0][1]
+    if len(ach_list) == 1:
+        retval = u'There is an [[Achievements#%s|Achievement]] for ' % sect
+    else:
+        retval = u'There are [[Achievements#%s|Achievements]] for ' % sect
+    retval += ', '.join([a[0] for a in ach_list])
+    retval += u'.'
+    # fix capitalisation and tense
+    retval = retval.replace(u'Own', u'owning')
+    retval = retval.replace(u'Craft', u'crafting')
+    return retval
+
 class XrefToolkit:
 
     """Ugly catch-all class with tools to manipulate wiki pages."""
@@ -1683,6 +1704,23 @@ class XrefToolkit:
                                            text,
                                            the_params,
                                            ingredients)
+
+        achievements = ach.rewards_for(name)
+        if len(achievements):
+            ach_str = achievement_text(achievements)
+            start = text.find(u'Achievement')
+            if start != -1:
+                end = text.find(u'\n', start)
+                start = text.rindex(u'}}')
+                text = text.replace(text[start:end], u'}}' + ach_str)
+            else:
+                # Assume all item pages use a template,
+                # Add achievement text after the last one
+                start = text.rindex(u'}}')
+                text = text[:start] + text[start:].replace(u'}}',
+                                                           u'}}' + ach_str)
+        elif u'Achievements' in [r.title() for r in refs]:
+            wikipedia.output("Page links to Achievements, but there isn't a related achievement")
 
         return text
 

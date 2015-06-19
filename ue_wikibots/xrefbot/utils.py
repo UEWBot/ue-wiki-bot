@@ -135,6 +135,7 @@ class Achievements:
         """Instantiate the class."""
         self._parsed_page = False
         self._daily_rewards = []
+        self._achievements = []
 
     def _any_to_items(self, item_name):
         """Return a list of items included in an 'Any' item"""
@@ -165,6 +166,14 @@ class Achievements:
                 self._daily_rewards.append(item)
         # Insignia Parts aren't listed with most Daily Rewards
         self._daily_rewards.append(u'Insignia Parts')
+        # Parse out individual achievements
+        for template, params in pg.templatesWithParams():
+            if template.title(withNamespace=False) == u'Achievement Row':
+                pd = params_to_dict(params)
+                # Ignore daily achievements
+                if pd[u'group'] != u'Daily':
+                    self._achievements.append((pd[u'description'],
+                                               pd[u'group']))
         self._parsed_page = True
 
     def is_daily_reward(self, item_name):
@@ -177,6 +186,22 @@ class Achievements:
         """
         self._parse_page()
         return item_name in self._daily_rewards
+
+    def rewards_for(self, page_name):
+        """
+        Return a list of rewards for the specified page.
+
+        page_name -- the page of interest.
+
+        Return value is a list of 2-tuples containing achievement description
+            and achievement section.
+        """
+        retval = []
+        self._parse_page()
+        for a in self._achievements:
+            if page_name in a[0]:
+                retval.append(a)
+        return retval
 
 
 class ImageMap:

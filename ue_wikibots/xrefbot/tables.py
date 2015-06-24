@@ -266,6 +266,8 @@ def property_row(name, d, count, high_cost_ratios):
         time = d[u'time']
         # If no units, assume hours
         if time.isdigit():
+            if u'high_cost' in d:
+                time = str(count * int(time))
             time += u'hr'
             if time != u'1hr':
                 time += u's'

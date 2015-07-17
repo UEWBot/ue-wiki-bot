@@ -652,13 +652,26 @@ class XrefToolkit:
         # Check each use of the Skill template
         missed_params = set()
         old_level = u'0'
+        old_start = 0
         for template,params in templatesWithParams:
             if template == u'Skill':
-                level = utils.param_from_params(params, u'level')
-                if level is not None:
-                    if (level == old_level) and (level != u'1'):
+                param_dict = utils.params_to_dict(params)
+                # Check for the same level as the previous level of the same skill
+                try:
+                    effect = param_dict[u'effect']
+                    start = text.find(effect)
+                    # Is there a section header between the last skill and this one ?
+                    if u'===' in text[old_start:start]:
+                        old_level = u'0'
+                    level = param_dict[u'level']
+                    if (level == old_level):
                         pywikibot.output("copy-paste error for skill level %s (%s) ?" % (level, params))
+                    elif (int(level) != int(old_level)+1):
+                        pywikibot.output("missing skill level %d (%s) ?" % (int(old_level)+1, params))
                     old_level = level
+                    old_start = start
+                except KeyError:
+                    pass
                 missed_params |= missing_params(params, skill_param_map.keys())
         # Ensure the Needs categories are correct
         text = self._fix_needs_cats(text,

@@ -628,13 +628,17 @@ class XrefToolkit:
 
         # Check mandatory parameters of the Class template
         class_param_map = {u'description': u'Needs Description',
-                           u'short_description': u'Needs Information', #u'Needs Short Description',
                            u'image': u'Needs Improvement', #u'Needs Image',
                            u'weapons': u'Needs Information', #u'Needs Weapons',
-                           u'strength': u'Needs Information', #u'Needs Strength',
-                           u'special_atk_name': u'Needs Information', #u'Needs Special Attack Name',
-                           u'special_atk_effect': u'Needs Information', #u'Needs Special Attack Effect',
                            u'help_text': u'Needs Information'} #u'Needs Help Text'}
+        initial_param_map = {u'strength': u'Needs Information', #u'Needs Strength',
+                             u'short_description': u'Needs Information', #u'Needs Short Description',
+                             u'special_atk_name': u'Needs Information', #u'Needs Special Attack Name',
+                             u'special_atk_effect': u'Needs Information'} #u'Needs Special Attack Effect',
+
+        # More parameters are mandatory for classes that are always available
+        if utils.param_from_params(the_params, u'unlock_class') is None:
+            class_param_map.update(initial_param_map)
 
         text = self._fix_needs_categories(text,
                                           the_params,
@@ -643,10 +647,11 @@ class XrefToolkit:
         skill_param_map = {u'level': u'Needs Information', #u'Needs Skill Level',
                            u'effect': u'Needs Information', #u'Needs Skill Effect',
                            u'cost': u'Needs Information', #u'Needs Skill Cost',
+                           u'unlock': u'Needs Information', #u'Needs Skill Unlock',
                            u'time': u'Needs Information'} #u'Needs Skill Time'}
         # Check each use of the Skill template
         missed_params = set()
-        old_level = 0
+        old_level = u'0'
         for template,params in templatesWithParams:
             if template == u'Skill':
                 level = utils.param_from_params(params, u'level')

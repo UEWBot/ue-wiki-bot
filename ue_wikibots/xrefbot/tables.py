@@ -32,6 +32,7 @@ Generate the following tables:
 - Jobs Table
 - Challenge Jobs Table
 - Area Gear Table
+- Insignias Table
 """
 
 import sys
@@ -53,6 +54,12 @@ ITEM_TEMPLATES = re.compile(u'.*\WItem')
 PROPERTY_TEMPLATES = re.compile(u'.*\WProperty')
 JOB_TEMPLATES = re.compile(u'.*Job')
 LIEUTENANT_TEMPLATES = re.compile(u'Lieutenant\W(.*)')
+
+class Error(Exception):
+    pass
+
+class IrrelevantRowError(Error):
+    pass
 
 def name_to_link(name):
     """
@@ -206,6 +213,24 @@ def summary_header(row_template):
             text += u'!span="col" data-sort-type="number" | Atk\n'
             text += u'!span="col" data-sort-type="number" | Def\n'
             text += u'!span="col" class="unsortable" | Power\n'
+    elif row_template == u'Insignia Row':
+        # Insignia Type column
+        text += u'!span="col" rowspan="2" | Type\n'
+        # Main stat(s) column
+        text += u'!span="col" rowspan="2" | Main Stat\n'
+        # Sub-stats columns (checkboxes)
+        text += u'!colspan="10" class="unsortable" | Sub-stats\n'
+        text += u'|-\n'
+        text += u'!span="col" | Lt [[Attack|Atk]]\n'
+        text += u'!span="col" | Lt [[Attack|Atk]]%\n'
+        text += u'!span="col" | Lt [[Attack|Def]]\n'
+        text += u'!span="col" | Lt [[Attack|Def]]%\n'
+        text += u'!span="col" | [[Health]]\n'
+        text += u'!span="col" | [[Health]]%\n'
+        text += u'!span="col" | [[Damage|Dmg]] %\n'
+        text += u'!span="col" | Shield %\n'
+        text += u'!span="col" | [[Critical Hit|Crit]] %\n'
+        text += u'!span="col" | [[Critical Hit|Crit]] dmg %\n'
     else:
         pywikibot.output("Unexpected row template %s" % row_template)
 
@@ -529,17 +554,22 @@ def page_to_row(page, row_template):
     # Where to put the page name
     mapping = {u'Challenge Job Row': u'district',
                u'Lieutenant Row' : u'name',
-               u'Item Row' : u'name'}
+               u'Item Row' : u'name',
+               u'Insignia Row' : u'type'}
     ignore_cost_param = {u'Special Item',
                          u'Gift Item',
                          u'Faction Item'}
+    templates_of_interest = [u'Challenge Job',
+                             u'Insignia Type']
+    found_template = False
     templatesWithParams = page.templatesWithParams()
     name = page.title()
     row = u'{{%s|%s=%s' % (row_template, mapping[row_template], name)
     for (template, params) in templatesWithParams:
         template_name = template.title(withNamespace=False)
         # We're only interested in certain templates
-        if ITEM_TEMPLATES.search(template_name) or template_name == u'Challenge Job':
+        if ITEM_TEMPLATES.search(template_name) or template_name in templates_of_interest:
+            found_template = True
             # Pass all the item template parameters
             if template_name in ignore_cost_param:
                 # We only have a real cost for Basic Items
@@ -550,11 +580,14 @@ def page_to_row(page, row_template):
         else:
             match = LIEUTENANT_TEMPLATES.search(template_name)
             if match:
+                found_template = True
                 # Construct a rarity parameter from the template name
                 row += u'|rarity=%s' % match.group(1)
                 # Pass all the lieutenant template parameters
                 for param in params:
                     row += u'|%s' % param
+    if not found_template:
+        raise IrrelevantRowError
     row += u'}}'
     if row_template == u'Challenge Job Row':
         row = sort_lts(row, name)
@@ -869,7 +902,8 @@ class XrefBot:
                         u'Heavy Weapons': 'Item Row',
                         u'Vehicles': 'Item Row',
                         u'Gear': 'Item Row',
-                        u'Lieutenants': 'Lieutenant Row'}
+                        u'Lieutenants': 'Lieutenant Row',
+                        u'Insignias' : u'Insignia Row'}
 
         # Go through cat_to_templ, and create/update summary page for each one
         for name, template in cat_to_templ.iteritems():
@@ -880,7 +914,10 @@ class XrefBot:
             # Create one row for each page in the category
             rows = {}
             for page in list(cat.articles()):
-                rows[page.title()] = page_to_row(page, template)
+                try:
+                    rows[page.title()] = page_to_row(page, template)
+                except IrrelevantRowError:
+                    pass
             # Start the new page text
             new_text = summary_header(template)
             # Sort rows by item (page) name, and append each one

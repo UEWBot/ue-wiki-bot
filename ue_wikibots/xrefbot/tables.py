@@ -45,6 +45,7 @@ from pywikibot import pagegenerators
 import re
 import difflib
 import utils
+import argparse
 
 # Summary message when using this module as a stand-alone script
 summary = u'Robot: Create/update item summary tables'
@@ -674,14 +675,16 @@ def areas_in_order():
 class XrefBot:
     """Class to create/update pages summarising sets of pages on the wiki."""
 
-    def __init__(self, acceptall = False):
+    def __init__(self, pages, acceptall = False):
         """
         Instantiate the class.
 
+        pages      -- list of pages to create/update
         accept_all -- Pass True to not ask the user whether to create/update
                       pages.
         """
         self.acceptall = acceptall
+        self.pages = pages
         self.areas = areas_in_order()
 
     def _update_or_create_page(self, old_page, new_text):
@@ -808,10 +811,6 @@ class XrefBot:
         job_row_template = u'Job Row'
         dice_row_template = u'Challenge Job Row'
 
-        job_page = pywikibot.Page(pywikibot.Site(), u'Jobs Table')
-        dice_job_page = pywikibot.Page(pywikibot.Site(), u'Challenge Jobs Table')
-        area_gear_page = pywikibot.Page(pywikibot.Site(), u'Area Gear Table')
-
         job_rows = []
         dice_rows = []
         gear_dict = {}
@@ -840,12 +839,21 @@ class XrefBot:
         new_dice_text += summary_footer(dice_row_template)
 
         # Generate the area gear page from the dict
-        new_gear_text = self._dict_to_gear_page(gear_dict)
+        if u'Area Gear Table' in self.pages:
+            new_gear_text = self._dict_to_gear_page(gear_dict)
 
         # Upload the new pages
-        self._update_or_create_page(job_page, new_job_text);
-        self._update_or_create_page(dice_job_page, new_dice_text);
-        self._update_or_create_page(area_gear_page, new_gear_text);
+        if u'Jobs Table' in self.pages:
+            job_page = pywikibot.Page(pywikibot.Site(), u'Jobs Table')
+            self._update_or_create_page(job_page, new_job_text);
+        if u'Challenge Jobs Table' in self.pages:
+            dice_job_page = pywikibot.Page(pywikibot.Site(),
+                                           u'Challenge Jobs Table')
+            self._update_or_create_page(dice_job_page, new_dice_text);
+        if u'Area Gear Table' in self.pages:
+            area_gear_page = pywikibot.Page(pywikibot.Site(),
+                                            u'Area Gear Table')
+            self._update_or_create_page(area_gear_page, new_gear_text);
 
     def update_lt_rarity_table(self):
         """
@@ -908,7 +916,11 @@ class XrefBot:
         # Go through cat_to_templ, and create/update summary page for each one
         for name, template in cat_to_templ.iteritems():
             # The current summary table page for this category
-            old_page = pywikibot.Page(pywikibot.Site(), u'%s Table' % name)
+            page_name = u'%s Table' % name
+            # Skip pages the user isn't interested in
+            if page_name not in self.pages:
+                continue
+            old_page = pywikibot.Page(pywikibot.Site(), page_name)
             # The category of interest
             cat = pywikibot.Category(pywikibot.Site(), u'Category:%s' % name)
             # Create one row for each page in the category
@@ -931,17 +943,46 @@ class XrefBot:
     def run(self):
         """Create/update all the summary pages."""
         self.update_most_tables()
-        self.update_properties_table()
-        self.update_jobs_tables()
-        self.update_lt_rarity_table()
+        if u'Properties Table' in self.pages:
+            self.update_properties_table()
+        if ((u'Jobs Table' in self.pages) or
+            (u'Challenge Jobs Table' in self.pages) or
+            (u'Area Gear Table' in self.pages)):
+            self.update_jobs_tables()
+        if u'Lieutenants Faction Rarity Table' in self.pages:
+            self.update_lt_rarity_table()
 
-def main():
-    bot = XrefBot()
+def main(pages):
+    bot = XrefBot(pages)
     bot.run()
 
 if __name__ == "__main__":
+    arguments = {'--rifles'     : u'Rifles Table',
+                 '--guns'       : u'Handguns Table',
+                 '--melee'      : u'Melee Weapons Table',
+                 '--heavy'      : u'Heavy Weapons Table',
+                 '--vehicles'   : u'Vehicles Table',
+                 '--gear'       : u'Gear Table',
+                 '--lts'        : u'Lieutenants Table',
+                 '--insignias'  : u'Insignias Table',
+                 '--properties' : u'Properties Table',
+                 '--jobs'       : u'Jobs Table',
+                 '--dice_jobs'  : u'Challenge Jobs Table',
+                 '--area_gear'  : u'Area Gear Table',
+                 '--lt_rarities': u'Lieutenants Faction Rarity Table'}
+
+    parser = argparse.ArgumentParser(description='Create/update summary pages.', epilog='With no options, create/update all summary pages.')
+    for a in sorted(arguments.iterkeys()):
+        s = arguments[a]
+        parser.add_argument(a, help="Create/update the %s page" % s, dest='pages', action='append_const', const=s)
+    args = parser.parse_args()
+
+    # Default to "all" if no specific pages listed
+    pages = args.pages
+    if not pages:
+        pages = arguments.keys()
     try:
-        main()
+        main(pages)
     finally:
         pywikibot.stopme()
 

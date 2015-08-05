@@ -570,6 +570,7 @@ def boss_page_to_row(page, row_template):
     # Extract the epic thresholds section from the page text
     (start, end) = utils.find_specific_section(text, u'{{Epic}} Thresholds')
     if start == -1:
+        pywikibot.output("Skipping %s as it has no Epic Thresholds section" % name)
         raise IrrelevantRowError
     section = text[start:end]
     # Extract the actual thresholds
@@ -577,7 +578,9 @@ def boss_page_to_row(page, row_template):
                   2: u'',
                   3: u''}
     if section.count(u'#') != 3:
-        print "Epic thresholds section for %s has %d entries" % (name, section.count(u'#'))
+        pywikibot.output("Epic thresholds section for %s has %d entries:" % (name,
+                                                                           section.count(u'#')))
+        pywikibot.output(section)
         raise IrrelevantRowError
     for param in thresholds.keys():
         i = section.index(u'#')

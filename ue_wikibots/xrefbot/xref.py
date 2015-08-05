@@ -173,7 +173,8 @@ def achievement_text(ach_list):
     else:
         retval = u'There are [[Achievements#%s|Achievements]] for ' % sect
     retval += ', '.join([a[0] for a in ach_list])
-    retval += u'.'
+    if retval[-1] != u'.':
+        retval += u'.'
     # fix capitalisation and tense
     retval = retval.replace(u'Own', u'owning')
     retval = retval.replace(u'Craft', u'crafting')
@@ -1725,17 +1726,15 @@ class XrefToolkit:
         achievements = ach.rewards_for(name)
         if len(achievements):
             ach_str = achievement_text(achievements)
-            start = text.find(u'Achievement')
-            if start != -1:
-                end = text.find(u'\n', start)
-                start = text.rindex(u'}}')
-                text = text.replace(text[start:end], u'}}' + ach_str)
-            else:
-                # Assume all item pages use a template,
-                # Add achievement text after the last one
-                start = text.rindex(u'}}')
-                text = text[:start] + text[start:].replace(u'}}',
-                                                           u'}}' + ach_str)
+            # Assume all item pages use a template,
+            # Achievement text goes after the last one
+            start = text.rindex(u'}}')
+            try:
+                end = text.index(u'\n', start)
+            except ValueError:
+                end = len(text)
+            text = text[:start] + text[start:].replace(text[start:end],
+                                                       u'}}' + ach_str)
         elif u'Achievements' in [r.title() for r in refs]:
             wikipedia.output("Page links to Achievements, but there isn't a related achievement")
 

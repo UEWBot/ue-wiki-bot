@@ -33,6 +33,7 @@ Generate the following tables:
 - Challenge Jobs Table
 - Area Gear Table
 - Insignias Table
+- Bosses Table
 """
 
 import sys
@@ -232,6 +233,15 @@ def summary_header(row_template):
         text += u'!span="col" | Shield %\n'
         text += u'!span="col" | [[Critical Hit|Crit]] %\n'
         text += u'!span="col" | [[Critical Hit|Crit]] dmg %\n'
+    elif row_template == u'Boss Row':
+        # Name column
+        text += u'!span="col" | Name\n'
+        # Threshold 1 column
+        text += u'!span="col" data-sort-type="number" | 1 Epic Threshold\n'
+        # Threshold 2 column
+        text += u'!span="col" data-sort-type="number" | 2 Epic Threshold\n'
+        # Threshold 3 column
+        text += u'!span="col" data-sort-type="number" | 3 Epic Threshold\n'
     else:
         pywikibot.output("Unexpected row template %s" % row_template)
 
@@ -544,11 +554,53 @@ def gear_needed(page):
                         needed[g] = (n, img)
     return needed
 
+def boss_page_to_row(page, row_template):
+    """
+    Return a table row for the item or challenge job described in page.
+
+    page -- Page to parse.
+    row_template -- template to use in the generated row text.
+                    One of 'Challenge Job Row', 'Lieutenant Row', or 'Item Row'.
+    """
+    POINTS_RE = re.compile(ur'#\s*(?P<points>[\d,. ]*)')
+    name = page.title()
+    text = page.get()
+    # Extract the epic thresholds section from the page text
+    (start, end) = utils.find_specific_section(text, u'{{Epic}} Thresholds')
+    if start == -1:
+        raise IrrelevantRowError
+    section = text[start:end]
+    # Extract the actual thresholds
+    thresholds = {1: u'',
+                  2: u'',
+                  3: u''}
+    if section.count(u'#') != 3:
+        print "Epic thresholds section for %s has %d entries" % (name, section.count(u'#'))
+        raise IrrelevantRowError
+    for param in thresholds.keys():
+        i = section.index(u'#')
+        m = POINTS_RE.search(section)
+        # Skip entries without a value
+        if m and m.start() == i:
+            # Clean the value to a raw number
+            val = m.group(1)
+            val = val.rstrip()
+            val = val.replace(u',', u'')
+            val = val.replace(u'.', u'')
+            thresholds[param] = val
+            # Remove (some of) this entry from the start
+            section = section[i+1:]
+    return u'{{%s|name=%s|epic_1=%s|epic_2=%s|epic_3=%s}}' % (row_template,
+                                                              name,
+                                                              thresholds[1],
+                                                              thresholds[2],
+                                                              thresholds[3])
+
 def page_to_row(page, row_template):
     """
     Return a table row for the item or challenge job described in page.
 
-    page -- text of the page to parse.
+    page -- Page to parse.
     row_template -- template to use in the generated row text.
                     One of 'Challenge Job Row', 'Lieutenant Row', or 'Item Row'.
     """
@@ -562,6 +614,9 @@ def page_to_row(page, row_template):
                          u'Faction Item'}
     templates_of_interest = [u'Challenge Job',
                              u'Insignia Type']
+    # Boss pages don't have a main template (maybe they should...)
+    if row_template == u'Boss Row':
+        return boss_page_to_row(page, row_template);
     found_template = False
     templatesWithParams = page.templatesWithParams()
     name = page.title()
@@ -902,19 +957,24 @@ class XrefBot:
         Vehicles - Vehicles Table
         Gear - Gear Table
         Lieutenants - Lieutenants Table
+        Insignias - Insignias Table
+        Job Bosses, Tech Lab Bosses, Legend Bosses - Bosses Table
         """
         # Categories we're interested in and row template to use for each category
-        cat_to_templ = {u'Rifles': 'Item Row',
-                        u'Handguns': 'Item Row',
-                        u'Melee Weapons': 'Item Row',
-                        u'Heavy Weapons': 'Item Row',
-                        u'Vehicles': 'Item Row',
-                        u'Gear': 'Item Row',
-                        u'Lieutenants': 'Lieutenant Row',
-                        u'Insignias' : u'Insignia Row'}
+        cat_to_templ = {u'Rifles': ('Item Row', []),
+                        u'Handguns': ('Item Row', []),
+                        u'Melee Weapons': ('Item Row', []),
+                        u'Heavy Weapons': ('Item Row', []),
+                        u'Vehicles': ('Item Row', []),
+                        u'Gear': ('Item Row', []),
+                        u'Lieutenants': ('Lieutenant Row', []),
+                        u'Insignias' : (u'Insignia Row', []),
+                        u'Bosses' : (u'Boss Row', [u'Tech Lab Bosses',
+                                                   u'Legend Bosses',
+                                                   u'Job Bosses'])}
 
         # Go through cat_to_templ, and create/update summary page for each one
-        for name, template in cat_to_templ.iteritems():
+        for name, (template, cat_list) in cat_to_templ.iteritems():
             # The current summary table page for this category
             page_name = u'%s Table' % name
             # Skip pages the user isn't interested in
@@ -922,10 +982,19 @@ class XrefBot:
                 continue
             old_page = pywikibot.Page(pywikibot.Site(), page_name)
             # The category of interest
-            cat = pywikibot.Category(pywikibot.Site(), u'Category:%s' % name)
+            if len(cat_list) > 0:
+                articles = []
+                for name in cat_list:
+                    cat = pywikibot.Category(pywikibot.Site(),
+                                             u'Category:%s' % name)
+                    articles.extend(list(cat.articles()))
+            else:
+                cat = pywikibot.Category(pywikibot.Site(),
+                                         u'Category:%s' % name)
+                articles = list(cat.articles())
             # Create one row for each page in the category
             rows = {}
-            for page in list(cat.articles()):
+            for page in articles:
                 try:
                     rows[page.title()] = page_to_row(page, template)
                 except IrrelevantRowError:
@@ -969,6 +1038,7 @@ if __name__ == "__main__":
                  '--jobs'       : u'Jobs Table',
                  '--dice_jobs'  : u'Challenge Jobs Table',
                  '--area_gear'  : u'Area Gear Table',
+                 '--bosses'     : u'Bosses Table',
                  '--lt_rarities': u'Lieutenants Faction Rarity Table'}
 
     parser = argparse.ArgumentParser(description='Create/update summary pages.', epilog='With no options, create/update all summary pages.')

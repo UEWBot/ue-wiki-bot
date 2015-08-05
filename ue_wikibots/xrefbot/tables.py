@@ -1050,7 +1050,7 @@ if __name__ == "__main__":
     # Default to "all" if no specific pages listed
     pages = args.pages
     if not pages:
-        pages = arguments.keys()
+        pages = arguments.values()
     try:
         main(pages)
     finally:

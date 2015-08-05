@@ -1736,7 +1736,7 @@ class XrefToolkit:
             text = text[:start] + text[start:].replace(text[start:end],
                                                        u'}}' + ach_str)
         elif u'Achievements' in [r.title() for r in refs]:
-            wikipedia.output("Page links to Achievements, but there isn't a related achievement")
+            pywikibot.output("Page links to Achievements, but there isn't a related achievement")
 
         return text
 

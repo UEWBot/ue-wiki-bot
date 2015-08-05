@@ -90,6 +90,7 @@ def lt_faction_rarity_header(factions):
     text = u'<!-- This page was generated/modified by software -->\n'
     # No WYSIWYG editor
     text += u'__NOWYSIWYG__\n'
+    text += u'This page is auto-generated from the rest of the wiki. If something is wrong, please fix it in the Lt page\n'
     text += u'{| border="1" class="wikitable"\n'
     text += u'!span="col" | \n'
     for faction in factions:
@@ -128,6 +129,7 @@ def summary_header(row_template):
     text = u'<!-- This page was generated/modified by software -->\n'
     # No WYSIWYG editor
     text += u'__NOWYSIWYG__\n'
+    text += u'This page is auto-generated from the rest of the wiki. If something is wrong, please fix it in the page for the row\n'
     # Sortable table with borders
     text += u'{| border="1" class="sortable"\n'
     if row_template == u'Item Row':

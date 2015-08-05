@@ -91,7 +91,7 @@ def find_specific_section(text, section):
     or (-1, -1) if the section isn't found.
     """
     # Does the page have a section header ?
-    header = re.search(ur'===*\s*%s\W*=*==' % section, text)
+    header = re.search(ur'===*\s*%s\s*=*==' % section, text)
     if header:
         list_start = header.end()
         # List ends at a template, header or category
@@ -102,7 +102,7 @@ def find_specific_section(text, section):
         else:
             list_end = len(text)
         # Shift list_end back to exactly the end of the list
-        while text[-1] in u'\n\r':
+        while text[list_end] in u'\n\r':
             list_end -= 1
         return (list_start, list_end)
     return (-1, -1)

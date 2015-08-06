@@ -199,7 +199,8 @@ class Achievements:
         retval = []
         self._parse_page()
         for a in self._achievements:
-            if page_name in a[0]:
+            # Should always be a link, but may be displayed differently
+            if u'[[%s' % page_name in a[0]:
                 retval.append(a)
         return retval
 

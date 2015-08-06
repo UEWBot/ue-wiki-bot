@@ -574,15 +574,8 @@ def boss_page_to_row(page, row_template):
         raise IrrelevantRowError
     section = text[start:end]
     # Extract the actual thresholds
-    thresholds = {1: u'',
-                  2: u'',
-                  3: u''}
-    if section.count(u'#') != 3:
-        pywikibot.output("Epic thresholds section for %s has %d entries:" % (name,
-                                                                           section.count(u'#')))
-        pywikibot.output(section)
-        raise IrrelevantRowError
-    for param in thresholds.keys():
+    thresholds = {}
+    for param in range(1, 1+section.count(u'#')):
         i = section.index(u'#')
         m = POINTS_RE.search(section)
         # Skip entries without a value
@@ -592,14 +585,15 @@ def boss_page_to_row(page, row_template):
             val = val.rstrip()
             val = val.replace(u',', u'')
             val = val.replace(u'.', u'')
-            thresholds[param] = val
+            if len(val):
+                thresholds[param] = val
             # Remove (some of) this entry from the start
             section = section[i+1:]
-    return u'{{%s|name=%s|epic_1=%s|epic_2=%s|epic_3=%s}}' % (row_template,
-                                                              name,
-                                                              thresholds[1],
-                                                              thresholds[2],
-                                                              thresholds[3])
+    text = u'{{%s|name=%s' % (row_template, name)
+    for i in sorted(thresholds.keys()):
+        text += u'|epic_%d=%s' % (i, thresholds[i])
+    text += u'}}'
+    return text
 
 def page_to_row(page, row_template):
     """

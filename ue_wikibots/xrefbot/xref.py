@@ -2390,6 +2390,7 @@ class XrefToolkit:
         if total != num_parts:
             # Fix num_parts, if present, else flag missing ingredient(s)
             # TODO This assumes no spaces in the parameter setting
+            # TODO Add num_parts if not already present
             text = text.replace(u'num_parts=%d' % num_parts,
                                 u'num_parts=%d' % total)
 

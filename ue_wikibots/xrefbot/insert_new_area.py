@@ -106,7 +106,7 @@ You have some number of hours to complete the fight.
 
 ==Recommended Class==
 
-==[[Boss Rewards|Rewards]]==
+==[[Boss Drops|Rewards]]==
 ==={{Epic}} Thresholds===
 # points
 # points
@@ -153,6 +153,7 @@ class AreaBot:
         new_line = u'#[[%s]] ([[%s]] boss)\n' % (self.area_name, self.boss_name)
         text = self.jobs_page_text.replace(u'There are currently %d [[' % areas,
                                            u'There are currently %d [[' % (areas + 1))
+        # TODO This doesn't work if there's whitespace in the following line
         line_after = u'#[[%s]] ' % self.areas_list[self.new_number]
         text = text.replace(line_after, new_line + line_after)
         self._update_page(self.jobs_page, self.jobs_page_text, text)

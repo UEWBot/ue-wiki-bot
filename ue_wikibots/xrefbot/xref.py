@@ -1332,6 +1332,10 @@ class XrefToolkit:
 
         Return True if the specified Lt matches the criteria in beneficiary.
         """
+        # Some items don't directly benefit any LT
+        if not beneficiary:
+            return False
+
         # If the LT's name appears, that's an easy one
         if lt in beneficiary:
             return True
@@ -1428,7 +1432,7 @@ class XrefToolkit:
         faction_refs = cat_refs_map.refs_for(u'%s Lieutenants' % faction)
         refItems.update(self._items_in_refs(faction_refs))
 
-        # TODO Filter out any items that don't affect this Lt
+        # Filter out any items that don't affect this Lt
         refItems = {k: v for k, v in refItems.iteritems() if self._affects_lt(name,
                                                                               rarity,
                                                                               faction,

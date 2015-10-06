@@ -89,7 +89,6 @@ def sort_lab_params(text, template, params):
     """
     # RE to match the entire template and all its parameters
     # We assume no templates are nested within this one
-    print params
     templateRe = re.compile(ur'{{%s[^}]*}}' % template,
                             re.DOTALL | re.MULTILINE)
     new_text = u'{{%s\n|' % template + u'\n|'.join(sorted(params,
@@ -130,9 +129,10 @@ class ItemBot:
                 # Write out the new version
                 old_page.put(new_text, summary)
 
-    def update_lts(self):
+    def update_lts_and_lab_items(self):
         """
-        Create or update each page in the Lieutenants category.
+        Create or update each page in the Lieutenants and Epic Research Items
+        categories.
         """
         # All the pages we're interested in are in these two categories
         # TODO If this list grows, it may be better to find pages that
@@ -157,7 +157,7 @@ class ItemBot:
             self.update_or_create_page(page, text);
 
     def run(self):
-        self.update_lts()
+        self.update_lts_and_lab_items()
 
 def main():
     bot = ItemBot()

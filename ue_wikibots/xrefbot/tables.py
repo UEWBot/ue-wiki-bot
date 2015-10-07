@@ -585,6 +585,7 @@ def boss_page_to_row(page, row_template):
             val = val.rstrip()
             val = val.replace(u',', u'')
             val = val.replace(u'.', u'')
+            val = val.replace(u' ', u'')
             if len(val):
                 thresholds[param] = val
             # Remove (some of) this entry from the start

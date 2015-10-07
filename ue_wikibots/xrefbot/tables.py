@@ -558,11 +558,11 @@ def gear_needed(page):
 
 def boss_page_to_row(page, row_template):
     """
-    Return a table row for the item or challenge job described in page.
+    Return a table row for the boss described in page.
 
     page -- Page to parse.
     row_template -- template to use in the generated row text.
-                    One of 'Challenge Job Row', 'Lieutenant Row', or 'Item Row'.
+                    Must be 'Boss Row'.
     """
     POINTS_RE = re.compile(ur'#\s*(?P<points>[\d,. ]*)')
     name = page.title()
@@ -601,7 +601,8 @@ def page_to_row(page, row_template):
 
     page -- Page to parse.
     row_template -- template to use in the generated row text.
-                    One of 'Challenge Job Row', 'Lieutenant Row', or 'Item Row'.
+                    One of 'Challenge Job Row', 'Lieutenant Row', 'Item Row',
+                    or 'Boss Row'.
     """
     # Where to put the page name
     mapping = {u'Challenge Job Row': u'district',

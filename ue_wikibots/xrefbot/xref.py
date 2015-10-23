@@ -840,18 +840,30 @@ class XrefToolkit:
                 if u'xp' in mp:
                     mp.remove(u'xp')
                     mp |= missing_params(params, xp_pair_param_map.keys())
-                # Special case for missing gear_n and gear_n_img parameters
+                param_dict = utils.params_to_dict(params)
+                # Check gear
                 got_gear = False
                 for i in range(4,0,-1):
                     root = u'gear_%d' % i
+                    img_param = root + u'_img'
                     if root in mp:
                         # Shouldn't have higher number without lower
                         if not got_gear:
                             mp.remove(root)
-                            img_param = root + u'_img'
                             mp.discard(img_param)
                     else:
                         got_gear = True
+                    # If we have this gear param, check the corresponding image
+                    if root in param_dict:
+                        image = image_map.image_for(param_dict[root])
+                        try:
+                            img = param_dict[img_param]
+                            if img != image:
+                                # TODO Fix the image
+                                print "Wrong image for %s - %s rather than %s.\n" % (param_dict[root], img, image);
+                        except KeyError:
+                            # TODO Add the image
+                            print "Missing %s=%s" % (img_param, image)
                 missed_params |= mp
             elif template == u'Challenge Job':
                 mp = missing_params(params,

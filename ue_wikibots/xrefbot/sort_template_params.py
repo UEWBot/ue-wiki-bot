@@ -60,17 +60,71 @@ def lt_sort_key(param):
         # Sort all unnumbered ones before all numbered ones
         return (0, param)
 
+def next_template_end(text, start, end):
+    """
+    Returns the index of the next u'{{' or u'}}' in text[start:end].
+    Raises ValueError if neither are present.
+    """
+    left = text.find(u'{{', start, end)
+    if left == -1:
+        return text.index(u'}}', start, end)
+    right = text.find(u'}}', start, end)
+    if left < right or right == -1:
+        return left
+    return right
+
+def template_bounds(text, template):
+    """
+    Finds the specified template in the text. Returns a 2-tuple of
+    (start_index, end_index) such that text[start_index:end_index]
+    starts and ends with the {{...}}.
+    """
+    # Find the start of the template of interest,
+    # and the end of the last template in text
+    start = text.index(u'{{%s' % template)
+    end = text.rindex(u'}}')
+
+    # Go through the text between start and end, finding
+    # all the start and end template markers.
+    start_2 = start
+    braces = []
+    while True:
+        try:
+            pos = next_template_end(text, start_2 + 2, end)
+        except ValueError:
+            # We've found all the starts and ends
+            break
+        # Add this one to the list
+        braces.append((text[pos:pos+2], pos))
+        # Continue checking after this one
+        start_2 = pos
+    # Now we can go through the list pairing up braces
+    # We know the list is sorted by position
+    # We started inside the template of interest
+    nesting = 1
+    for brace in braces:
+        if brace[0] == u'}}':
+            # This is the end of the current template
+            nesting -= 1
+            if nesting == 0:
+                # Current template is the template of interest
+                end = brace[1]
+                break
+        else:
+            # Start of a nested template
+            nesting += 1
+
+    # Include the start and end template markers
+    return (start, end+2)
+
 def sort_lt_params(text, template, params):
     """
     Return text with the specified parameters sorted into a more reasonable order
     """
-    # RE to match the entire template and all its parameters
-    # We assume this is the last template on the page
-    templateRe = re.compile(ur'{{%s.*}}' % template,
-                            re.DOTALL | re.MULTILINE)
+    start, end = template_bounds(text, template)
     new_text = u'{{%s\n|' % template + u'\n|'.join(sorted(params,
                                                           key=lt_sort_key)) + u'\n}}'
-    return templateRe.sub(new_text, text, count=1)
+    return text[:start] + new_text + text[end:]
 
 def lab_sort_key(param):
     """
@@ -87,13 +141,10 @@ def sort_lab_params(text, template, params):
     """
     Return text with the specified parameters sorted into a more reasonable order
     """
-    # RE to match the entire template and all its parameters
-    # We assume no templates are nested within this one
-    templateRe = re.compile(ur'{{%s[^}]*}}' % template,
-                            re.DOTALL | re.MULTILINE)
+    start, end = template_bounds(text, template)
     new_text = u'{{%s\n|' % template + u'\n|'.join(sorted(params,
                                                           key=lab_sort_key)) + u'\n}}'
-    return templateRe.sub(new_text, text, count=1)
+    return text[:start] + new_text + text[end:]
 
 class ItemBot:
     def __init__(self, acceptall = False):

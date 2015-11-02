@@ -1440,9 +1440,13 @@ class XrefToolkit:
 
         # Check for items that affect the entire faction
         param_dict = utils.params_to_dict(the_params)
-        faction = param_dict[u'faction']
-        faction_refs = cat_refs_map.refs_for(u'%s Lieutenants' % faction)
-        refItems.update(self._items_in_refs(faction_refs))
+        try:
+            faction = param_dict[u'faction']
+            faction_refs = cat_refs_map.refs_for(u'%s Lieutenants' % faction)
+            refItems.update(self._items_in_refs(faction_refs))
+        except KeyError:
+            # We don't know the faction, so just ignore it
+            faction = None
 
         # Filter out any items that don't affect this Lt
         refItems = {k: v for k, v in refItems.iteritems() if self._affects_lt(name,

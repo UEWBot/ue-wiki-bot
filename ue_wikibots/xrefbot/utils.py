@@ -84,7 +84,7 @@ def find_specific_section(text, section):
     section -- name of the section to locate.
 
     Search for a header for the specified section.
-    If found, search forward for a header, template, or category that
+    If found, search forward for a header or category that
     marks the end of the section.
 
     Return a 2-tuple containing the start and end indices of the seciion,
@@ -94,9 +94,9 @@ def find_specific_section(text, section):
     header = re.search(ur'===*\s*%s\s*=*==' % section, text)
     if header:
         list_start = header.end()
-        # List ends at a template, header or category
+        # List ends at a header or category
         # Skip the header for the section of interest itself
-        match = re.search(r'{{|==.*==|\[\[Category', text[list_start:])
+        match = re.search(r'==.*==|\[\[Category', text[list_start:])
         if match:
             list_end = list_start+match.start()
         else:

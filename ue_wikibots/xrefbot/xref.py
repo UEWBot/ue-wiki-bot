@@ -2543,6 +2543,11 @@ class XrefBot:
         page -- Page object to be checked and possibly updated.
         """
         try:
+            # Drop out quickly for namespaces that we don't deal with
+            ns = page.namespace()
+            if ns == "File" or ns == "Talk" or ns == "User" or ns == "Thread":
+                pywikibot.output(u"Skipping %s because it's in the %s namespace" % (page.title(), ns))
+                return
             # Show the title of the page we're working on.
             # Highlight the title in purple.
             pywikibot.output(u"\n\n>>> \03{lightpurple}%s\03{default} <<<" % page.title())

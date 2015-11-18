@@ -546,9 +546,13 @@ def gear_needed(page):
                 key = u'gear_%d' % i
                 try:
                     g = d[key]
-                    n = int(d[key + u'_count'])
+                    try:
+                        n = int(d[key + u'_count'])
+                    except ValueError:
+                        # Use -1 as a placeholder - any real number is greater
+                        n = -1
                     img = d[key + u'_img']
-                except (KeyError, ValueError):
+                except KeyError:
                     pass
                 else:
                     # Store the largest number of each type of gear
@@ -852,7 +856,12 @@ class XrefBot:
             the_gear = gear_dict[area]
             for gear in sorted(the_gear.keys()):
                 (n, img) = the_gear[gear]
-                text += u'*%d [[File:%s||100px]] [[%s]]\n' % (n, img, gear)
+                # Check for special placeholder indicating "some number"
+                if n == -1:
+                   num = u'?'
+                else:
+                   num = str(n)
+                text += u'*%s [[File:%s||100px]] [[%s]]\n' % (num, img, gear)
         text += u'[[Category:Summary Tables]]'
         return text
 

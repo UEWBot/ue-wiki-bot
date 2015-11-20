@@ -1592,6 +1592,10 @@ class XrefToolkit:
                 is_tech_lab_item = True
                 ingredients = params
 
+            elif template == u'Lieutenant Row':
+                # Break this one out from the next "elif"
+                pass
+
             elif template.startswith(u'Lieutenant '):
                 the_template = template
                 the_params = params

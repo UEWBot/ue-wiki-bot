@@ -882,7 +882,6 @@ class XrefToolkit:
                                                rare_param + u'=%s' % rarity)
                         mp.discard(rare_param)
                 missed_params |= mp
-        pywikibot.output("Set of missing job parameters is %s" % missed_params)
         # Ensure the Needs categories are correct
         text = self._fix_needs_cats(text,
                                     missed_params,

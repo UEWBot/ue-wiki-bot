@@ -568,7 +568,7 @@ def boss_page_to_row(page, row_template):
     row_template -- template to use in the generated row text.
                     Must be 'Boss Row'.
     """
-    POINTS_RE = re.compile(ur'#({{formatnum:)?\s*(?P<points>[\d,. ]*)(}})?')
+    POINTS_RE = re.compile(ur'#\s*({{formatnum:)?\s*(?P<points>[\d,. ]*)(}})?')
     name = page.title()
     text = page.get()
     # Extract the epic thresholds section from the page text

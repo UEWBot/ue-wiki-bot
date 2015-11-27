@@ -1021,7 +1021,8 @@ class XrefToolkit:
                            u'Tech Lab Bosses',
                            u'Legend Bosses',
                            u'Event Bosses',
-                           u'Retired Bosses']
+                           u'Retired Bosses',
+                           u'Bosses'] # War Hounds is here for now...
         # Check core category
         the_cats = []
         for cat in boss_categories:

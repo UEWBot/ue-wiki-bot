@@ -56,6 +56,8 @@ ITEM_TEMPLATES = re.compile(u'.*\WItem')
 PROPERTY_TEMPLATES = re.compile(u'.*\WProperty')
 JOB_TEMPLATES = re.compile(u'.*Job')
 LIEUTENANT_TEMPLATES = re.compile(u'Lieutenant\W(.*)')
+SECRET_COUNT_RE_1 = re.compile(ur'an additional (\w+) \[\[\w*#Secret')
+SECRET_COUNT_RE_2 = re.compile(ur'(\w+) additional \[\[\w*#Secret')
 
 class Error(Exception):
     pass
@@ -123,7 +125,7 @@ def summary_header(row_template):
 
     row_template -- Name of the template to be used for each data row.
                     One of 'Item Row', 'Property Row', 'Job Row',
-                    'Challenge Job Row', or 'Lieutenant Row'.
+                    'Challenge Job Row', 'Secret Job Row', or 'Lieutenant Row'.
     """
     # Warn editors that the page was generated
     text = u'<!-- This page was generated/modified by software -->\n'
@@ -244,6 +246,13 @@ def summary_header(row_template):
         text += u'!span="col" data-sort-type="number" | 2 Epic Threshold\n'
         # Threshold 3 column
         text += u'!span="col" data-sort-type="number" | 3 Epic Threshold\n'
+    elif row_template == u'Secret Job Row':
+        # Area column
+        text += u'!span="col" | Area\n'
+        # Job count
+        text += u'!span="col" | Job count\n'
+        # Date added
+        text += u'!span="col" | Date added\n'
     else:
         pywikibot.output("Unexpected row template %s" % row_template)
 
@@ -468,6 +477,51 @@ def fortress_rows(name, text, row_template, the_dict):
         rows.append(row)
     #rows.sort()
     return rows
+
+def secret_job_dates(areas):
+    """
+    Parse the history page to determine the dates when secret jobs in
+    different areas were released.
+    Returns a dict, keyed by area name, of dates.
+    """
+    retval = {}
+    page = pywikibot.Page(pywikibot.Site(), u'History')
+    text = page.get()
+    # Split it at dates (some entries span multiple lines)
+    #DATE_RE = re.compile(ur'([-0-9]* [A-Z][a-z]{2} 20[1-9][0-9])', re.MULTILINE)
+    DATE_RE = re.compile(ur'([-0-9]* [A-Z][a-z]{2} 20[1-9][0-9])')
+    split_text = DATE_RE.split(text)
+    for i in range(len(split_text)):
+        if u'ecret' in split_text[i]:
+            # Which area is this for ?
+            for area in areas:
+                if area in split_text[i]:
+                    # Previous entry in the list is the date
+                    retval[area] = split_text[i-1]
+                    break
+    return retval
+
+def page_to_secret_row(page, template, dates):
+    """
+    Create a secret job row from an area page.
+    """
+    name = page.title()
+    text = page.get()
+    # Set count by parsing the page
+    m = SECRET_COUNT_RE_1.search(text)
+    if not m:
+        m = SECRET_COUNT_RE_2.search(text)
+    if m:
+        count = m.group(1)
+    else:
+        print "Unable to find secret job count for %s" % name
+        count = u'Unknown'
+    try:
+        release_date = dates[name]
+    except KeyError:
+        release_date = u'Not yet released'
+    return u'{{%s|area=%s|count=%s|date=%s}}' % (template, name,
+                                                 count, release_date)
 
 def swap_lts(row, idx1, idx2):
     """
@@ -867,41 +921,53 @@ class XrefBot:
 
     def update_jobs_tables(self):
         """
-        Create or update the three job summary pages.
+        Create or update the job summary pages.
 
         Read every page in the Areas category and create/update pages
-        Jobs Table, Challenge Jobs Table, and Area Gear Table accordingly.
+        Jobs Table, Challenge Jobs Table, Secret Jobs Table, and
+        Area Gear Table accordingly.
         """
         # Templates to use
         job_row_template = u'Job Row'
         dice_row_template = u'Challenge Job Row'
+        secret_row_template = u'Secret Job Row'
 
         job_rows = []
         dice_rows = []
+        secret_rows = []
         gear_dict = {}
 
         cat = pywikibot.Category(pywikibot.Site(), u'Areas')
+
+        secret_dates = secret_job_dates(self.areas)
 
         # Go through the area pages in in-game order
         for page in sorted(cat.articles(), key=self._area_key):
             # One row per use of the template on a page in category
             job_rows += page_to_rows(page, job_row_template)
             dice_rows.append(page_to_row(page, dice_row_template))
+            secret_rows.append(page_to_secret_row(page,
+                                                  secret_row_template,
+                                                  secret_dates))
             # Add an entry to gear_dict for this page
             gear_dict.update({page: gear_needed(page)})
 
         # Start the new page text
         new_job_text = summary_header(job_row_template)
         new_dice_text = summary_header(dice_row_template)
+        new_secret_text = summary_header(secret_row_template)
 
         for row in job_rows:
             new_job_text += row + u'\n'
         for row in dice_rows:
             new_dice_text += row + u'\n'
+        for row in secret_rows:
+            new_secret_text += row + u'\n'
 
         # Finish with a footer
         new_job_text += summary_footer(job_row_template)
         new_dice_text += summary_footer(dice_row_template)
+        new_secret_text += summary_footer(secret_row_template)
 
         # Generate the area gear page from the dict
         if u'Area Gear Table' in self.pages:
@@ -915,6 +981,10 @@ class XrefBot:
             dice_job_page = pywikibot.Page(pywikibot.Site(),
                                            u'Challenge Jobs Table')
             self._update_or_create_page(dice_job_page, new_dice_text);
+        if u'Secret Jobs Table' in self.pages:
+            secret_job_page = pywikibot.Page(pywikibot.Site(),
+                                             u'Secret Jobs Table')
+            self._update_or_create_page(secret_job_page, new_secret_text);
         if u'Area Gear Table' in self.pages:
             area_gear_page = pywikibot.Page(pywikibot.Site(),
                                             u'Area Gear Table')
@@ -1026,6 +1096,7 @@ class XrefBot:
             self.update_properties_table()
         if ((u'Jobs Table' in self.pages) or
             (u'Challenge Jobs Table' in self.pages) or
+            (u'Secret Jobs Table' in self.pages) or
             (u'Area Gear Table' in self.pages)):
             self.update_jobs_tables()
         if u'Lieutenants Faction Rarity Table' in self.pages:
@@ -1049,6 +1120,7 @@ if __name__ == "__main__":
                  '--dice_jobs'  : u'Challenge Jobs Table',
                  '--area_gear'  : u'Area Gear Table',
                  '--bosses'     : u'Bosses Table',
+                 '--secret'     : u'Secret Jobs Table',
                  '--lt_rarities': u'Lieutenants Faction Rarity Table'}
 
     parser = argparse.ArgumentParser(description='Create/update summary pages.', epilog='With no options, create/update all summary pages.')

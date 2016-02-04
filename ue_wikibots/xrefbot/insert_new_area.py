@@ -65,7 +65,7 @@ __NOWYSIWYG__
 [[File:district_%s.jpg|thumb|400px|Map of the %s area]]
 ''<intro text>''
 
-This is the %s [[:Category:Areas|area]] in the game, u%s Completing some job unlocks the [[%s]] area.
+This is the %s [[:Category:Areas|area]] in the game, u%s %s
 
 There are some number of jobs in this area, including the [[#Challenge Job|challenge job]], plus an additional 16 [[#Secret Jobs - 1|secret jobs]] (not yet available).
 
@@ -153,8 +153,11 @@ class AreaBot:
         new_line = u'#[[%s]] ([[%s]] boss)\n' % (self.area_name, self.boss_name)
         text = self.jobs_page_text.replace(u'There are currently %d [[' % areas,
                                            u'There are currently %d [[' % (areas + 1))
-        # TODO This doesn't work if there's whitespace in the following line
-        line_after = u'#[[%s]] ' % self.areas_list[self.new_number]
+        if self.new_number in self.areas_list:
+            # TODO This doesn't work if there's whitespace in the following line
+            line_after = u'#[[%s]] ' % self.areas_list[self.new_number]
+        else:
+            line_after = u'[[Category:Content]]'
         text = text.replace(line_after, new_line + line_after)
         self._update_page(self.jobs_page, self.jobs_page_text, text)
 
@@ -189,6 +192,8 @@ class AreaBot:
         page = pywikibot.Page(pywikibot.Site(), u'Achievements')
         text = old_text = page.get()
         # We don't insert an achievement for the new area
+        # TODO When inserting the new area at the end,
+        #      this wrongly updates the number of the last existing area
         for i in range(self.new_number, len(self.areas_list) + 1):
             name = self.areas_list[i - 1]
             print u'[[%s|Area %d]]' % (name, i)
@@ -203,11 +208,15 @@ class AreaBot:
         page = pywikibot.Page(pywikibot.Site(), self.after)
         old_text = page.get()
         link = u'Completing %s job unlocks the [[%s]] area.'
-        job = parse.search(link % (u'{}', self.areas_list[self.new_number]),
-                           old_text).fixed[0]
-        link = link % (job, u'%s')
-        text = old_text.replace(link % self.areas_list[self.new_number],
-                                link % self.area_name)
+        if self.new_number in self.areas_list:
+            job = parse.search(link % (u'{}', self.areas_list[self.new_number]),
+                               old_text).fixed[0]
+            link = link % (job, u'%s')
+            text = old_text.replace(link % self.areas_list[self.new_number],
+                                    link % self.area_name)
+        else:
+            final = u'It is currently the final area.'
+            text = old_text.replace(final, link % (u'some', self.area_name))
         self._update_page(page, old_text, text)
 
     def _update_next_area(self):
@@ -216,14 +225,17 @@ class AreaBot:
 
         Return the unlock link for the new area.
         """
+        # Some have this phrase in it's own sentence, others don't
+        link = u'nlocked once you have completed %s in [[%s]].'
+        if self.new_number not in self.areas_list:
+            # New area is the last one
+            return link % (u'some job', self.after)
         page = pywikibot.Page(pywikibot.Site(),
                               self.areas_list[self.new_number])
         old_text = page.get()
         # Also replace the area number while we're there
         i = self.new_number + 1
         text = old_text.replace(number_map[i], number_map[i+1])
-        # Some have this phrase in it's own sentence, others don't
-        link = u'nlocked once you have completed %s in [[%s]].'
         job = parse.search(link % (u'{}', self.after),
                            old_text).fixed[0]
         old_link = link % (job, self.after)
@@ -240,11 +252,15 @@ class AreaBot:
         link -- text to use to link to the following area page.
         """
         page = pywikibot.Page(pywikibot.Site(), self.area_name)
+        if self.new_number in self.areas_list:
+            next_area = u'Completing some job unlocks the [[%s]] area.' % self.areas_list[self.new_number]
+        else:
+            next_area = u'It is currently the final area.'
         text = stub_area_page % (self.area_name.lower(),
                                  self.area_name,
                                  number_map[self.new_number],
                                  link,
-                                 self.areas_list[self.new_number],
+                                 next_area,
                                  self.boss_name)
         self._update_page(page, u'', text)
 

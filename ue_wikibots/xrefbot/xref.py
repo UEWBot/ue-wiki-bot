@@ -924,7 +924,10 @@ class XrefToolkit:
                                u'Lab',
                                u'Lab Four Of A Kind',
                                u'Lab Full House']
-        item_name = drop_params[u'name']
+        try:
+            item_name = drop_params[u'name']
+        except KeyError:
+            return text
         item = pywikibot.Page(pywikibot.Site(), item_name)
         templatesWithParams = item.templatesWithParams()
         for (temp, params) in templatesWithParams:
@@ -949,8 +952,8 @@ class XrefToolkit:
                         continue
                     elif (key == u'creator'):
                         continue
-                    elif not drop_params_match(drop_params[key],
-                                               item_params[key]):
+                    elif key in item_params and not drop_params_match(drop_params[key],
+                                                                      item_params[key]):
                         # TODO Should be able to fix some of them at least...
                         pywikibot.output("Drop parameter mismatch for %s parameter of item %s (%s vs %s)" % (key, item_name, item_params[key], drop_params[key]))
                 # Then check for any that may be missing

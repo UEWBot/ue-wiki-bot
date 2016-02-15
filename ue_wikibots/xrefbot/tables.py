@@ -370,6 +370,10 @@ def safe_house_rows(name, text, row_template):
         income = u'Unknown'
     else:
         income = match.group(1)
+        # We only want the numbers
+        income = re.sub(r'\D+', u'', income)
+        if income == u'':
+            income = u'None'
     # Look for an "Unlock" line
     match = re.search(ur'Unlocked when (.*)', text)
     if match is None:
@@ -864,18 +868,21 @@ class XrefBot:
         cat = pywikibot.Category(pywikibot.Site(), the_cat)
         for page in set(cat.articles(recurse=True)):
             new_rows = page_to_rows(page, row_template, lvl_to_ratio)
+            title = page.title()
             if new_rows:
                 rows += new_rows
-            elif page.title() == u'Fortress':
+            elif title == u'Fortress':
                 # Use the cached page text
-                rows += fortress_rows(page.title(),
+                rows += fortress_rows(title,
                                       fortress_text,
                                       row_template,
                                       fortress_dict)
-            elif page.title() == u'Safe House':
-                rows += safe_house_rows(page.title(), page.get(), row_template)
+            elif title == u'Safe House':
+                rows += safe_house_rows(title, page.get(), row_template)
+            elif title == u'The Cayman Islands':
+                rows += safe_house_rows(title, page.get(), row_template)
             else:
-                pywikibot.output("Unexpected non-template property page %s" % page.title())
+                pywikibot.output("Unexpected non-template property page %s" % title)
 
         # Start the new page text
         new_text = summary_header(row_template)

@@ -1139,7 +1139,7 @@ class XrefToolkit:
 
     def _fix_safe_house(self, text):
         """
-        Fix the Safe House page.
+        Fix Safe House or The Cayman Islands page.
 
         text -- current text of the page.
 
@@ -1162,7 +1162,7 @@ class XrefToolkit:
         Check that the page includes appropriate information (like Upgrade properties).
         Check that the cost table matches the template for upgrade properties.
         """
-        # TODO implement this function
+        # TODO implement the rest of this function
         # First, retrieve the expected cost ratios from the template
         Rrow = re.compile(ur'\|\s*(?P<level>\d+).*cost}}}\*(?P<ratio>[\d.]+)')
         table_page = pywikibot.Page(pywikibot.Site(),
@@ -1217,11 +1217,14 @@ class XrefToolkit:
                 the_template = template
                 the_params = params
 
-        # Fortress and Safe House are special
+        # Fortress, Safe House and The Cayman Islands are special
         if name == u'Safe House':
             return self._fix_safe_house(text)
         elif name == u'Fortress':
             return self._fix_fortress(text)
+        elif name == u'The Cayman Islands':
+            # Very similar to Safe House
+            return self._fix_safe_house(text)
 
         # Drop out early if not a property page
         # TODO Is there a better test ?

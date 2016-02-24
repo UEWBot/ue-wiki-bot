@@ -812,11 +812,14 @@ class XrefToolkit:
             if template == u'Crate Reward':
                 param_dict = utils.params_to_dict(params)
                 name = param_dict[u'name']
-                # Note that we'll fail to find images for many skinned Lts
                 image = image_map.image_for(name)
                 if param_dict[u'image'] != image:
                     # We'll fix the image when we re-generate the text for the page
-                    print "Wrong image for %s - %s rather than %s.\n" % (name, param_dict[u'image'], image)
+                    if image:
+                        print "Wrong image for %s - %s rather than %s.\n" % (name, param_dict[u'image'], image)
+                    else:
+                        # TODO If we don't know the right image, let's trust the one that's currently there
+                        pass
                 # Which section is this one in ?
                 start = text.index(name)
                 for s in sections:
@@ -830,7 +833,9 @@ class XrefToolkit:
                 r = image_map.rarity_for(name)
                 if r != rarity:
                     # TODO Make allowance for the expected special cases here
-                    print "Wrong rarity for %s - %s rather than %s." % (name, rarity, r)
+                    # For those cases, we want to append some additional text
+                    if r:
+                        print "Wrong rarity for %s - %s rather than %s." % (name, rarity, r)
 
         # Re-create the expected layout of the page.
         # We should have a section for each rarity,
@@ -845,7 +850,7 @@ class XrefToolkit:
             new_text += u'{|\n'
             i = 0
             lts = s[2]
-            # TODO We'll get an exception if there's an odd number of Lts in lts
+            assert len(lts) % 2 == 0, "Odd number of rewards at rarity %s" % s[0]
             while i < len(lts):
                 # 2 Lts per row
                 name = lts[i]

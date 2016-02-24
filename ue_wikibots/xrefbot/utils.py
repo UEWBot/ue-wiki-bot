@@ -224,8 +224,9 @@ class ImageMap:
     """
 
     _IMG_RE = re.compile(ur'\|\W*image\W*=\W*(?P<image>.*)')
+    _IMG_2_RE = re.compile(ur'\|\W*image_2\W*=\W*(?P<image>.*)')
     # TODO This should match jpg as well as png files
-    _IMG_2_RE = re.compile(ur'\[\[File:(?P<image>.*\.png)\|.*\]\]')
+    _IMG_FILE_RE = re.compile(ur'\[\[File:(?P<image>.*\.png)\|.*\]\]')
     _RARITY_RE = re.compile(ur'\|\W*rarity\W*=\W*(?P<rarity>.*)')
 
     def __init__(self):
@@ -241,14 +242,21 @@ class ImageMap:
         pg = pywikibot.Page(pywikibot.Site(), name)
         # Retrieve the text of the specified page
         m = None
+        img_re = self._IMG_RE
         try:
-            text = pg.get(get_redirect=True)
+            text = pg.get()
         except pywikibot.NoPage:
             text = ''
+        except pywikibot.IsRedirectPage:
+            # This is probably a skinned Lt, in which case we want image2 of the Lt page
+            img_re = self._IMG_2_RE
+            pg = pg.getRedirectTarget()
+            text = pg.get()
         # Extract the image parameter
-        m = self._IMG_RE.search(text)
+        m = img_re.search(text)
         if m is None:
-            m = self._IMG_2_RE.search(text)
+            # No image parameter - look for an image file link
+            m = self._IMG_FILE_RE.search(text)
         if m is None:
             print("Unable to find image for %s" % name)
             self.image_mapping[name] = None

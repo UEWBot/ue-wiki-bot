@@ -266,11 +266,13 @@ class ImageMap:
         m = self._RARITY_RE.search(text)
         if m is None:
             self.rarity_mapping[name] = None
-            # TODO Lt rarity is specified in the template used
+            # Lt rarity is specified in the template used
             for template, params in pg.templatesWithParams():
                 t = template.title(withNamespace=False)
                 if t.startswith(u'Lieutenant '):
                     self.rarity_mapping[name] = t.split()[1]
+            # Lt skin pages don't specify the rarity
+            # TODO Should be possible to get it from the Lt itself
             if self.rarity_mapping[name] == None:
                 print("Unable to find rarity for %s" % name)
         else:

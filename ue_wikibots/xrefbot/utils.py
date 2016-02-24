@@ -109,7 +109,7 @@ def find_specific_section(text, section):
 
 def areas_in_order(jobs_page_text):
     """
-    Return a list of Area pages in in=game order.
+    Return a list of Area pages in in-game order.
 
     jobs_page_text -- the text of the Jobs page of the wiki.
     """

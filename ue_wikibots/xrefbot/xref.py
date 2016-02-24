@@ -291,6 +291,7 @@ class XrefToolkit:
                               text,
                               categories,
                               templatesWithParams)
+        text = self._fix_crate(text, categories, templatesWithParams)
         return text
 
     # Now a load of utility methods
@@ -776,6 +777,93 @@ class XrefToolkit:
             title = template.title(withNamespace=False)
             if title.startswith(u'Lieutenant '):
                 return title.split()[1]
+
+    def _fix_crate(self, text, categories, templatesWithParams):
+        """
+        Fix a Crate page.
+
+        text - current text of the page.
+        categories -- list of categories the page belongs to.
+        templatesWithParams -- list of 2-tuples containing template Page
+                               and list of parameters.
+
+        Return updated text.
+
+        Ensure that __NOWYSIWYG__ is present.
+        Check that the correct image is supplied for each reward.
+        """
+        # Drop out if it isn't a Crate page
+        if not self._cat_in_categories(u'Crates', categories):
+            return text
+
+        # __NOWYSIWYG__
+        text = self._prepend_NOWYSIWYG_if_needed(text)
+
+        # First figure out what sections we have
+        sections = []
+        rarities = utils.rarities_in_order()
+        for m in HEADER_RE.finditer(text):
+            for r in rarities:
+                if r in m.group(u'title'):
+                    sections.append((r, m.start(), [], m.end()))
+
+        # Check each template
+        for template, params in templatesWithParams:
+            if template == u'Crate Reward':
+                param_dict = utils.params_to_dict(params)
+                name = param_dict[u'name']
+                # Note that we'll fail to find images for many skinned Lts
+                image = image_map.image_for(name)
+                if param_dict[u'image'] != image:
+                    # We'll fix the image when we re-generate the text for the page
+                    print "Wrong image for %s - %s rather than %s.\n" % (name, param_dict[u'image'], image)
+                # Which section is this one in ?
+                start = text.index(name)
+                for s in sections:
+                    if start > s[1]:
+                        rarity = s[0]
+                for s in sections:
+                    if rarity == s[0]:
+                        # Add the Lt to the list for that section
+                        s[2].append(name)
+                # Check that the rarity is correct
+                r = image_map.rarity_for(name)
+                if r != rarity:
+                    # TODO Make allowance for the expected special cases here
+                    print "Wrong rarity for %s - %s rather than %s." % (name, rarity, r)
+
+        # Re-create the expected layout of the page.
+        # We should have a section for each rarity,
+        # with 2 Lts per row within each section
+        # First the general description of the crate
+        new_text = text[0:sections[0][1]]
+        for s in sections:
+            # Section header
+            new_text += text[s[1]:s[3]]
+            new_text += u'\n'
+            # Table start
+            new_text += u'{|\n'
+            i = 0
+            lts = s[2]
+            # TODO We'll get an exception if there's an odd number of Lts in lts
+            while i < len(lts):
+                # 2 Lts per row
+                name = lts[i]
+                image = image_map.image_for(name)
+                new_text += u'{{Crate Reward|name=%s|image=%s}}\n' % (name, image)
+                i += 1
+                name = lts[i]
+                image = image_map.image_for(name)
+                new_text += u'{{Crate Reward|name=%s|image=%s}}\n' % (name, image)
+                i += 1
+                if i < len(lts):
+                    new_text += u'|-\n'
+            # Table end
+            new_text += u'|}\n'
+        new_text += u'\n[[Category:Crates]]'
+        text = new_text
+
+        return text
 
     def _fix_area(self, name, text, categories, templatesWithParams):
         """

@@ -28,6 +28,8 @@ import re
 
 # Separate the name and value for a template parameter
 _PARAM_RE = re.compile(ur'\s*(?P<name>[^\s=]+)\s*=\s*(?P<value>.*)', re.DOTALL)
+# Find the colour and name of a rarity
+_RARITY_RE = re.compile(ur'\*.*color:(?P<colour>[^"]*)">(?P<rarity>[^<]*)')
 
 def escape_str(string):
     """
@@ -125,6 +127,16 @@ def areas_in_order(jobs_page_text):
 
     return areas
 
+def rarities_in_order():
+    """
+    Return a list of rarities in descending in-game order.
+    """
+    rarities = []
+    pg = pywikibot.Page(pywikibot.Site(), u'Rarity')
+    for m in _RARITY_RE.finditer(pg.get()):
+        # Note that we assume that we find them in descending order
+        rarities.append(m.group('rarity'))
+    return rarities
 
 class Achievements:
     """
@@ -205,18 +217,56 @@ class Achievements:
         return retval
 
 
+# TODO Rename this class
 class ImageMap:
     """
-    Cache class for the image filenames for items, properties, and ingredients.
+    Cache class for the image filenames and rarities for items, properties, and ingredients.
     """
 
-    _IMG_RE = re.compile(ur'\|W*image\W*=\W*(?P<image>.*)')
+    _IMG_RE = re.compile(ur'\|\W*image\W*=\W*(?P<image>.*)')
+    # TODO This should match jpg as well as png files
     _IMG_2_RE = re.compile(ur'\[\[File:(?P<image>.*\.png)\|.*\]\]')
+    _RARITY_RE = re.compile(ur'\|\W*rarity\W*=\W*(?P<rarity>.*)')
 
     def __init__(self):
         """Instantiate the class."""
         # Populate image_map
-        self.mapping = {}
+        self.image_mapping = {}
+        self.rarity_mapping = {}
+
+    def _read_page(self, name):
+        """
+        Read the specified page and populate the caches.
+        """
+        pg = pywikibot.Page(pywikibot.Site(), name)
+        # Retrieve the text of the specified page
+        m = None
+        try:
+            text = pg.get(get_redirect=True)
+        except pywikibot.NoPage:
+            text = ''
+        # Extract the image parameter
+        m = self._IMG_RE.search(text)
+        if m is None:
+            m = self._IMG_2_RE.search(text)
+        if m is None:
+            print("Unable to find image for %s" % name)
+            self.image_mapping[name] = None
+        else:
+            self.image_mapping[name] = m.group('image')
+        # Extract the rarity parameter
+        m = self._RARITY_RE.search(text)
+        if m is None:
+            self.rarity_mapping[name] = None
+            # TODO Lt rarity is specified in the template used
+            for template, params in pg.templatesWithParams():
+                t = template.title(withNamespace=False)
+                if t.startswith(u'Lieutenant '):
+                    self.rarity_mapping[name] = t.split()[1]
+            if self.rarity_mapping[name] == None:
+                print("Unable to find rarity for %s" % name)
+        else:
+            self.rarity_mapping[name] = m.group('rarity')
 
     def image_for(self, name):
         """
@@ -224,24 +274,19 @@ class ImageMap:
 
         name -- name of the item, property, or ingredient.
         """
-        if name not in self.mapping:
-            pg = pywikibot.Page(pywikibot.Site(), name)
-            # Retrieve the text of the specified page
-            m = None
-            try:
-                text = pg.get(get_redirect=True)
-            except pywikibot.NoPage:
-                pass
-            else:
-                # Extract the image parameter
-                m = self._IMG_RE.search(text)
-                if m is None:
-                    m = self._IMG_2_RE.search(text)
-            if m is None:
-                print("Unable to find image for %s" % name)
-                return None
-            self.mapping[name] = m.group('image')
-        return self.mapping[name]
+        if name not in self.image_mapping:
+            self._read_page(name)
+        return self.image_mapping[name]
+
+    def rarity_for(self, name):
+        """
+        Return the rarity for the specified item, property, or ingredient.
+
+        name -- name of the item, property, or ingredient.
+        """
+        if name not in self.rarity_mapping:
+            self._read_page(name)
+        return self.rarity_mapping[name]
 
 
 class CategoryRefs:

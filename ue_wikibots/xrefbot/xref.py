@@ -63,8 +63,9 @@ NO_STACK_RE = re.compile(ur'\[no \[\[stack\]\]\]')
 NO_STACK_RE_2 = re.compile(ur'{{No Stack}}')
 # Separators are with, for, and to
 SEP_RE = re.compile(ur' with | for | to ')
-# Some follow a completely patterns
-ALL_RE = re.compile(ur'[Aa]ll (.*) (count as .*)')
+# Some follow completely different patterns
+# Note that here we deliberately avoid matching the powers of the four Medallions
+ALL_RE = re.compile(ur'[Aa]ll (.*) (count as \d.*)')
 WHEN_RE = re.compile(ur'(.*) when (.*)')
 
 # Cache to speed up _fix_lieutenant()

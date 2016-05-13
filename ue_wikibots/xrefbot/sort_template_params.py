@@ -52,7 +52,7 @@ def lt_sort_key(param):
         if root == u'item':
             # Sort all items after all levels
             num += 20
-        elif root == u'image':
+        elif root == u'image' or root == u'skin':
             # Sort skin images in with the un-numbered part
             return (0, param)
         return (num, LT_ROOT_ORDERING.index(root), m.group('leaf'))

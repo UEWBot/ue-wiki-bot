@@ -2476,7 +2476,7 @@ class XrefToolkit:
             # TODO May actually want Lab Four of a Kind or Lab Full House
             if u'|from=' in text:
                 text = text.replace(u'|from=',
-                                    u'|from=<br\\>\n*{{Lab|in_list=yes}}\n*',
+                                    u'|from=<br/>\n*{{Lab|in_list=yes}}\n*',
                                     1)
             else:
                 text = text.replace(u'|image=',

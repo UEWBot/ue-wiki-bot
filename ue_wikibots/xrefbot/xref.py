@@ -1906,11 +1906,15 @@ class XrefToolkit:
             # Don't call r.categories() for redirects
             elif r.isRedirectPage():
                 pass
-            # If it's linked to from an event page, assume it's an event reward
-            elif self._cat_in_categories(u'Events',
-                                         r.categories()) or self._cat_in_categories(u'Giveaways',
-                                                                                    r.categories()):
+            # If it's linked to from a giveaways page, assume it was given away
+            elif self._cat_in_categories(u'Giveaways', r.categories()):
                 source_set.add(r.title())
+            # If it's linked from an event page, check whether it's in a list
+            # All rewards are in lists, although the converse may not be true
+            elif self._cat_in_categories(u'Events', r.categories()):
+                m = re.search(u'\*.*%s' % name, r.get())
+                if m:
+                    source_set.add(r.title())
         # Check whether it's a daily achievement reward
         if ach.is_daily_reward(name):
             source_set.add(u'Achievements#Daily')

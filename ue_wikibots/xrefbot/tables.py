@@ -500,8 +500,9 @@ def secret_job_dates(areas):
             # Which area is this for ?
             for area in areas:
                 if area in split_text[i]:
-                    # Previous entry in the list is the date
-                    retval[area] = split_text[i-1]
+                    # Previous entry in the list is the date, unless we're at the start
+                    if i > 0:
+                        retval[area] = split_text[i-1]
                     break
     return retval
 

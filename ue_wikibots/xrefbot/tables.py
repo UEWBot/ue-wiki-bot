@@ -259,11 +259,13 @@ def summary_header(row_template):
         # Area column
         text += u'!span="col" | Area\n'
         # energy cost for 5 stars
-        text += u'!span="col" data-sort-type="number" | Energy to 5*\n'
-        # Number of stars obtained
-        text += u'!span="col" data-sort-type="number" | Stars\n'
-        # Energy per star
-        text += u'!span="col" data-sort-type="number" | E/star\n'
+        text += u'!span="col" data-sort-type="number" | [[Energy]] to 5[[Star (Job)|*]]\n'
+        # Number of skill points obtained
+        text += u'!span="col" data-sort-type="number" | [[Skill Point]]s\n'
+        # Energy per skill point
+        text += u'!span="col" data-sort-type="number" | Energy/Skill point\n'
+        # Is the row accurate ?
+        text += u'!span="col" | Underestimate\n'
     else:
         pywikibot.output("Unexpected row template %s" % row_template)
 
@@ -273,7 +275,11 @@ def summary_footer(row_template):
     """
     Return the rest of a summary table, after the last row of data.
     """
-    return u'|}\n[[Category:Summary Tables]]'
+    note = u''
+    if row_template == u'Area Row':
+        note = u'"Underestimate" is Yes if the total energy for one or more jobs is unknown\n'
+
+    return u'|}\n%s[[Category:Summary Tables]]' % note
 
 def cost_ratios():
     """
@@ -559,8 +565,8 @@ def page_to_areas_rows(page, template):
     if m:
         just_bronze = False
 
-    main = {'count': 0, 'energy': 0}
-    secrets = {'count': 0, 'energy': 0}
+    main = {'count': 0, 'energy': 0, 'complete': True}
+    secrets = {'count': 0, 'energy': 0, 'complete': True}
     # This will toggle to secrets when we get to the first secret job
     jobs = main
 
@@ -585,6 +591,7 @@ def page_to_areas_rows(page, template):
             else:
                 # This is actually "don't know"
                 total_energy = 0
+                jobs['complete'] = False
 
             jobs['count'] += 1
             jobs['energy'] += total_energy
@@ -597,10 +604,14 @@ def page_to_areas_rows(page, template):
         levels += [u'Silver', u'Gold']
     for level in levels:
         main_line = line % (template, name, level, main['count'], main['energy'])
+        if (level == levels[0]) and not main['complete']:
+            main_line = main_line.replace(u'}}', u'|missing_data=true}}')
         retval.append(main_line)
         # Add a secrets line if secret jobs are open
         if secrets['count'] > 0:
             secrets_line = line % (template, name, u'Secret %s' % level, secrets['count'], secrets['energy'])
+            if (level == levels[0]) and not secrets['complete']:
+                secrets_line = secrets_line.replace(u'}}', u'|missing_data=true}}')
             retval.append(secrets_line)
         # Next level costs twice the energy
         main['energy'] *= 2

@@ -58,6 +58,8 @@ JOB_TEMPLATES = re.compile(u'.*Job')
 LIEUTENANT_TEMPLATES = re.compile(u'Lieutenant\W(.*)')
 SECRET_COUNT_RE_1 = re.compile(ur'an additional (\w+) \[\[\w*#Secret')
 SECRET_COUNT_RE_2 = re.compile(ur'(\w+) additional \[\[\w*#Secret')
+SECRET_JOBS_RE = re.compile(ur'==\w*Secret Jobs')
+JOB_STARS_RE = re.compile(ur'Silver and gold .* were enabled')
 
 class Error(Exception):
     pass
@@ -124,7 +126,7 @@ def summary_header(row_template):
     Return a summary table page down to the first row of data.
 
     row_template -- Name of the template to be used for each data row.
-                    One of 'Item Row', 'Property Row', 'Job Row',
+                    One of 'Item Row', 'Property Row', 'Job Row', 'Area Row',
                     'Challenge Job Row', 'Secret Job Row', or 'Lieutenant Row'.
     """
     # Warn editors that the page was generated
@@ -253,6 +255,15 @@ def summary_header(row_template):
         text += u'!span="col" | Job count\n'
         # Date added
         text += u'!span="col" | Date added\n'
+    elif row_template == u'Area Row':
+        # Area column
+        text += u'!span="col" | Area\n'
+        # energy cost for 5 stars
+        text += u'!span="col" data-sort-type="number" | Energy to 5*\n'
+        # Number of stars obtained
+        text += u'!span="col" data-sort-type="number" | Stars\n'
+        # Energy per star
+        text += u'!span="col" data-sort-type="number" | E/star\n'
     else:
         pywikibot.output("Unexpected row template %s" % row_template)
 
@@ -527,6 +538,74 @@ def page_to_secret_row(page, template, dates):
         release_date = u'Not yet released'
     return u'{{%s|area=%s|count=%s|date=%s}}' % (template, name,
                                                  count, release_date)
+
+def page_to_areas_rows(page, template):
+    """
+    Create one or more areas rows from an area page.
+    """
+    name = page.title()
+    text = page.get()
+
+    # Find where secret jobs appear on the page
+    m = SECRET_JOBS_RE.search(text)
+    if m:
+        secrets_start = m.start()
+    else:
+        secrets_start = len(text)
+
+    # Determine whether silver and gold stars are enabled or not
+    just_bronze = True
+    m = JOB_STARS_RE.search(text)
+    if m:
+        just_bronze = False
+
+    main = {'count': 0, 'energy': 0}
+    secrets = {'count': 0, 'energy': 0}
+    # This will toggle to secrets when we get to the first secret job
+    jobs = main
+
+    templatesWithParams = page.templatesWithParams()
+    for (t, params) in templatesWithParams:
+        template_name = t.title(withNamespace=False)
+        # We're only interested in Jobs
+        if template_name == u'Job':
+            if not jobs == secrets:
+                # Check whether this is the first secret job
+                job_name = utils.param_from_params(params,
+                                                   u'name')
+                m = re.search(ur'name=%s' % job_name, text)
+                if m:
+                    if m.start() > secrets_start:
+                        jobs = secrets
+
+            p = utils.param_from_params(params,
+                                        u'total_energy')
+            if p:
+                total_energy = int(p)
+            else:
+                # This is actually "don't know"
+                total_energy = 0
+
+            jobs['count'] += 1
+            jobs['energy'] += total_energy
+
+    # Now we need to return a list with 1, 2, 3, or 6 entries
+    line = u'{{%s|name=[[%s]] %s|jobs=%d|jobs_energy=%d}}'
+    retval = []
+    levels = [u'Bronze']
+    if not just_bronze:
+        levels += [u'Silver', u'Gold']
+    for level in levels:
+        main_line = line % (template, name, level, main['count'], main['energy'])
+        retval.append(main_line)
+        # Add a secrets line if secret jobs are open
+        if secrets['count'] > 0:
+            secrets_line = line % (template, name, u'Secret %s' % level, secrets['count'], secrets['energy'])
+            retval.append(secrets_line)
+        # Next level costs twice the energy
+        main['energy'] *= 2
+        secrets['energy'] *= 2
+    return retval
 
 def swap_lts(row, idx1, idx2):
     """
@@ -932,17 +1011,19 @@ class XrefBot:
         Create or update the job summary pages.
 
         Read every page in the Areas category and create/update pages
-        Jobs Table, Challenge Jobs Table, Secret Jobs Table, and
+        Jobs Table, Challenge Jobs Table, Secret Jobs Table, Areas Table, and
         Area Gear Table accordingly.
         """
         # Templates to use
         job_row_template = u'Job Row'
         dice_row_template = u'Challenge Job Row'
         secret_row_template = u'Secret Job Row'
+        area_row_template = u'Area Row'
 
         job_rows = []
         dice_rows = []
         secret_rows = []
+        areas_rows = []
         gear_dict = {}
 
         cat = pywikibot.Category(pywikibot.Site(), u'Areas')
@@ -957,24 +1038,29 @@ class XrefBot:
             secret_rows.append(page_to_secret_row(page,
                                                   secret_row_template,
                                                   secret_dates))
+            areas_rows += page_to_areas_rows(page, area_row_template)
             # Add an entry to gear_dict for this page
             gear_dict.update({page: gear_needed(page)})
 
         # Start the new page text
         new_job_text = summary_header(job_row_template)
         new_dice_text = summary_header(dice_row_template)
+        new_areas_text = summary_header(area_row_template)
         new_secret_text = summary_header(secret_row_template)
 
         for row in job_rows:
             new_job_text += row + u'\n'
         for row in dice_rows:
             new_dice_text += row + u'\n'
+        for row in areas_rows:
+            new_areas_text += row + u'\n'
         for row in secret_rows:
             new_secret_text += row + u'\n'
 
         # Finish with a footer
         new_job_text += summary_footer(job_row_template)
         new_dice_text += summary_footer(dice_row_template)
+        new_areas_text += summary_footer(area_row_template)
         new_secret_text += summary_footer(secret_row_template)
 
         # Generate the area gear page from the dict
@@ -993,6 +1079,10 @@ class XrefBot:
             secret_job_page = pywikibot.Page(pywikibot.Site(),
                                              u'Secret Jobs Table')
             self._update_or_create_page(secret_job_page, new_secret_text);
+        if u'Areas Table' in self.pages:
+            areas_page = pywikibot.Page(pywikibot.Site(),
+                                        u'Areas Table')
+            self._update_or_create_page(areas_page, new_areas_text);
         if u'Area Gear Table' in self.pages:
             area_gear_page = pywikibot.Page(pywikibot.Site(),
                                             u'Area Gear Table')
@@ -1105,6 +1195,7 @@ class XrefBot:
         if ((u'Jobs Table' in self.pages) or
             (u'Challenge Jobs Table' in self.pages) or
             (u'Secret Jobs Table' in self.pages) or
+            (u'Areas Table' in self.pages) or
             (u'Area Gear Table' in self.pages)):
             self.update_jobs_tables()
         if u'Lieutenants Faction Rarity Table' in self.pages:
@@ -1126,6 +1217,7 @@ if __name__ == "__main__":
                  '--properties' : u'Properties Table',
                  '--jobs'       : u'Jobs Table',
                  '--dice_jobs'  : u'Challenge Jobs Table',
+                 '--areas'      : u'Areas Table',
                  '--area_gear'  : u'Area Gear Table',
                  '--bosses'     : u'Bosses Table',
                  '--secret'     : u'Secret Jobs Table',

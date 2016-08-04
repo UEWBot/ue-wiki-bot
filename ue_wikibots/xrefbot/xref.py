@@ -2518,9 +2518,11 @@ class XrefToolkit:
         if total != num_parts:
             # Fix num_parts, if present, else flag missing ingredient(s)
             # TODO This assumes no spaces in the parameter setting
-            # TODO Add num_parts if not already present
             text = text.replace(u'num_parts=%d' % num_parts,
                                 u'num_parts=%d' % total)
+            if u'num_parts' not in text:
+                # Add num_parts if not already present
+                text = text.replace(u'Lab', u'Lab|num_parts=%d' % total)
 
         # Check the Lab parameters against the Recipe parameters
         lab_keys = set(lab_dict.keys())

@@ -36,9 +36,14 @@ Generate the following tables:
 - Bosses Table
 """
 
+from __future__ import absolute_import
+from __future__ import print_function
 import sys
 import os
 import operator
+import six
+from six.moves import map
+from six.moves import range
 sys.path.append(os.environ['HOME'] + '/ue/ue_wikibots/core')
 
 import pywikibot
@@ -536,7 +541,7 @@ def page_to_secret_row(page, template, dates):
     if m:
         count = m.group(1)
     else:
-        print "Unable to find secret job count for %s" % name
+        print("Unable to find secret job count for %s" % name)
         count = u'Unknown'
     try:
         release_date = dates[name]
@@ -690,7 +695,7 @@ def gear_needed(page):
             g = d.get(u'gear', u'None')
             if g != u'None':
                 # There shouldn't be any of these
-                print "Found %s in gear parameter in %s" % (g, page.title())
+                print("Found %s in gear parameter in %s" % (g, page.title()))
             for i in range(1,5):
                 key = u'gear_%d' % i
                 try:
@@ -1003,7 +1008,7 @@ class XrefBot:
         """
         text = u'<!-- This page was generated/modified by software -->\n'
         text += u'This page lists the gear required to complete all the jobs in each area (including secret jobs). Details are pulled from the individual [[:Category:Areas|Area]] pages, so any errors or omissions there will be reflected here.\n'
-        for area in sorted(gear_dict.keys(), key=self._area_key):
+        for area in sorted(list(gear_dict.keys()), key=self._area_key):
             text += u'==[[%s]]==\n' % area.title()
             the_gear = gear_dict[area]
             for gear in sorted(the_gear.keys()):
@@ -1163,7 +1168,7 @@ class XrefBot:
                                                    u'Job Bosses'])}
 
         # Go through cat_to_templ, and create/update summary page for each one
-        for name, (template, cat_list) in cat_to_templ.iteritems():
+        for name, (template, cat_list) in six.iteritems(cat_to_templ):
             # The current summary table page for this category
             page_name = u'%s Table' % name
             # Skip pages the user isn't interested in
@@ -1235,7 +1240,7 @@ if __name__ == "__main__":
                  '--lt_rarities': u'Lieutenants Faction Rarity Table'}
 
     parser = argparse.ArgumentParser(description='Create/update summary pages.', epilog='With no options, create/update all summary pages.')
-    for a in sorted(arguments.iterkeys()):
+    for a in sorted(six.iterkeys(arguments)):
         s = arguments[a]
         parser.add_argument(a, help="Create/update the %s page" % s, dest='pages', action='append_const', const=s)
     args = parser.parse_args()
@@ -1243,7 +1248,7 @@ if __name__ == "__main__":
     # Default to "all" if no specific pages listed
     pages = args.pages
     if not pages:
-        pages = arguments.values()
+        pages = list(arguments.values())
     try:
         main(pages)
     finally:

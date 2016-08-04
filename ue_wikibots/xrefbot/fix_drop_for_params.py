@@ -22,6 +22,8 @@ so we need to change the Drop template to not add the '[[...]]'
 to its for parameters, and must instead get the users to supply it.
 """
 
+from __future__ import absolute_import
+from __future__ import print_function
 import sys
 import os
 import operator
@@ -66,8 +68,8 @@ class DropBot:
             except (pywikibot.NoPage, pywikibot.InvalidTitle):
                 # Don't create links to most non-existent pages
                 if for_param not in bad_pages_to_link_to:
-                    print("Not linking to non-existent or invalid page '%s'\n" %
-                              for_param)
+                    print(("Not linking to non-existent or invalid page '%s'\n" %
+                              for_param))
                     return text
             except pywikibot.IsRedirectPage:
                 pass
@@ -80,8 +82,8 @@ class DropBot:
                                     u'|for=[[%s]]' % for_param,
                                     1)
                 if text == old_text:
-                    print("Failed to replace '%s' in:\n%s\n" %
-                              (for_param, params))
+                    print(("Failed to replace '%s' in:\n%s\n" %
+                              (for_param, params)))
         return text
 
     def treat(self, page):

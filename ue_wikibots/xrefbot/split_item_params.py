@@ -18,9 +18,11 @@
 Script to split the item parameter on Lieutenants pages on Underworld Empire Wiki
 """
 
+from __future__ import absolute_import
 import sys
 import os
 import operator
+from six.moves import range
 sys.path.append(os.environ['HOME'] + '/ue/ue_wikibots/core')
 
 import pywikibot

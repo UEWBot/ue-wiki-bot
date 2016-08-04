@@ -21,9 +21,13 @@ Arguments:
 &params;
 """
 
+from __future__ import absolute_import
+from __future__ import print_function
 import sys
 import os
 import operator
+import six
+from six.moves import range
 sys.path.append(os.environ['HOME'] + '/ue/ue_wikibots/core')
 from itertools import chain
 
@@ -237,10 +241,10 @@ class XrefToolkit:
                 changes = True
                 break
         if changes:
-            print
+            print()
             pywikibot.output(text)
         if self.debug:
-            print
+            print()
             pywikibot.showDiff(oldText, text)
         return text
 
@@ -436,7 +440,7 @@ class XrefToolkit:
 
         Return the new page text.
         """
-        missed_params = missing_params(params, param_cat_map.keys())
+        missed_params = missing_params(params, list(param_cat_map.keys()))
         return self._fix_needs_cats(text,
                                     missed_params,
                                     param_cat_map)
@@ -553,7 +557,7 @@ class XrefToolkit:
         for template, params in templatesWithParams:
             if u'Recipe' not in template:
                 continue
-            missed_params |= missing_params(params, recipe_param_map.keys())
+            missed_params |= missing_params(params, list(recipe_param_map.keys()))
             # Find this item on the page
             param_dict = utils.params_to_dict(params)
             name = param_dict[u'name']
@@ -561,7 +565,7 @@ class XrefToolkit:
             pywikibot.output("Checking %s" % name)
             recipe_start = text.find(name)
             if is_old:
-                missed_params |= missing_params(params, old_recipe_map.keys())
+                missed_params |= missing_params(params, list(old_recipe_map.keys()))
             # TODO Cross-reference against item page
             # Check images for ingredients
             n = 0
@@ -675,7 +679,7 @@ class XrefToolkit:
                     old_start = start
                 except KeyError:
                     pass
-                missed_params |= missing_params(params, skill_param_map.keys())
+                missed_params |= missing_params(params, list(skill_param_map.keys()))
         # Ensure the Needs categories are correct
         text = self._fix_needs_cats(text,
                                     missed_params,
@@ -817,7 +821,7 @@ class XrefToolkit:
                 if param_dict[u'image'] != image:
                     # We'll fix the image when we re-generate the text for the page
                     if image:
-                        print "Wrong image for %s - %s rather than %s.\n" % (name, param_dict[u'image'], image)
+                        print("Wrong image for %s - %s rather than %s.\n" % (name, param_dict[u'image'], image))
                     else:
                         # TODO If we don't know the right image, let's trust the one that's currently there
                         pass
@@ -836,7 +840,7 @@ class XrefToolkit:
                     # TODO Make allowance for the expected special cases here
                     # For those cases, we want to append some additional text
                     if r:
-                        print "Wrong rarity for %s - %s rather than %s." % (name, rarity, r)
+                        print("Wrong rarity for %s - %s rather than %s." % (name, rarity, r))
 
         # Re-create the expected layout of the page.
         # We should have a section for each rarity,
@@ -928,12 +932,12 @@ class XrefToolkit:
         for template, params in templatesWithParams:
             if template == u'Job':
                 mp = missing_params(params,
-                                    common_param_map.keys() +
-                                        job_param_map.keys())
+                                    list(common_param_map.keys()) +
+                                        list(job_param_map.keys()))
                 # xp_min and xp_max will do instead of xp
                 if u'xp' in mp:
                     mp.remove(u'xp')
-                    mp |= missing_params(params, xp_pair_param_map.keys())
+                    mp |= missing_params(params, list(xp_pair_param_map.keys()))
                 param_dict = utils.params_to_dict(params)
                 # Check gear
                 got_gear = False
@@ -954,16 +958,16 @@ class XrefToolkit:
                             img = param_dict[img_param]
                             if img != image:
                                 # TODO Fix the image
-                                print "Wrong image for %s - %s rather than %s.\n" % (param_dict[root], img, image);
+                                print("Wrong image for %s - %s rather than %s.\n" % (param_dict[root], img, image));
                         except KeyError:
                             # TODO Add the image
-                            print "Missing %s=%s" % (img_param, image)
+                            print("Missing %s=%s" % (img_param, image))
                 missed_params |= mp
             elif template == u'Challenge Job':
                 mp = missing_params(params,
-                                    common_param_map.keys() +
-                                        xp_pair_param_map.keys() +
-                                        challenge_param_map.keys())
+                                    list(common_param_map.keys()) +
+                                        list(xp_pair_param_map.keys()) +
+                                        list(challenge_param_map.keys()))
                 # Look up any missing Lt rarities
                 for i in range(1,5):
                     root = u'lt_%d' % i
@@ -979,9 +983,9 @@ class XrefToolkit:
         # Ensure the Needs categories are correct
         text = self._fix_needs_cats(text,
                                     missed_params,
-                                    dict(common_param_map.items() +
-                                             job_param_map.items() +
-                                             challenge_param_map.items()))
+                                    dict(list(common_param_map.items()) +
+                                             list(job_param_map.items()) +
+                                             list(challenge_param_map.items())))
 
         return text
 
@@ -1277,7 +1281,7 @@ class XrefToolkit:
             cost = int(m.group('cost'))
             costs[level] = cost
         base_cost = costs[1]
-        for level,cost in costs.iteritems():
+        for level,cost in six.iteritems(costs):
             expected_cost = base_cost * ratios[level]
             if cost != expected_cost:
                 pywikibot.output("Level %d cost of %d != expected %d" % (level,
@@ -1426,7 +1430,7 @@ class XrefToolkit:
                         powerParam = param_dict[u'power']
                         imageParam = param_dict[u'image']
                     except KeyError:
-                        print "KeyError - _items_in_refs(). template = %s, param_dict = %s" % (template, param_dict)
+                        print("KeyError - _items_in_refs(). template = %s, param_dict = %s" % (template, param_dict))
                         continue
                     else:
                         refItems[r.title()] = (powerParam,
@@ -1530,7 +1534,7 @@ class XrefToolkit:
         # Check for any items that have a power that affects this Lt
         refItems2 = self._items_in_refs(refs)
         # Does the item have a power that affects this Lt ?
-        x = {k: v for k, v in refItems2.iteritems() if v[0] is not None and name in v[0]}
+        x = {k: v for k, v in six.iteritems(refItems2) if v[0] is not None and name in v[0]}
         refItems.update(x)
 
         # Check for items that affect all Lts of this rarity
@@ -1549,7 +1553,7 @@ class XrefToolkit:
             faction = None
 
         # Filter out any items that don't affect this Lt
-        refItems = {k: v for k, v in refItems.iteritems() if self._affects_lt(name,
+        refItems = {k: v for k, v in six.iteritems(refItems) if self._affects_lt(name,
                                                                               rarity,
                                                                               faction,
                                                                               self._split_power(v[0])[1])}
@@ -1887,7 +1891,7 @@ class XrefToolkit:
                         source_set.add(r.title())
                 elif template == u'Mystery Gift Item':
                     gift_params = utils.params_to_dict(params)
-                    if name in gift_params.values():
+                    if name in list(gift_params.values()):
                         source_set.add(r.title())
                 elif template == u'Execution Method':
                     if name in utils.param_from_params(params, u'bonus'):

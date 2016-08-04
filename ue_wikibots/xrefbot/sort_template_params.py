@@ -18,6 +18,7 @@
 Script to sort a subset of template parameters on Underworld Empire Wiki
 """
 
+from __future__ import absolute_import
 import sys
 import os
 import operator

@@ -23,9 +23,12 @@ boss name
 name of the area it comes after
 """
 
+from __future__ import absolute_import
+from __future__ import print_function
 import sys
 import os
 import operator
+from six.moves import range
 sys.path.append(os.environ['HOME'] + '/ue/ue_wikibots/core')
 
 import argparse
@@ -196,8 +199,8 @@ class AreaBot:
         #      this wrongly updates the number of the last existing area
         for i in range(self.new_number, len(self.areas_list) + 1):
             name = self.areas_list[i - 1]
-            print u'[[%s|Area %d]]' % (name, i)
-            print u'[[%s|Area %d]]' % (name, i + 1)
+            print(u'[[%s|Area %d]]' % (name, i))
+            print(u'[[%s|Area %d]]' % (name, i + 1))
             text = text.replace(u'[[%s|Area %d]]' % (name, i),
                                 u'[[%s|Area %d]]' % (name, i + 1))
         # We also don't add any achievements for the new boss

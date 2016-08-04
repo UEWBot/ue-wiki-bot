@@ -14,6 +14,8 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #! /usr/bin/python
 
+from __future__ import absolute_import
+from __future__ import print_function
 import sys
 import os
 import operator
@@ -40,4 +42,4 @@ for d in c.articles():
                         fact = param_from_params(p1, u'faction')
                         job = param_from_params(p, u'name')
                         if f != fact and f != u'None':
-                            print "Job %s in area %s has lt %s and faction %s. Lt has faction %s" % (job, d.title(), lt, f, fact)
+                            print("Job %s in area %s has lt %s and faction %s. Lt has faction %s" % (job, d.title(), lt, f, fact))

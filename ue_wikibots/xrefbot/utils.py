@@ -18,6 +18,8 @@
 Utility functions and classes for UEW wikibots.
 """
 
+from __future__ import absolute_import
+from __future__ import print_function
 import sys
 import os
 import operator
@@ -258,7 +260,7 @@ class ImageMap:
             # No image parameter - look for an image file link
             m = self._IMG_FILE_RE.search(text)
         if m is None:
-            print("Unable to find image for %s" % name)
+            print(("Unable to find image for %s" % name))
             self.image_mapping[name] = None
         else:
             self.image_mapping[name] = m.group('image')
@@ -274,7 +276,7 @@ class ImageMap:
             # Lt skin pages don't specify the rarity
             # TODO Should be possible to get it from the Lt itself
             if self.rarity_mapping[name] == None:
-                print("Unable to find rarity for %s" % name)
+                print(("Unable to find rarity for %s" % name))
         else:
             self.rarity_mapping[name] = m.group('rarity')
 
@@ -355,7 +357,7 @@ class RecipeCache:
     def recipes(self):
         """Return a list of items that have recipes."""
         self._init_if_needed()
-        return self._recipes.keys()
+        return list(self._recipes.keys())
 
     def recipe_for(self, item):
         """

@@ -14,6 +14,8 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #! /usr/bin/python
 
+from __future__ import absolute_import
+from __future__ import print_function
 import sys
 import os
 import operator
@@ -32,4 +34,4 @@ for d in c.articles():
         if t_name == u'Special Item':
             power = param_from_params(p, u'power')
             if power is not None:
-                print "%s: %s" % (d.title(), power)
+                print("%s: %s" % (d.title(), power))

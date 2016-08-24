@@ -1430,7 +1430,10 @@ class XrefToolkit:
                         powerParam = param_dict[u'power']
                         imageParam = param_dict[u'image']
                     except KeyError:
-                        print("KeyError - _items_in_refs(). template = %s, param_dict = %s" % (template, param_dict))
+                        # If it doesn't have a power, we're not interested
+                        # If it is just missing an image, let's report that to the user
+                        if u'power' in param_dict:
+                            print('Missing image in %s' % r.title())
                         continue
                     else:
                         refItems[r.title()] = (powerParam,

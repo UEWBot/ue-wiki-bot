@@ -1165,7 +1165,8 @@ class XrefBot:
                         u'Insignias' : (u'Insignia Row', []),
                         u'Bosses' : (u'Boss Row', [u'Tech Lab Bosses',
                                                    u'Legend Bosses',
-                                                   u'Job Bosses'])}
+                                                   u'Job Bosses',
+                                                   u'Bosses'])} # For War Hounds
 
         # Go through cat_to_templ, and create/update summary page for each one
         for name, (template, cat_list) in six.iteritems(cat_to_templ):

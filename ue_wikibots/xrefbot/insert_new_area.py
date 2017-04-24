@@ -171,12 +171,12 @@ class AreaBot:
                                                                       self.area_name)
         page = pywikibot.Page(pywikibot.Site(), u'Bosses')
         text = old_text = page.get()
-        intro = u'There are currently %s bosses in the game, %s'
-        bosses = parse.search(intro % (u'{:d}', u''), text).fixed[0]
+        intro = u'There are currently %s bosses in the game'
+        bosses = parse.search(intro % (u'{:d}'), text).fixed[0]
         line_before = u' in the [[%s]] area' % self.after
-        intro = intro % (u'%d', u'%d')
-        text = text.replace(intro % (bosses, areas),
-                            intro % ((bosses + 1, areas + 1)))
+        intro = intro % (u'%d')
+        text = text.replace(intro % (bosses),
+                            intro % ((bosses + 1)))
         text = text.replace(line_before,
                             line_before + u'\n' + new_line)
         self._update_page(page, old_text, text)

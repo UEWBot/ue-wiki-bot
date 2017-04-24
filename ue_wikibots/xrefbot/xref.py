@@ -818,7 +818,7 @@ class XrefToolkit:
                 param_dict = utils.params_to_dict(params)
                 name = param_dict[u'name']
                 image = image_map.image_for(name)
-                if param_dict[u'image'] != image:
+                if not drop_params_match(param_dict[u'image'], image):
                     # We'll fix the image when we re-generate the text for the page
                     if image:
                         print("Wrong image for %s - %s rather than %s.\n" % (name, param_dict[u'image'], image))
@@ -956,7 +956,7 @@ class XrefToolkit:
                         image = image_map.image_for(param_dict[root])
                         try:
                             img = param_dict[img_param]
-                            if img != image:
+                            if not drop_params_match(img, image):
                                 # TODO Fix the image
                                 print("Wrong image for %s - %s rather than %s.\n" % (param_dict[root], img, image));
                         except KeyError:

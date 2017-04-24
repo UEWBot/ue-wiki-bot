@@ -154,8 +154,8 @@ def summary_header(row_template):
         text += u'!span="col" | Rarity\n'
         # Three summary stats columns
         text += u'!span="col" data-sort-type="number" | Atk+Def\n'
-        text += u'!span="col" data-sort-type="number" | Atk+70% of Def\n'
-        text += u'!span="col" data-sort-type="number" | 70% of Atk + Def\n'
+        text += u'!span="col" data-sort-type="number" | Atk+75% of Def\n'
+        text += u'!span="col" data-sort-type="number" | 75% of Atk + Def\n'
     elif row_template == u'Property Row':
         # Number column
         text += u'!span="col" data-sort-type="number" | Level\n'

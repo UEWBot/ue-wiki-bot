@@ -273,9 +273,9 @@ class ImageMap:
                 t = template.title(withNamespace=False)
                 if t.startswith(u'Lieutenant '):
                     self.rarity_mapping[name] = t.split()[1]
-            # Lt skin pages don't specify the rarity
-            # TODO Should be possible to get it from the Lt itself
+            # Lt skin pages specify the rarity as a template parameter
             if self.rarity_mapping[name] == None:
+                # If we end up here, the page probably isn't using the template provided
                 print(("Unable to find rarity for %s" % name))
         else:
             self.rarity_mapping[name] = m.group('rarity')

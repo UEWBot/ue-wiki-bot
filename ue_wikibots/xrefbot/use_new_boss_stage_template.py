@@ -52,7 +52,7 @@ class DropBot:
 
         page -- Page to check.
         """
-        MINION_RE = ur'\* ?(?P<name>.*) \(\{\{Class Img\|(?P<class>.*)\|\|20px\}\}\)'
+        MINION_RE = ur'\* ?(?P<name>.*) \(\{\{Class Img\|(?P<class>.*)\|\|?20px\}\}\)'
         try:
             # Show the title of the page we're working on.
             # Highlight the title in purple.

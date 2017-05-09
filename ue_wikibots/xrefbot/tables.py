@@ -723,31 +723,27 @@ def boss_page_to_row(page, row_template):
                     Must be 'Boss Row'.
     """
     POINTS_RE = re.compile(ur'#\s*({{formatnum:)?\s*(?P<points>[\d,. ]*)(}})?')
+    threshold_param_map = {u'1 Epic:': 1,
+                           u'2 Epics:': 2,
+                           u'3 Epics:': 3}
     name = page.title()
     text = page.get()
-    # Extract the epic thresholds section from the page text
+
     (start, end) = utils.find_specific_section(text, u'{{Epic}} Thresholds')
     if start == -1:
         pywikibot.output("Skipping %s as it has no Epic Thresholds section" % name)
         raise IrrelevantRowError
-    section = text[start:end]
-    # Extract the actual thresholds
+
+    # Extract the epic thresholds section from the page text
     thresholds = {}
-    for param in range(1, 1+section.count(u'#')):
-        i = section.index(u'#')
-        m = POINTS_RE.search(section)
-        # Skip entries without a value
-        if m and m.start() == i:
-            # Clean the value to a raw number
-            val = m.group(u'points')
-            val = val.rstrip()
-            val = val.replace(u',', u'')
-            val = val.replace(u'.', u'')
-            val = val.replace(u' ', u'')
-            if len(val):
-                thresholds[param] = val
-            # Remove (some of) this entry from the start
-            section = section[i+1:]
+    templatesWithParams = page.templatesWithParams()
+    for (template, params) in templatesWithParams:
+        template_name = template.title(withNamespace=False)
+        if template_name == u'BossEpicThresholds':
+            d = utils.params_to_dict(params)
+            for k,v in d.iteritems():
+                thresholds[threshold_param_map[k]] = v
+
     text = u'{{%s|name=%s' % (row_template, name)
     for i in sorted(thresholds.keys()):
         text += u'|epic_%d=%s' % (i, thresholds[i])

@@ -29,7 +29,7 @@ import pywikibot
 import re
 
 # Separate the name and value for a template parameter
-_PARAM_RE = re.compile(ur'\s*(?P<name>[^\s=]+)\s*=\s*(?P<value>.*)', re.DOTALL)
+_PARAM_RE = re.compile(ur'\s*(?P<name>[^=]+)\s*=\s*(?P<value>.*)', re.DOTALL)
 # Find the colour and name of a rarity
 _RARITY_RE = re.compile(ur'\*.*color:(?P<colour>[^"]*)">(?P<rarity>[^<]*)')
 

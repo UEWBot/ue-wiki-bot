@@ -467,7 +467,7 @@ class XrefToolkit:
         for m in iterator:
             hdr_lvl = len(m.group(1))
             headers.append({'level':hdr_lvl,
-                            'title':m.group(u'title'),
+                            'title':m.group(u'title').strip(),
                             'from':m.start(),
                             'to':m.end()})
 
@@ -1149,6 +1149,10 @@ class XrefToolkit:
         # Check each drop
         for (template, params) in templatesWithParams:
             if template == u'Drop':
+                print("*** %s still uses 'Drop' template rather than 'BossDrop'" % name)
+                drop_params = utils.params_to_dict(params)
+                text = self._check_item_params(text, name, drop_params)
+            elif template == u'BossDrop':
                 drop_params = utils.params_to_dict(params)
                 text = self._check_item_params(text, name, drop_params)
 
@@ -1163,10 +1167,12 @@ class XrefToolkit:
         # Check Needs categories
         cat = u'Needs Completion Dialogue'
         if u'Job Bosses' in the_cats:
-            text = self._check_needs_section(text,
-                                             categories,
-                                             u'Completion Dialogue',
-                                             cat)
+            # Not all bosses in this category have a completion dialogue
+            pass
+            #text = self._check_needs_section(text,
+            #                                 categories,
+            #                                 u'Completion Dialogue',
+            #                                 cat)
         else:
             #Non-Job bosses should never be in this category
             text = self._remove_category(text, cat)

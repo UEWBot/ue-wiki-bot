@@ -284,6 +284,10 @@ class XrefToolkit:
                                     text,
                                     templatesWithParams,
                                     refs)
+        text = self._fix_skin(titleWithoutNamespace,
+                              text,
+                              templatesWithParams,
+                              refs)
         text = self._fix_property(titleWithoutNamespace,
                                   text,
                                   templatesWithParams)
@@ -369,6 +373,7 @@ class XrefToolkit:
                                u'Street Lieutenants',
                                u'The Cartel Lieutenants',
                                u'The Mafia Lieutenants',
+                               u'Skins',
                                u'Insignias']
 
         if template != None:
@@ -1662,6 +1667,55 @@ class XrefToolkit:
         return self._fix_needs_categories(text,
                                           the_params,
                                           lt_param_map)
+
+    def _fix_skin(self, name, text, templatesWithParams, refs):
+        """
+        Fix a Lieutenant Skin page.
+
+        name -- name of the Skin (page title).
+        text -- current page text.
+        templatesWithParams -- list of templates used and corresponding parameters.
+        refs -- list of pages that link to the page.
+
+        Return updated text.
+
+        If the page uses the 'Skin' template:
+        Ensure that __NOWYSIWYG__ is present.
+        Check that the page doesn't explictly list any categories that should be
+        assigned by the template.
+        Check that all parameters are present, or that tha page is in the 'Needs Information' category.
+        """
+        # Does the page use the skin template ?
+        the_params = None
+        for template,params in templatesWithParams:
+            if template == u'Skin':
+                the_template = template
+                the_params = params
+            elif template == u'Skinned Lieutenant':
+                print("*** %s page uses old 'Skinned Lieutenant' template" % name)
+
+        # Drop out early if not a skin page
+        # TODO Is there a better test ?
+        if the_params is None:
+            return text
+
+        # __NOWYSIWYG__
+        text = self._prepend_NOWYSIWYG_if_needed(text)
+
+        # Check for explicit categories that should be implicit
+        text = self._remove_implicit_categories(text)
+
+        # Check mandatory parameters
+        skin_param_map = {u'lt': u'Needs Information',
+                          u'skinned_lt': u'Needs Information',
+                          u'unlock': u'Needs Information',
+                          u'image': u'Needs Improvement'} #u'Needs Image'}
+
+        text = self._fix_needs_categories(text,
+                                          params,
+                                          skin_param_map)
+
+        return text
 
     def _fix_lieutenant(self,
                         name,

@@ -80,6 +80,20 @@ def params_to_dict(params):
             result[m.group('name')] = m.group('value')
     return result
 
+def param_dict_to_str(param_dict, sort_key=None):
+    """
+    Return the dict as a string suitable for specifying template parameters.
+
+    param_dict -- dict of parameter values, keyed by parameter name
+    sort_key -- function of one argument that is used to extract a comparison key from each dict key
+
+    Return a string
+    """
+    retval = u''
+    for k in sorted(param_dict.iterkeys(), key=sort_key):
+        retval += u'|%s=%s\n' % (k, param_dict[k])
+    return retval
+
 def find_specific_section(text, section):
     """
     Find the specified section in text.

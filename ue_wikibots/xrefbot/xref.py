@@ -1374,7 +1374,7 @@ class XrefToolkit:
 
         name -- page title.
         text -- current text of the page.
-        the_params -- list of parameters to rhe lieutenant template.
+        the_params -- list of parameters to the lieutenant template.
         refs -- list of pages that link to the page to be fixed.
 
         Return the modified text parameter.
@@ -1412,7 +1412,10 @@ class XrefToolkit:
                         # Ensure that it's in Favor Point Lieutenants
                         text = self._append_category(text, c)
         for s in sources:
-            if s not in fromParam:
+            # TODO This block doesn't work properly if the are multiple missing sources
+            if not fromParam:
+                text = text.replace(u'|', u'|from=%s\n|' % s, 1)
+            elif s not in fromParam:
                 pywikibot.output("***Need to add %s" % s)
                 # First convert a single item to a list
                 if not u'\n' in fromParam:

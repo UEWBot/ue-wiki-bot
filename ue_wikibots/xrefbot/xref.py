@@ -1368,6 +1368,21 @@ class XrefToolkit:
 
     # The next few methods are only used on Lieutenant pages
 
+    def _lt_was_event_reward(self, lt_name, event_name):
+        """
+        Check whether a Lieutenant was a reward in the specified event.
+
+        lt_name -- title of the Lt page
+        event_name -- Title of the event page
+
+        Return True or False
+        """
+        page = pywikibot.Page(pywikibot.Site(), event_name)
+        # Lt rewards in events always specify how many of the Lt you get
+        if re.search(ur'\d\s*\[\[\s*%s' % lt_name, page.get()):
+            return True
+        return False
+
     def _fix_lt_sources(self, name, text, the_params, refs):
         """
         Fix the list of sources on a Lieutenant page.
@@ -1389,13 +1404,18 @@ class XrefToolkit:
                 # Ensure that it's in Crate Lieutenants
                 c = u'Crate Lieutenants'
                 text = self._append_category(text, c)
-            elif self._cat_in_categories(u'Events',
-                                         r.categories()) or self._cat_in_categories(u'Giveaways',
-                                                                                    r.categories()):
+            elif self._cat_in_categories(u'Giveaways', r.categories()):
                 sources.append(u'[[%s]]' % r.title())
                 # Ensure that it's in Event Lieutenants
                 c = u'Event Lieutenants'
                 text = self._append_category(text, c)
+            elif self._cat_in_categories(u'Events', r.categories()):
+                # ensure that the Lt was a reward rather than an opponent
+                if self._lt_was_event_reward(name, r.title()):
+                    sources.append(u'[[%s]]' % r.title())
+                    # Ensure that it's in Event Lieutenants
+                    c = u'Event Lieutenants'
+                    text = self._append_category(text, c)
             for temp,params in r.templatesWithParams():
                 template = temp.title(withNamespace=False)
                 if template == u'Challenge Job':

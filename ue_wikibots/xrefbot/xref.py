@@ -864,6 +864,7 @@ class XrefToolkit:
             while i < len(lts):
                 # 2 Lts per row
                 name = lts[i]
+                # TODO it's annoying when this causes changes due to the case of the first letter or underscores versus spaces
                 image = image_map.image_for(name)
                 new_text += u'{{Crate Reward|name=%s|image=%s}}\n' % (name, image)
                 i += 1

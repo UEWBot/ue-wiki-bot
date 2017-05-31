@@ -34,6 +34,7 @@ Generate the following tables:
 - Area Gear Table
 - Insignias Table
 - Bosses Table
+- Chem-Packs Table
 """
 
 from __future__ import absolute_import
@@ -71,6 +72,13 @@ class Error(Exception):
 
 class IrrelevantRowError(Error):
     pass
+
+faction_to_colour = {u'The Cartel':       u'skyblue',
+                     u'Dragon Syndicate': u'indianred',
+                     u'The Mafia':        u'burlywood',
+                     u'Street':           u'lightgreen',
+                     u'Unaffiliated':     u'mediumpurple'
+                    }
 
 def name_to_link(name):
     """
@@ -126,6 +134,33 @@ def lt_faction_rarity_row(factions, rarity, lieutenants_by_faction):
         text += u'\n'
     return text
  
+def chem_pack_header(factions):
+    """
+    Return a summary table down to the first row of data.
+
+    factions -- list of all the factions. Used for column headers.
+    """
+    faction_to_pack = {u'The Cartel':       u'Cartel',
+                       u'Dragon Syndicate': u'Syndicate',
+                       u'The Mafia':        u'Mafia',
+                       u'Street':           u'Street',
+                       u'Unaffiliated':     u'Shadow'
+                      }
+    # Warn editors that the page was generated
+    text = u'<!-- This page was generated/modified by software -->\n'
+    # No WYSIWYG editor
+    text += u'__NOWYSIWYG__\n'
+    text += u'This page is auto-generated from the rest of the wiki. If something is wrong, please fix it in the Lt page\n'
+    text += u'{| border="1" class="wikitable"\n'
+    text += u'!rowspan="2" data-sort-type="text" | Boss\n'
+    for faction in factions:
+        text += u'!colspan="3" style="background-color:%s" | [[%s]]\n' % (faction_to_colour[faction], faction)
+    text += u'|-\n'
+    for faction in factions:
+        for pack in [u'I', u'II', u'III']:
+            text += u'!span="col" style="background-color:%s" | [[%s Chem-Pack %s|%s]]\n' % (faction_to_colour[faction], faction_to_pack[faction], pack, pack)
+    return text
+
 def summary_header(row_template):
     """
     Return a summary table page down to the first row of data.
@@ -896,6 +931,10 @@ class XrefBot:
         self.acceptall = acceptall
         self.pages = pages
         self.areas = areas_in_order()
+        self.factions = []
+        cat = pywikibot.Category(pywikibot.Site(), u'Factions')
+        for faction in list(cat.articles()):
+            self.factions.append(faction.title())
 
     def _update_or_create_page(self, old_page, new_text):
         """
@@ -1018,6 +1057,80 @@ class XrefBot:
         text += u'[[Category:Summary Tables]]'
         return text
 
+    def update_chem_packs_table(self):
+        """
+        Create or update the Chem-Packs summary page.
+
+        Read every page in the Chem-Packs category and create/update page
+        Chem-Packs Table accordingly.
+        """
+        if u'Chem-Packs Table' not in self.pages:
+            return
+
+        # Template to use
+        pack_to_faction = {u'Cartel':    u'The Cartel',
+                           u'Syndicate': u'Dragon Syndicate',
+                           u'Mafia':     u'The Mafia',
+                           u'Street':    u'Street',
+                           u'Shadow':    u'Unaffiliated'
+                          }
+        boss_cats = [u'Legend Bosses',
+                     u'Tech Lab Bosses',
+                     u'Bosses', # for War Hounds
+                     u'Job Bosses']
+
+        cat = pywikibot.Category(pywikibot.Site(), u'Chem-Packs')
+
+        packs_dict = {}
+
+        # Populate packs_dict
+        # Keyed by faction
+        # Each element is a 2-tuple containing pack name and list of source bosses
+        for page in cat.articles():
+            page_title = page.title()
+            # Not interested in IV or V
+            if page_title[-1] == u'V':
+                continue
+            # Add to the dict
+            templatesWithParams = page.templatesWithParams()
+            for (template, params) in templatesWithParams:
+                if template.title(withNamespace=False) != u'Ingredient':
+                    continue
+                source_str = utils.param_from_params(params, u'from')
+                # Discard the initial u'<br/>'
+                sources = source_str.split(u'\n')[1:]
+            faction = pack_to_faction[page_title.split(None, 1)[0]]
+            if faction not in packs_dict:
+                packs_dict[faction] = []
+            packs_dict[faction].append((page_title, sources))
+
+        # Start the new page text
+        new_text = chem_pack_header(self.factions)
+
+        # We want a row for each boss
+        # with each column populated if it drops that pack
+        for cat in boss_cats:
+            c = pywikibot.Category(pywikibot.Site(),
+                                   u'Category:%s' % cat)
+            for page in c.articles():
+                page_title = page.title()
+                new_text += u'|-\n'
+                new_text += u'| [[%s]]\n' % page_title
+                for faction in self.factions:
+                    for item, sources in packs_dict[faction]:
+                        if u'*[[%s]]' % page_title in sources:
+                            new_text += u'| style="background-color:%s; color:black" | Y\n' % faction_to_colour[faction]
+                        else:
+                            new_text += u'| style="background-color:%s" |\n' % faction_to_colour[faction]
+                new_text += u'\n'
+
+        # Finish with a footer
+        new_text += summary_footer(None)
+
+        # Upload the new pages
+        page = pywikibot.Page(pywikibot.Site(), u'Chem-Packs Table')
+        self._update_or_create_page(page, new_text);
+
     def update_jobs_tables(self):
         """
         Create or update the job summary pages.
@@ -1109,11 +1222,7 @@ class XrefBot:
         """
         old_page = pywikibot.Page(pywikibot.Site(),
                                   u'Lieutenants Faction Rarity Table')
-        factions = []
-        cat = pywikibot.Category(pywikibot.Site(), u'Factions')
-        for faction in list(cat.articles()):
-            factions.append(faction.title())
-        new_text = lt_faction_rarity_header(factions)
+        new_text = lt_faction_rarity_header(self.factions)
         for rarity in rarities():
             lieutenants = {}
 	    lt_cat = pywikibot.Category(pywikibot.Site(),
@@ -1129,7 +1238,7 @@ class XrefBot:
                                                           u'faction')
                         lieutenants.setdefault(faction, []).append(name)
             if lieutenants:
-                new_text += lt_faction_rarity_row(factions, rarity, lieutenants)
+                new_text += lt_faction_rarity_row(self.factions, rarity, lieutenants)
         new_text += summary_footer(None)
         # Upload it
         self._update_or_create_page(old_page, new_text);
@@ -1213,6 +1322,8 @@ class XrefBot:
             self.update_jobs_tables()
         if u'Lieutenants Faction Rarity Table' in self.pages:
             self.update_lt_rarity_table()
+        if u'Chem-Packs Table' in self.pages:
+            self.update_chem_packs_table()
 
 def main(pages):
     bot = XrefBot(pages)
@@ -1234,6 +1345,7 @@ if __name__ == "__main__":
                  '--area_gear'  : u'Area Gear Table',
                  '--bosses'     : u'Bosses Table',
                  '--secret'     : u'Secret Jobs Table',
+                 '--chem-packs' : u'Chem-Packs Table',
                  '--lt_rarities': u'Lieutenants Faction Rarity Table'}
 
     parser = argparse.ArgumentParser(description='Create/update summary pages.', epilog='With no options, create/update all summary pages.')

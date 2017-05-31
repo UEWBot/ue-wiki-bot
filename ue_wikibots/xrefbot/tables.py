@@ -150,7 +150,7 @@ def chem_pack_header(factions):
     text = u'<!-- This page was generated/modified by software -->\n'
     # No WYSIWYG editor
     text += u'__NOWYSIWYG__\n'
-    text += u'This page is auto-generated from the rest of the wiki. If something is wrong, please fix it in the Lt page\n'
+    text += u'This page is auto-generated from the rest of the wiki. If something is wrong, please fix it in the boss page\n'
     text += u'{| border="1" class="wikitable"\n'
     text += u'!rowspan="2" data-sort-type="text" | Boss\n'
     for faction in factions:

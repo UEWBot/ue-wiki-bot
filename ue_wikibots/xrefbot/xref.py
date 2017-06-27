@@ -2428,9 +2428,8 @@ class XrefToolkit:
         cat = u'Daily Rewards'
         if self._cat_in_categories(cat, categories):
             text = self._remove_category(text, cat)
-            # Add a daily parameter, with value yes if not already present
-            daily_param = param_dict[u'daily']
-            if daily_param is None:
+            # Add a daily parameter, with value yes, if not already present
+            if u'daily' not in param_dict:
                 text = self._add_param(text, params, u'daily=yes')
 
         # Check type param

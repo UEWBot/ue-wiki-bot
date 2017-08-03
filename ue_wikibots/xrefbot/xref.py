@@ -1972,7 +1972,7 @@ class XrefToolkit:
         for r in refs:
             for temp,params in r.templatesWithParams():
                 template = temp.title(withNamespace=False)
-                if template == u'Drop':
+                if (template == u'Drop') or (template == u'BossDrop'):
                     if utils.param_from_params(params, u'name') == name:
                         # TODO If it has creator=true, need to ensure that's reflected on this page
                         source_set.add(r.title())

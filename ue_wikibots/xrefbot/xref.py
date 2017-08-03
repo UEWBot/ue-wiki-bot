@@ -2362,7 +2362,6 @@ class XrefToolkit:
         special_param_map = {u'description': u'Needs Description',
                              u'atk': u'Needs Stats',
                              u'def': u'Needs Stats',
-                             u'cost': u'Needs Cost',
                              u'rarity': u'Needs Rarity',
                              u'image': u'Needs Improvement'} #u'Needs Image'}
         # If it's a tech lab item, don't bother checking what it's made from.

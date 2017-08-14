@@ -1076,10 +1076,11 @@ class XrefToolkit:
                     # TODO There should be a better way to do this...
                     if item_name not in paramless_items and not self._cat_in_categories(u'Recombinators', item.categories()):
                         # TODO Need to also remove type=Ingredients
-                        text = text.replace(ur'name=%s|' % item_name,
-                                            u'name=%s|%s=%s|' % (item_name,
-                                                                 key,
-                                                                 item_params[key]))
+                        text = re.sub(ur'name\s*=\s*%s\s*\|' % item_name,
+                                      u'name=%s|%s=%s|' % (item_name,
+                                                           key,
+                                                           item_params[key]),
+                                      text)
                 if source not in item_params['from']:
                     pywikibot.output("Boss claims to drop %s, but is not listed on that page" % item_name)
             elif u'Lieutenant' in template:
@@ -1187,7 +1188,7 @@ class XrefToolkit:
         if (start == -1):
             (start, end) = self._find_section(text, sect)
             # Replace the header
-            text = text.replace(u'=%s=' % sect, u'=%s=' % sect_str)
+            text = re.sub(ur'=\s*%s\s*=' % sect, u'=%s=' % sect_str, text)
 
         text = self._check_needs_section(text,
                                          categories,

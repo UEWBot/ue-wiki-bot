@@ -1381,7 +1381,7 @@ class XrefToolkit:
         """
         page = pywikibot.Page(pywikibot.Site(), event_name)
         # Lt rewards in events always specify how many of the Lt you get
-        if re.search(ur'\d\s*\[\[\s*%s' % lt_name, page.get()):
+        if re.search(ur'\d\s*x?\s*\[\[\s*%s' % lt_name, page.get()):
             return True
         return False
 

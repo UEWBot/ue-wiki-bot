@@ -1824,11 +1824,10 @@ class XrefToolkit:
                                          the_params,
                                          is_tech_lab_item)
 
-        if not is_tech_lab_item:
-            text = self._fix_lt_sources(name,
-                                        text,
-                                        the_params,
-                                        refs)
+        text = self._fix_lt_sources(name,
+                                    text,
+                                    the_params,
+                                    refs)
 
         # Do special checks for any Epic Research Items
         if is_tech_lab_item:

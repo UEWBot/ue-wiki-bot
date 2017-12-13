@@ -1201,6 +1201,42 @@ class XrefToolkit:
                                          u'Stages',
                                          u'Needs Stages')
 
+        # Check the new boss-related templates
+        for (template, params) in templatesWithParams:
+            if template == u'BossInfo':
+                # high_aggro? is a simple True/False
+                text = self._fix_needs_categories(text,
+                                                  params,
+                                                  {u'participants':              u'Needs Participant Limit',
+                                                   u'fight_time':                u'Needs Fight Time',
+                                                   u'collect_time':              u'Needs Collect Time',
+                                                   u'recommended_class':         u'Needs Recommended Class',
+                                                   u'minimum_collect_threshold': u'Needs Min Collect Threshold',
+                                                   u'total_health':              u'Needs Total Health',
+                                                   u'max_empire_points':         u'Needs Max Empire Points',
+                                                  })
+            elif template == u'BossSpeedkill':
+                text = self._fix_needs_categories(text,
+                                                  params,
+                                                  {u'1 Star:':  u'Needs Speed Kill Time',
+                                                   u'2 Stars:': u'Needs Speed Kill Time',
+                                                   u'3 Stars:': u'Needs Speed Kill Time',
+                                                  })
+            elif template == u'BossStage':
+                text = self._fix_needs_categories(text,
+                                                  params,
+                                                  {u'Name_01':  u'Needs Stages',
+                                                   u'Class_01': u'Needs Information',
+                                                   u'Minion_01_HP': u'Needs Information',
+                                                  })
+            elif template == u'BossEpicThresholds':
+                text = self._fix_needs_categories(text,
+                                                  params,
+                                                  {u'1 Epic:':  u'Needs Epic Threshold',
+                                                   u'2 Epics:': u'Needs Epic Threshold',
+                                                   u'3 Epics:': u'Needs Epic Threshold',
+                                                  })
+
         text = self._check_needs_section(text,
                                          categories,
                                          u'Basic Information',

@@ -62,6 +62,7 @@ ITEM_TEMPLATES = re.compile(u'.*\WItem')
 PROPERTY_TEMPLATES = re.compile(u'.*\WProperty')
 JOB_TEMPLATES = re.compile(u'.*Job')
 LIEUTENANT_TEMPLATES = re.compile(u'Lieutenant\W(.*)')
+SIDEKICK_TEMPLATES = re.compile(u'Sidekick\W(.*)')
 SECRET_COUNT_RE_1 = re.compile(ur'an additional (\w+) \[\[\w*#Secret')
 SECRET_COUNT_RE_2 = re.compile(ur'(\w+) additional \[\[\w*#Secret')
 SECRET_JOBS_RE = re.compile(ur'==\w*Secret Jobs')
@@ -167,7 +168,7 @@ def summary_header(row_template):
 
     row_template -- Name of the template to be used for each data row.
                     One of 'Item Row', 'Property Row', 'Job Row', 'Area Row',
-                    'Challenge Job Row', 'Secret Job Row', or 'Lieutenant Row'.
+                    'Challenge Job Row', 'Secret Job Row', 'Sidekick Row', or 'Lieutenant Row'.
     """
     # Warn editors that the page was generated
     text = u'<!-- This page was generated/modified by software -->\n'
@@ -246,6 +247,21 @@ def summary_header(row_template):
         text += u'!span="col" | Lt 4\n'
         # Recombinator
         text += u'!span="col" | Recombinator\n'
+    elif row_template == u'Sidekick Row':
+        # Name column
+        text += u'!span="col" rowspan="2" | Name\n'
+        # Type column
+        text += u'!span="col" rowspan="2" | Type\n'
+        # Rarity column
+        text += u'!span="col" rowspan="2" | Rarity\n'
+        # Atk & Def for each number of stars
+        for stars in range(1,10):
+            text += u'!colspan="3" class="unsortable" | %d Star\n' % stars
+        text += u'|-\n'
+        for stars in range(1,10):
+            text += u'!span="col" data-sort-type="number" | Atk\n'
+            text += u'!span="col" data-sort-type="number" | Def\n'
+            text += u'!span="col" class="unsortable" | Power\n'
     elif row_template == u'Lieutenant Row':
         # Name column
         text += u'!span="col" rowspan="2" | Name\n'
@@ -791,12 +807,13 @@ def page_to_row(page, row_template):
 
     page -- Page to parse.
     row_template -- template to use in the generated row text.
-                    One of 'Challenge Job Row', 'Lieutenant Row', 'Item Row',
+                    One of 'Challenge Job Row', 'Lieutenant Row', 'Sidekick Row', 'Item Row',
                     or 'Boss Row'.
     """
     # Where to put the page name
     mapping = {u'Challenge Job Row': u'district',
                u'Lieutenant Row' : u'name',
+               u'Sidekick Row' : u'name',
                u'Item Row' : u'name',
                u'Insignia Row' : u'type'}
     ignore_cost_param = {u'Special Item',
@@ -807,6 +824,19 @@ def page_to_row(page, row_template):
     # Boss pages don't have a main template (maybe they should...)
     if row_template == u'Boss Row':
         return boss_page_to_row(page, row_template);
+    elif row_template == u'Sidekick Row':
+        # Parse the four template pages to get atk and def params
+        sidekick_stats = {}
+        for r in [u'Common', u'Uncommon', u'Rare', u'Epic']:
+            sidekick_stats[r] = u''
+            p = pywikibot.Page(pywikibot.Site(), u'Template:Sidekick %s' % r)
+            templatesWithParams = p.templatesWithParams()
+            for (template, params) in templatesWithParams:
+                if template.title(withNamespace=False) != u'Sidekick':
+                    continue
+                for p in params:
+                    if (u'atk' in p) or (u'def' in p):
+                        sidekick_stats[r] += u'|%s' % p
     found_template = False
     templatesWithParams = page.templatesWithParams()
     name = page.title()
@@ -825,13 +855,18 @@ def page_to_row(page, row_template):
                     row += u'|%s' % param
         else:
             match = LIEUTENANT_TEMPLATES.search(template_name)
+            if not match:
+                match = SIDEKICK_TEMPLATES.search(template_name)
             if match:
                 found_template = True
                 # Construct a rarity parameter from the template name
                 row += u'|rarity=%s' % match.group(1)
-                # Pass all the lieutenant template parameters
+                # Pass all the lieutenant/sidekick template parameters
                 for param in params:
                     row += u'|%s' % param
+                if row_template == u'Sidekick Row':
+                    # Copy atk and def params from the template
+                    row += sidekick_stats[match.group(1)]
     if not found_template:
         raise IrrelevantRowError
     row += u'}}'
@@ -1256,6 +1291,7 @@ class XrefBot:
         Vehicles - Vehicles Table
         Gear - Gear Table
         Lieutenants - Lieutenants Table
+        Sidekicks - Sidekicks Table
         Insignias - Insignias Table
         Job Bosses, Tech Lab Bosses, Legend Bosses - Bosses Table
         """
@@ -1267,6 +1303,7 @@ class XrefBot:
                         u'Vehicles': ('Item Row', []),
                         u'Gear': ('Item Row', []),
                         u'Lieutenants': ('Lieutenant Row', []),
+                        u'Sidekicks': ('Sidekick Row', []),
                         u'Insignias' : (u'Insignia Row', []),
                         u'Bosses' : (u'Boss Row', [u'Tech Lab Bosses',
                                                    u'Legend Bosses',
@@ -1337,6 +1374,7 @@ if __name__ == "__main__":
                  '--vehicles'   : u'Vehicles Table',
                  '--gear'       : u'Gear Table',
                  '--lts'        : u'Lieutenants Table',
+                 '--sidekicks'  : u'Sidekicks Table',
                  '--insignias'  : u'Insignias Table',
                  '--properties' : u'Properties Table',
                  '--jobs'       : u'Jobs Table',

@@ -2639,7 +2639,8 @@ class XrefToolkit:
             num_parts = int(lab_dict[u'num_parts'])
         except (KeyError, TypeError):
             num_parts = 5
-        total = self._parts_count(lab_dict)
+        # Count number of parts in the Tech Lab recipe
+        total = self._parts_count(recipe_dict)
         if total != num_parts:
             # Fix num_parts, if present, else flag missing ingredient(s)
             # TODO This assumes no spaces in the parameter setting

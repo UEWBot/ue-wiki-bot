@@ -48,12 +48,13 @@ def escape_str(string):
     string = re.sub(ur'\+', u'\+', string)
     return re.sub(ur'\]', u'\]', string)
 
-def param_from_params(params, param):
+def param_from_params(params, param, verbatim=False):
     """
     Return the value for 'param' in 'params', or None if it isn't present.
 
     params -- list of template parameter values.
     param -- parameter to find the value for.
+    verbatim -- return empty string or '?' rather than None
     """
     for p in params:
         m = _PARAM_RE.match(p)
@@ -61,7 +62,7 @@ def param_from_params(params, param):
             val = m.group('value')
             # People sometimes provide the parameters,
             # even though we don't know the value
-            if val != u'' and val != u'?':
+            if verbatim or (val != u'' and val != u'?'):
                 return val
     return None
 

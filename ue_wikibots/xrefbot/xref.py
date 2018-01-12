@@ -2369,7 +2369,13 @@ class XrefToolkit:
                 text = self._append_category(text,
                                              u'Needs Information') # u'Needs Purpose'
         else:
-            #TODO Check that all the recipes we found are listed in the for parameter
+            # Check that all the recipes we found are listed in the for parameter
+            for r in recipes:
+                if r not in for_param:
+                    text = text.replace(u'|for=<br/>', u'|for=<br/>\n*[[%s]]' % r)
+                    # If that did nothing, need to turn "for" into a list
+                    if r not in text:
+                        text = text.replace(u'|for=', u'|for=<br/>\n*[[%s]]\n*' % r)
             pass
 
         return text

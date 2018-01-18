@@ -98,6 +98,10 @@ def drop_params_match(param1, param2):
     # Direct match first
     if param1 == param2:
         return True
+    if not param1:
+        return False
+    if not param2:
+        return False
     # Convert spaces to underscores in both
     param1 = param1.replace(' ', '_')
     param2 = param2.replace(' ', '_')

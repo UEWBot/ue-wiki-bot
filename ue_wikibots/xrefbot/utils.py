@@ -241,7 +241,6 @@ class ImageMap:
     """
 
     _IMG_RE = re.compile(ur'\|\W*image\W*=\W*(?P<image>.*)')
-    _IMG_2_RE = re.compile(ur'\|\W*image_2\W*=\W*(?P<image>.*)')
     # TODO This should match jpg as well as png files
     _IMG_FILE_RE = re.compile(ur'\[\[File:(?P<image>.*\.png)\|.*\]\]')
     _RARITY_RE = re.compile(ur'\|\W*rarity\W*=\W*(?P<rarity>.*)')
@@ -251,6 +250,20 @@ class ImageMap:
         # Populate image_map
         self.image_mapping = {}
         self.rarity_mapping = {}
+
+    def _read_skin_page(self, name, page):
+        """
+        Read the specified Lt skin page and populate the cache.
+        """
+        text = page.get()
+        # find the image parameter to the Skin template
+        for template, params in page.templatesWithParams():
+            if template.title(withNamespace=False) == u'Skin':
+                self.image_mapping[name] = param_from_params(params, u'image')
+                lt = param_from_params(params, u'lt')
+        if lt:
+            # Set the rarity to the same as the unskinned Lt
+            self.rarity_mapping[name] = self.rarity_for(lt)
 
     def _read_page(self, name):
         """
@@ -265,10 +278,10 @@ class ImageMap:
         except pywikibot.NoPage:
             text = ''
         except pywikibot.IsRedirectPage:
-            # This is probably a skinned Lt, in which case we want image2 of the Lt page
-            img_re = self._IMG_2_RE
+            # This is probably a skinned Lt
             pg = pg.getRedirectTarget()
-            text = pg.get()
+            self._read_skin_page(name, pg)
+            return
         # Extract the image parameter
         m = img_re.search(text)
         if m is None:

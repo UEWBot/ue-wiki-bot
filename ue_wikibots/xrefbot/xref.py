@@ -864,7 +864,6 @@ class XrefToolkit:
             new_text += u'{|\n'
             i = 0
             lts = s[2]
-            assert len(lts) % 2 == 0, "Odd number of rewards at rarity %s" % s[0]
             while i < len(lts):
                 # 2 Lts per row
                 name = lts[i]
@@ -872,12 +871,13 @@ class XrefToolkit:
                 image = image_map.image_for(name)
                 new_text += u'{{Crate Reward|name=%s|image=%s}}\n' % (name, image)
                 i += 1
-                name = lts[i]
-                image = image_map.image_for(name)
-                new_text += u'{{Crate Reward|name=%s|image=%s}}\n' % (name, image)
-                i += 1
                 if i < len(lts):
-                    new_text += u'|-\n'
+                    name = lts[i]
+                    image = image_map.image_for(name)
+                    new_text += u'{{Crate Reward|name=%s|image=%s}}\n' % (name, image)
+                    i += 1
+                    if i < len(lts):
+                        new_text += u'|-\n'
             # Table end
             new_text += u'|}\n'
         new_text += u'\n[[Category:Crates]]'

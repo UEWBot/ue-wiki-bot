@@ -567,7 +567,7 @@ def secret_job_dates(areas):
     text = page.get()
     # Split it at dates (some entries span multiple lines)
     #DATE_RE = re.compile(ur'([-0-9]* [A-Z][a-z]{2} 20[1-9][0-9])', re.MULTILINE)
-    DATE_RE = re.compile(ur'([-0-9]* [A-Z][a-z]{2} 20[1-9][0-9])')
+    DATE_RE = re.compile(ur'([-0-9 ]*[A-Z][a-z]{2,} 20[1-9][0-9])')
     split_text = DATE_RE.split(text)
     for i in range(len(split_text)):
         if u'ecret' in split_text[i]:
@@ -576,7 +576,10 @@ def secret_job_dates(areas):
                 if area in split_text[i]:
                     # Previous entry in the list is the date, unless we're at the start
                     if i > 0:
-                        retval[area] = split_text[i-1]
+                        if area not in retval:
+                            retval[area] = []
+                        # Put earlier dates (found further down the page) earlier in the list
+                        retval[area].insert(0, split_text[i-1])
                     break
     return retval
 
@@ -596,7 +599,7 @@ def page_to_secret_row(page, template, dates):
         print("Unable to find secret job count for %s" % name)
         count = u'Unknown'
     try:
-        release_date = dates[name]
+        release_date = u', '.join(dates[name])
     except KeyError:
         release_date = u'Not yet released'
     return u'{{%s|area=%s|count=%s|date=%s}}' % (template, name,

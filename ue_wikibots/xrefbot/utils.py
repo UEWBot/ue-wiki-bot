@@ -254,6 +254,7 @@ class ImageMap:
     def _read_skin_page(self, name, page):
         """
         Read the specified Lt skin page and populate the cache.
+        Returns True if it was indeed a Lt Skin page, False otherwise
         """
         text = page.get()
         lt = None
@@ -265,6 +266,8 @@ class ImageMap:
         if lt:
             # Set the rarity to the same as the unskinned Lt
             self.rarity_mapping[name] = self.rarity_for(lt)
+            return True
+        return False
 
     def _read_page(self, name):
         """
@@ -281,8 +284,10 @@ class ImageMap:
         except pywikibot.IsRedirectPage:
             # This is probably a skinned Lt
             pg = pg.getRedirectTarget()
-            self._read_skin_page(name, pg)
-            return
+            if self._read_skin_page(name, pg):
+                return
+            # If not, try working from the text of the page we were redirected to
+            text = pg.get()
         # Extract the image parameter
         m = img_re.search(text)
         if m is None:

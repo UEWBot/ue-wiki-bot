@@ -256,6 +256,7 @@ class ImageMap:
         Read the specified Lt skin page and populate the cache.
         """
         text = page.get()
+        lt = None
         # find the image parameter to the Skin template
         for template, params in page.templatesWithParams():
             if template.title(withNamespace=False) == u'Skin':

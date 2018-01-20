@@ -1570,7 +1570,7 @@ class XrefToolkit:
         stack = (NO_STACK_RE.search(power) is None)
         # Remove any "no stack" string
         power = NO_STACK_RE.sub('', power)
-        if not stack:
+        if stack:
             stack = (NO_STACK_RE_2.search(power) is None)
             # Remove any "no stack" string
             power = NO_STACK_RE_2.sub('', power)

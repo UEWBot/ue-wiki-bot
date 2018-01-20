@@ -1531,6 +1531,15 @@ class XrefToolkit:
         if not beneficiary:
             return False
 
+        # If the word "per" appears, we need to look deeper
+        if u' per ' in beneficiary:
+           # The actual beneficary is the part before the "per"
+           beneficiary = beneficiary.split(u' per ')[0]
+
+        # All the "X Lts count as Y" items don't appear on any Lt page
+        if u' count as ' in beneficiary:
+            return False
+
         # If the LT's name appears, that's an easy one
         if lt in beneficiary:
             return True
@@ -1579,6 +1588,10 @@ class XrefToolkit:
         res = ALL_RE.match(power)
         if res is not None:
             return (res.group(2), res.group(1), None, stack)
+
+        # Don't split a "count as" power that doesn't match ALL_RE
+        if u' count as ' in power:
+            return (power, None, None, stack)
 
         # And the "when" pattern
         res = WHEN_RE.match(power)

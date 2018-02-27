@@ -288,6 +288,10 @@ class XrefToolkit:
                                     text,
                                     templatesWithParams,
                                     refs)
+        text = self._fix_sidekick(titleWithoutNamespace,
+                                  text,
+                                  templatesWithParams,
+                                  refs)
         text = self._fix_skin(titleWithoutNamespace,
                               text,
                               templatesWithParams,
@@ -1405,6 +1409,113 @@ class XrefToolkit:
         text = self._fix_needs_categories(text,
                                           the_params,
                                           prop_param_map)
+
+        return text
+
+    # The next few are just for Sidekick pages
+
+    def _fix_sidekick_needs_params(self,
+                             text,
+                             the_params,
+                             is_tech_lab_item):
+        """
+        Fix the "Needs" categories on a Sidekick page.
+
+        text -- current text of the page.
+        the_params -- list of parameters to the primary template.
+        is_tech_lab_item -- True if the Sidekick has a Tech Lab recipe.
+
+        Return modified version of text parameter.
+        """
+        # Check mandatory parameters
+        lt_param_map = {u'ability': u'Needs Powers',
+                        u'image': u'Needs Improvement', #u'Needs Image',
+                        u'type': u'Needs Information'} #u'Needs Type'}
+        # Needs Powers is used for both ability and pwr_1..10
+        for i in range(1,10):
+            lt_param_map[u'pwr_%d' % i] = u'Needs Powers'
+
+        return self._fix_needs_categories(text,
+                                          the_params,
+                                          lt_param_map)
+
+    def _fix_sidekick(self,
+                      name,
+                      text,
+                      templatesWithParams,
+                      refs):
+        """
+        Fix a Sidekick page.
+
+        name -- name of the Sidekick (page title).
+        text -- current page text.
+        templatesWithParams -- list of templates used and corresponding parameters.
+        refs -- list of pages that link to the page.
+
+        Return updated text.
+
+        If the page uses any of the templates 'Sidekick Common',
+        'Sidekick Uncommon', 'Sidekick Rare, or 'Sidekick Epic':
+        Ensure that __NOWYSIWYG__ is present.
+        Check that the page doesn't explictly list any categories that should be
+        assigned by the template.
+        Remove any empty power parameters.
+        Add any missing sources.
+        """
+        # Does the page use a sidekick template ?
+        the_params = None
+        ingredients = None
+        is_tech_lab_item = name in recipe_cache.recipes()
+        for template,params in templatesWithParams:
+            # Find the templates we're interested in
+            if template == u'Sidekick':
+                pywikibot.output("Directly uses Sidekick template")
+
+            elif u'Lab' in template:
+                is_tech_lab_item = True
+                ingredients = params
+
+            elif template == u'Sidekick Row':
+                # Break this one out from the next "elif"
+                pass
+
+            elif template.startswith(u'Sidekick '):
+                the_template = template
+                the_params = params
+
+        # Drop out early if not a sidekick page
+        # TODO Is there a better test ?
+        if the_params is None:
+            return text
+
+        # __NOWYSIWYG__
+        text = self._prepend_NOWYSIWYG_if_needed(text)
+
+        # Now nuke any empty power parameters
+        to_nuke = []
+        for param in the_params:
+            p = param.rstrip()
+            if p == u'':
+                to_nuke.append(param)
+            if p[-1] == u'=':
+                if u'pwr_' in p:
+                    pywikibot.output("Nuking empty parameter %s" % param)
+                    text = text.replace(u'|%s' % p, '')
+                    to_nuke.append(param)
+        for i in to_nuke:
+            the_params.remove(i)
+
+        text = self._fix_sidekick_needs_params(text,
+                                               the_params,
+                                               is_tech_lab_item)
+
+        # Do special checks for any Epic Research Items
+        if is_tech_lab_item:
+            text = self._fix_tech_lab_item(name,
+                                           text,
+                                           the_params,
+                                           ingredients,
+                                           False)
 
         return text
 
@@ -2626,8 +2737,12 @@ class XrefToolkit:
                 text = text.replace(u'|from=',
                                     u'|from=<br/>\n*{{Lab|in_list=yes}}\n*',
                                     1)
-            else:
+            elif u'|image=' in text:
                 text = text.replace(u'|image=',
+                                    u'|from={{Lab}}\n|image=',
+                                    1)
+            elif u'|image =' in text:
+                text = text.replace(u'|image =',
                                     u'|from={{Lab}}\n|image=',
                                     1)
         else:

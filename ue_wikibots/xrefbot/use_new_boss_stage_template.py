@@ -20,6 +20,7 @@ Script to use the BossStage template in all Bosses
 
 from __future__ import absolute_import
 from __future__ import print_function
+from __future__ import unicode_literals
 import sys
 import os
 import operator
@@ -52,7 +53,7 @@ class DropBot:
 
         page -- Page to check.
         """
-        MINION_RE = ur'\* ?(?P<name>.*) \(\{\{Class Img\|(?P<class>.*)\|\|?20px\}\}\)'
+        MINION_RE = r'\* ?(?P<name>.*) \(\{\{Class Img\|(?P<class>.*)\|\|?20px\}\}\)'
         try:
             # Show the title of the page we're working on.
             # Highlight the title in purple.
@@ -64,7 +65,7 @@ class DropBot:
                 if (first != -1):
                     minions = []
                     # First try with HP values
-                    for m in re.finditer(ur'%s \((?P<hp>.*)HP\)' % MINION_RE, text[first:last]):
+                    for m in re.finditer(r'%s \((?P<hp>.*)HP\)' % MINION_RE, text[first:last]):
                         minions.append({u'name': m.group(u'name'), u'class': m.group(u'class'), u'hp': m.group(u'hp')})
                     # If we didn't find any, try without
                     if len(minions) == 0:

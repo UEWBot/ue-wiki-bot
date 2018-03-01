@@ -19,6 +19,7 @@ Script to remove the Needs Cost category from Special Item pages on Underworld E
 """
 
 from __future__ import absolute_import
+from __future__ import unicode_literals
 import sys
 import os
 import operator
@@ -33,7 +34,7 @@ import difflib
 # Summary message when using this module as a stand-alone script
 summary = u'Robot: Remove from Needs Cost category'
 
-CATEGORY_RE_STR = ur'\[\[\s*Category:\s*%s\s*\]\]'
+CATEGORY_RE_STR = r'\[\[\s*Category:\s*%s\s*\]\]'
 
 class ItemBot:
     def __init__(self, generator, acceptall = False):

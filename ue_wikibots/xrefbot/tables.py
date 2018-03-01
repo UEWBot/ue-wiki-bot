@@ -64,10 +64,10 @@ PROPERTY_TEMPLATES = re.compile(u'.*\WProperty')
 JOB_TEMPLATES = re.compile(u'.*Job')
 LIEUTENANT_TEMPLATES = re.compile(u'Lieutenant\W(.*)')
 SIDEKICK_TEMPLATES = re.compile(u'Sidekick\W(.*)')
-SECRET_COUNT_RE_1 = re.compile(ur'an additional (\w+) \[\[\w*#Secret')
-SECRET_COUNT_RE_2 = re.compile(ur'(\w+) additional \[\[\w*#Secret')
-SECRET_JOBS_RE = re.compile(ur'==\w*Secret Jobs')
-JOB_STARS_RE = re.compile(ur'Silver and gold .* were enabled')
+SECRET_COUNT_RE_1 = re.compile(r'an additional (\w+) \[\[\w*#Secret')
+SECRET_COUNT_RE_2 = re.compile(r'(\w+) additional \[\[\w*#Secret')
+SECRET_JOBS_RE = re.compile(r'==\w*Secret Jobs')
+JOB_STARS_RE = re.compile(r'Silver and gold .* were enabled')
 
 class Error(Exception):
     pass
@@ -438,7 +438,7 @@ def safe_house_rows(name, text, row_template):
     rows = []
     # Find the info we need - income, unlock criteria, cost
     # Look for an "Income" line
-    match = re.search(ur'Income: (.*)', text)
+    match = re.search(r'Income: (.*)', text)
     if match is None:
         pywikibot.output("Failed to find Income for %s" % name)
         income = u'Unknown'
@@ -449,14 +449,14 @@ def safe_house_rows(name, text, row_template):
         if income == u'':
             income = u'None'
     # Look for an "Unlock" line
-    match = re.search(ur'Unlocked when (.*)', text)
+    match = re.search(r'Unlocked when (.*)', text)
     if match is None:
         pywikibot.output("Failed to find Unlock criteria for %s" % name)
         unlock = u'Unknown'
     else:
         unlock = match.group(1)
     # Find a table of costs
-    for match in re.finditer(ur'\|\s*(?P<count>\d+)\s*\|\|[\s$]*(?P<cost>.*?)\s*\|\|[\s$]*(?P<max>.*?)\s*\|\|[ \t]*(?P<time>.*)',
+    for match in re.finditer(r'\|\s*(?P<count>\d+)\s*\|\|[\s$]*(?P<cost>.*?)\s*\|\|[\s$]*(?P<max>.*?)\s*\|\|[ \t]*(?P<time>.*)',
                              text):
         d = match.groupdict()
         count = int(d['count'])
@@ -485,8 +485,8 @@ def parsed_fortress_table(text):
     Dict returned is indexed by Fortress level, and contains a 3-tuple of
     (cost, pre-requisite name, pre-requisite level).
     """
-    fortress_table_full_re = re.compile(ur'\|\W*(?P<count>\d+)\W*\|\|\D*(?P<cost>\d+)\D*\|\|\W*\[\[(?P<prop>.*)\]\]\D*(?P<lvl>\d+)')
-    fortress_table_part_re = re.compile(ur'\|\W*(?P<count>\d+)\W*\|\|\W*\|\|\W*\[\[(?P<prop>.*)\]\]\D*(?P<lvl>\d+)')
+    fortress_table_full_re = re.compile(r'\|\W*(?P<count>\d+)\W*\|\|\D*(?P<cost>\d+)\D*\|\|\W*\[\[(?P<prop>.*)\]\]\D*(?P<lvl>\d+)')
+    fortress_table_part_re = re.compile(r'\|\W*(?P<count>\d+)\W*\|\|\W*\|\|\W*\[\[(?P<prop>.*)\]\]\D*(?P<lvl>\d+)')
     result = {}
     for match in fortress_table_part_re.finditer(text, re.IGNORECASE):
         d = match.groupdict()
@@ -533,14 +533,14 @@ def fortress_rows(name, text, row_template, the_dict):
     rows = []
     # Find the info we need - income, unlock criteria, cost
     # Look for an "Income" line
-    match = re.search(ur'Income: (.*)', text)
+    match = re.search(r'Income: (.*)', text)
     if match is None:
         pywikibot.output("Failed to find Income for %s" % name)
         income = u'Unknown'
     else:
         income = match.group(1)
     # Look for a "Build Time" line
-    match = re.search(ur'Build Time: (.*)hrs per level', text)
+    match = re.search(r'Build Time: (.*)hrs per level', text)
     if match is None:
         pywikibot.output("Failed to find Build Time for %s" % name)
         time = 0
@@ -566,8 +566,8 @@ def secret_job_dates(areas):
     page = pywikibot.Page(pywikibot.Site(), u'History')
     text = page.get()
     # Split it at dates (some entries span multiple lines)
-    #DATE_RE = re.compile(ur'([-0-9]* [A-Z][a-z]{2} 20[1-9][0-9])', re.MULTILINE)
-    DATE_RE = re.compile(ur'([-0-9 ]*[A-Z][a-z]{2,} 20[1-9][0-9])')
+    #DATE_RE = re.compile(r'([-0-9]* [A-Z][a-z]{2} 20[1-9][0-9])', re.MULTILINE)
+    DATE_RE = re.compile(r'([-0-9 ]*[A-Z][a-z]{2,} 20[1-9][0-9])')
     split_text = DATE_RE.split(text)
     for i in range(len(split_text)):
         if u'ecret' in split_text[i]:
@@ -639,7 +639,7 @@ def page_to_areas_rows(page, template):
                 # Check whether this is the first secret job
                 job_name = utils.param_from_params(params,
                                                    u'name')
-                m = re.search(ur'name=%s' % job_name, text)
+                m = re.search(r'name=%s' % job_name, text)
                 if m:
                     if m.start() > secrets_start:
                         jobs = secrets
@@ -700,13 +700,13 @@ def sort_lts(row, area):
     # First find the rarities of the 4 LTs
     rarities = {}
     for i in range(1,5):
-        m = re.search(ur'\|lt_%d_rarity\s*=\s*(?P<rarity>[^|\s]*)' % i, row)
+        m = re.search(r'\|lt_%d_rarity\s*=\s*(?P<rarity>[^|\s]*)' % i, row)
 	if m:
 		rarities[i] = m.group('rarity')
 	else:
 		pywikibot.output("Unable to find rarity for Lt %d" % i)
     if len(rarities) < 4:
-        #m = re.search(ur'\|district=(?P<area>[^|\s]*)', row)
+        #m = re.search(r'\|district=(?P<area>[^|\s]*)', row)
         ## As we put this parameter in, it should always be present
         #area = m.group('area')
         pywikibot.output("Missing Lts - not sorting %s\n" % area)
@@ -777,7 +777,7 @@ def boss_page_to_row(page, row_template):
     row_template -- template to use in the generated row text.
                     Must be 'Boss Row'.
     """
-    POINTS_RE = re.compile(ur'#\s*({{formatnum:)?\s*(?P<points>[\d,. ]*)(}})?')
+    POINTS_RE = re.compile(r'#\s*({{formatnum:)?\s*(?P<points>[\d,. ]*)(}})?')
     threshold_param_map = {u'1 Epic:': 1,
                            u'2 Epics:': 2,
                            u'3 Epics:': 3}

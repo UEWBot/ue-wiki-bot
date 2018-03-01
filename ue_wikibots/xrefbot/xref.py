@@ -23,6 +23,7 @@ Arguments:
 
 from __future__ import absolute_import
 from __future__ import print_function
+from __future__ import unicode_literals
 import sys
 import os
 import operator
@@ -47,30 +48,30 @@ summary = u'Robot: Fix cross-references and/or categories'
 
 # Headers
 # This doesn't match level 1 headers, but they're rare...
-HEADER_RE = re.compile(ur'(={2,})\s*(?P<title>[^=]+)\s*\1')
+HEADER_RE = re.compile(r'(={2,})\s*(?P<title>[^=]+)\s*\1')
 
 # List items on gift page
-GIFT_RE = re.compile(ur'<li value=(?P<level>.*)>\[\[(?P<item>.*)\]\]</li>')
+GIFT_RE = re.compile(r'<li value=(?P<level>.*)>\[\[(?P<item>.*)\]\]</li>')
 
 # List items on faction page
-FACTION_RE = re.compile(ur'\*\s*(?P<points>\S*)>\s*points - \[\[(?P<item>.*)\]\]')
+FACTION_RE = re.compile(r'\*\s*(?P<points>\S*)>\s*points - \[\[(?P<item>.*)\]\]')
 
 # Any link
-LINK_RE = re.compile(ur'\[\[\s*(?P<page>[^\|\]]*)\s*.*\]\]')
+LINK_RE = re.compile(r'\[\[\s*(?P<page>[^\|\]]*)\s*.*\]\]')
 
 # String used for category REs
-CATEGORY_RE_STR = ur'\[\[\s*Category:\s*%s\s*\]\]'
-CATEGORY_RE = re.compile(ur'\[\[\s*Category:[^]]*\]\]')
+CATEGORY_RE_STR = r'\[\[\s*Category:\s*%s\s*\]\]'
+CATEGORY_RE = re.compile(r'\[\[\s*Category:[^]]*\]\]')
 
 # Regexes used for item powers
-NO_STACK_RE = re.compile(ur'\[no \[\[stack\]\]\]')
-NO_STACK_RE_2 = re.compile(ur'{{No Stack}}')
+NO_STACK_RE = re.compile(r'\[no \[\[stack\]\]\]')
+NO_STACK_RE_2 = re.compile(r'{{No Stack}}')
 # Separators are with, for, and to
-SEP_RE = re.compile(ur' with | for | to ')
+SEP_RE = re.compile(r' with | for | to ')
 # Some follow completely different patterns
 # Note that here we deliberately avoid matching the powers of the four Medallions
-ALL_RE = re.compile(ur'[Aa]ll (.*) (count as \d.*)')
-WHEN_RE = re.compile(ur'(.*) when (.*)')
+ALL_RE = re.compile(r'[Aa]ll (.*) (count as \d.*)')
+WHEN_RE = re.compile(r'(.*) when (.*)')
 
 # Cache to speed up _fix_lieutenant()
 cat_refs_map = utils.CategoryRefs()
@@ -129,7 +130,7 @@ def time_params_match(param1, param2):
     if param1 == param2:
         return True
     # Split into number and units
-    Rvalue = re.compile(ur'(?P<value>\d*)\s*(?P<unit>\w*)')
+    Rvalue = re.compile(r'(?P<value>\d*)\s*(?P<unit>\w*)')
     g1 = Rvalue.match(param1)
     g2 = Rvalue.match(param2)
     #pywikibot.output("%s %s" % (g1.group('value'), g1.group('unit')))
@@ -524,10 +525,10 @@ class XrefToolkit:
 
         src_list -- text string to convert.
         """
-        labre = re.compile(ur'{{Lab[^}]*}}', re.MULTILINE | re.DOTALL)
+        labre = re.compile(r'{{Lab[^}]*}}', re.MULTILINE | re.DOTALL)
         text = src_list.replace(u'<br/>\n', u'')
         text = text.replace(u'<br />\n', u'')
-        text = text.replace(ur'*', u'')
+        text = text.replace(r'*', u'')
         # Convert any use of a Lab template to a link to the Tech Lab page
         text = labre.sub(u'made in [[Tech Lab]]', text)
         text = text.replace(u'\n', u', ')
@@ -596,9 +597,9 @@ class XrefToolkit:
                 if image is not None:
                     if part_img is None:
                         # Insert an appropriate part_img parameter
-                        new_part = re.sub(ur'(\|\W*%s\W*=\W*%s)' % (part_str,
+                        new_part = re.sub(r'(\|\W*%s\W*=\W*%s)' % (part_str,
                                                                     utils.escape_str(part)),
-                                          ur'\1\n|%s=%s' % (part_img_str,
+                                          r'\1\n|%s=%s' % (part_img_str,
                                                             image),
                                           text[recipe_start:],
                                           1)
@@ -1074,7 +1075,7 @@ class XrefToolkit:
                         if (key == u'type') and (u'for' in drop_params):
                             # We want either for or type for Ingredients
                             continue
-                        text = text.replace(ur'name=%s' % item_name,
+                        text = text.replace(r'name=%s' % item_name,
                                             u'name=%s|%s=%s' % (item_name,
                                                                 key,
                                                                 item_params[key]))
@@ -1084,7 +1085,7 @@ class XrefToolkit:
                     # TODO There should be a better way to do this...
                     if item_name not in paramless_items and not self._cat_in_categories(u'Recombinators', item.categories()):
                         # TODO Need to also remove type=Ingredients
-                        text = re.sub(ur'name\s*=\s*%s\s*\|' % item_name,
+                        text = re.sub(r'name\s*=\s*%s\s*\|' % item_name,
                                       u'name=%s|%s=%s|' % (item_name,
                                                            key,
                                                            item_params[key]),
@@ -1196,7 +1197,7 @@ class XrefToolkit:
         if (start == -1):
             (start, end) = self._find_section(text, sect)
             # Replace the header
-            text = re.sub(ur'=\s*%s\s*=' % sect, u'=%s=' % sect_str, text)
+            text = re.sub(r'=\s*%s\s*=' % sect, u'=%s=' % sect_str, text)
 
         text = self._check_needs_section(text,
                                          categories,
@@ -1319,7 +1320,7 @@ class XrefToolkit:
         """
         # TODO implement the rest of this function
         # First, retrieve the expected cost ratios from the template
-        Rrow = re.compile(ur'\|\s*(?P<level>\d+).*cost}}}\*(?P<ratio>[\d.]+)')
+        Rrow = re.compile(r'\|\s*(?P<level>\d+).*cost}}}\*(?P<ratio>[\d.]+)')
         table_page = pywikibot.Page(pywikibot.Site(),
                                     u'Template:Property Cost Table')
         table_text = table_page.get()
@@ -1330,7 +1331,7 @@ class XrefToolkit:
             ratio = m.group('ratio')
             ratios[int(level)] = float(ratio)
         # Now we can check the cost table
-        Rrow2 = re.compile(ur'\|\s*(?P<level>\d+).*formatnum:\s*(?P<cost>\d+)')
+        Rrow2 = re.compile(r'\|\s*(?P<level>\d+).*formatnum:\s*(?P<cost>\d+)')
         iterator = Rrow2.finditer(text)
         costs = {}
         for m in iterator:
@@ -1532,7 +1533,7 @@ class XrefToolkit:
         """
         page = pywikibot.Page(pywikibot.Site(), event_name)
         # Lt rewards in events always specify how many of the Lt you get
-        if re.search(ur'\d\s*x?\s*\[\[\s*%s' % lt_name, page.get()):
+        if re.search(r'\d\s*x?\s*\[\[\s*%s' % lt_name, page.get()):
             return True
         return False
 
@@ -1655,7 +1656,7 @@ class XrefToolkit:
         if lt in beneficiary:
             return True
 
-        parseRe = re.compile(ur'\[\[\s*:(Category:[^]\|]*)(|[^]]*)\]\]')
+        parseRe = re.compile(r'\[\[\s*:(Category:[^]\|]*)(|[^]]*)\]\]')
 
         # What categories of Lt does the item help ?
         cats = parseRe.findall(beneficiary)
@@ -1788,12 +1789,12 @@ class XrefToolkit:
                                                                               items[key][0]))
                     if items[key][0]:
                         # This regex assumes that the parameter has a line to itself
-                        text = re.sub(ur'item_%d_pwr\s*=\s*.*' % items[key][2],
+                        text = re.sub(r'item_%d_pwr\s*=\s*.*' % items[key][2],
                                       u'item_%d_pwr=%s\n' % (items[key][2],
                                                              refItems[key][0]),
                                       text)
                     else:
-                        text = re.sub(ur'item_%d\s*=' % items[key][2],
+                        text = re.sub(r'item_%d\s*=' % items[key][2],
                                       u'item_%d_pwr=%s\n|item_%d=' % (items[key][2],
                                                                       refItems[key][0],
                                                                       items[key][2]),
@@ -1804,12 +1805,12 @@ class XrefToolkit:
                                                                               items[key][1]))
                     if items[key][1]:
                         # This regex assumes that the parameter has a line to itself
-                        text = re.sub(ur'item_%d_img\s*=\s*.*' % items[key][2],
+                        text = re.sub(r'item_%d_img\s*=\s*.*' % items[key][2],
                                       u'item_%d_img=%s\n' % (items[key][2],
                                                              refItems[key][1]),
                                       text)
                     else:
-                        text = re.sub(ur'item_%d\s*=' % items[key][2],
+                        text = re.sub(r'item_%d\s*=' % items[key][2],
                                       u'item_%d_img=%s\n|item_%d=' % (items[key][2],
                                                                       refItems[key][1],
                                                                       items[key][2]),
@@ -2178,7 +2179,7 @@ class XrefToolkit:
         # Count the number of sources already in the list as we go
         src_count = 0
         if from_param:
-            m = re.search(ur'{{Lab.*}}', from_param, re.MULTILINE | re.DOTALL)
+            m = re.search(r'{{Lab.*}}', from_param, re.MULTILINE | re.DOTALL)
             if m:
                 src_count += 1
                 # Need to avoid matches within the Lab template part
@@ -2186,7 +2187,7 @@ class XrefToolkit:
             else:
                 from_str = from_param
             iterator = chain(LINK_RE.finditer(from_str),
-                             re.finditer(ur'(?P<page>{{.*}})', from_str))
+                             re.finditer(r'(?P<page>{{.*}})', from_str))
         else:
             iterator = []
         for m in iterator:
@@ -2797,9 +2798,9 @@ class XrefToolkit:
             if key in lab_keys:
                 if recipe_dict[key] != lab_dict[key]:
                     # Fix up this page to match Tech Lab, because recipes are found there
-                    text = re.sub(ur'(\|\W*%s\W*=\W*)%s' % (key,
+                    text = re.sub(r'(\|\W*%s\W*=\W*)%s' % (key,
                                                             utils.escape_str(lab_dict[key])),
-                                  ur'\g<1>%s' % recipe_dict[key],
+                                  r'\g<1>%s' % recipe_dict[key],
                                   text)
             else:
                 # Insert the missing parameter
@@ -2852,7 +2853,7 @@ class XrefToolkit:
             except KeyError:
                 # Add from parameter to this page
                 new_param = u'|%s=%s' % (from_str, src_param)
-                text = text.replace(ur'|%s' % part_str,
+                text = text.replace(r'|%s' % part_str,
                                     u'%s\n|%s' % (new_param, part_str),
                                     1)
             else:

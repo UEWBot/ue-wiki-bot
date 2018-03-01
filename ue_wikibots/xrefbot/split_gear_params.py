@@ -19,6 +19,7 @@ Script to split the gear parameter on Areas pages on Underworld Empire Wiki
 """
 
 from __future__ import absolute_import
+from __future__ import unicode_literals
 import sys
 import os
 import operator
@@ -36,13 +37,13 @@ summary = u'Robot: Split gear parameter into separate items and counts'
 # Set of REs to replace, from 4 items down to 1
 # TODO Can probably construct these in a similar way to replacement, below
 # TODO This converts e.g. "gear=2 [[Condo]]s" to "gear_1_count=2|gear_1=Condos" with an extra "s"
-gearRe = [re.compile(ur'\|\W*gear=.*$\n^\*\s*(?P<count_1>[<0-9]+)\s+\[\[(?P<item_1>[^|\]\n]*).*\]\]\W*$\n^\*\s*(?P<count_2>[<0-9]+)\s+\[\[(?P<item_2>[^|\]\n]*).*\]\]\W*$\n^\*\s*(?P<count_3>[<0-9]+)\s+\[\[(?P<item_3>[^|\]\n]*).*\]\]\W*$\n^\*\s*(?P<count_4>[<0-9]+)\s+\[\[(?P<item_4>[^|\]\n]*).*\]\]', re.MULTILINE),
-          re.compile(ur'\|\W*gear=.*$\n^\*\s*(?P<count_1>[<0-9]+)\s+\[\[(?P<item_1>[^|\]\n]*).*\]\]\W*$\n^\*\s*(?P<count_2>[<0-9]+)\s+\[\[(?P<item_2>[^|\]\n]*).*\]\]\W*$\n^\*\s*(?P<count_3>[<0-9]+)\s+\[\[(?P<item_3>[^|\]\n]*).*\]\]', re.MULTILINE),
-          re.compile(ur'\|\W*gear=.*$\n^\*\s*(?P<count_1>[<0-9]+)\s+\[\[(?P<item_1>[^|\]\n]*).*\]\]\W*$\n^\*\s*(?P<count_2>[<0-9]+)\s+\[\[(?P<item_2>[^|\]\n]*).*\]\]', re.MULTILINE),
-          re.compile(ur'\|\W*gear=\s*(?P<count_1>[<0-9]+)\W+\[\[(?P<item_1>[^|\]\n]*)\]\]')]
+gearRe = [re.compile(r'\|\W*gear=.*$\n^\*\s*(?P<count_1>[<0-9]+)\s+\[\[(?P<item_1>[^|\]\n]*).*\]\]\W*$\n^\*\s*(?P<count_2>[<0-9]+)\s+\[\[(?P<item_2>[^|\]\n]*).*\]\]\W*$\n^\*\s*(?P<count_3>[<0-9]+)\s+\[\[(?P<item_3>[^|\]\n]*).*\]\]\W*$\n^\*\s*(?P<count_4>[<0-9]+)\s+\[\[(?P<item_4>[^|\]\n]*).*\]\]', re.MULTILINE),
+          re.compile(r'\|\W*gear=.*$\n^\*\s*(?P<count_1>[<0-9]+)\s+\[\[(?P<item_1>[^|\]\n]*).*\]\]\W*$\n^\*\s*(?P<count_2>[<0-9]+)\s+\[\[(?P<item_2>[^|\]\n]*).*\]\]\W*$\n^\*\s*(?P<count_3>[<0-9]+)\s+\[\[(?P<item_3>[^|\]\n]*).*\]\]', re.MULTILINE),
+          re.compile(r'\|\W*gear=.*$\n^\*\s*(?P<count_1>[<0-9]+)\s+\[\[(?P<item_1>[^|\]\n]*).*\]\]\W*$\n^\*\s*(?P<count_2>[<0-9]+)\s+\[\[(?P<item_2>[^|\]\n]*).*\]\]', re.MULTILINE),
+          re.compile(r'\|\W*gear=\s*(?P<count_1>[<0-9]+)\W+\[\[(?P<item_1>[^|\]\n]*)\]\]')]
 
 # String to use to replace one item
-one_item = ur'|gear_%d_count=\g<count_%d>\n|gear_%d=\g<item_%d>'
+one_item = r'|gear_%d_count=\g<count_%d>\n|gear_%d=\g<item_%d>'
 
 class GearBot:
     def __init__(self, generator, acceptall = False):
@@ -53,7 +54,7 @@ class GearBot:
         for n in range(1,5):
             new_str = one_item % (n, n, n, n)
             try:
-                new_str = self.replacement[n-2] + ur'\n' + new_str
+                new_str = self.replacement[n-2] + r'\n' + new_str
             except IndexError:
                 pass
             self.replacement.append(new_str)

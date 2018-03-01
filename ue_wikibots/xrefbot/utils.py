@@ -29,9 +29,9 @@ import pywikibot
 import re
 
 # Separate the name and value for a template parameter
-_PARAM_RE = re.compile(ur'\s*(?P<name>[^=]+)\s*=\s*(?P<value>.*)', re.DOTALL)
+_PARAM_RE = re.compile(r'\s*(?P<name>[^=]+)\s*=\s*(?P<value>.*)', re.DOTALL)
 # Find the colour and name of a rarity
-_RARITY_RE = re.compile(ur'\*.*color:(?P<colour>[^"]*)">(?P<rarity>[^<]*)')
+_RARITY_RE = re.compile(r'\*.*color:(?P<colour>[^"]*)">(?P<rarity>[^<]*)')
 
 def escape_str(string):
     """
@@ -41,12 +41,12 @@ def escape_str(string):
 
     Useful if you want to include it in a regex.
     """
-    string = re.sub(ur'\|', u'\|', string)
-    string = re.sub(ur'\(', u'\(', string)
-    string = re.sub(ur'\)', u'\)', string)
-    string = re.sub(ur'\[', u'\[', string)
-    string = re.sub(ur'\+', u'\+', string)
-    return re.sub(ur'\]', u'\]', string)
+    string = re.sub(r'\|', u'\|', string)
+    string = re.sub(r'\(', u'\(', string)
+    string = re.sub(r'\)', u'\)', string)
+    string = re.sub(r'\[', u'\[', string)
+    string = re.sub(r'\+', u'\+', string)
+    return re.sub(r'\]', u'\]', string)
 
 def param_from_params(params, param, verbatim=False):
     """
@@ -110,7 +110,7 @@ def find_specific_section(text, section):
     or (-1, -1) if the section isn't found.
     """
     # Does the page have a section header ?
-    header = re.search(ur'===*\s*%s\s*=*==' % section, text)
+    header = re.search(r'===*\s*%s\s*=*==' % section, text)
     if header:
         list_start = header.end()
         # List ends at a header or category
@@ -139,7 +139,7 @@ def areas_in_order(jobs_page_text):
     (start, end) = find_specific_section(jobs_page_text, u'Areas')
 
     # Find and add each one in turn
-    for m in re.finditer(ur'#\s*\[\[([^]]*)\]\]', jobs_page_text[start:end]):
+    for m in re.finditer(r'#\s*\[\[([^]]*)\]\]', jobs_page_text[start:end]):
         areas.append(m.group(1))
 
     return areas
@@ -175,7 +175,7 @@ class Achievements:
             return [item_name]
         text = pg.get(get_redirect=True)
         # Format is "* [[<image>]] [[<page>]] - from <<sources>>"
-        for m in re.finditer(ur' \[\[([^]]*)\]\] - from ', text):
+        for m in re.finditer(r' \[\[([^]]*)\]\] - from ', text):
             retval.append(m.group(1))
         return retval
 
@@ -187,7 +187,7 @@ class Achievements:
         # Parse out the possible daily rewards
         text = pg.get(get_redirect=True)
         (start, end) = find_specific_section(text, u'Daily Rewards')
-        for m in re.finditer(ur'\[\[([^]]*)\]\]', text[start:end]):
+        for m in re.finditer(r'\[\[([^]]*)\]\]', text[start:end]):
             item = m.group(1)
             if item.startswith(u'Any '):
                 self._daily_rewards += self._any_to_items(item)
@@ -240,10 +240,10 @@ class ImageMap:
     Cache class for the image filenames and rarities for items, properties, and ingredients.
     """
 
-    _IMG_RE = re.compile(ur'\|\W*image\W*=\W*(?P<image>.*)')
+    _IMG_RE = re.compile(r'\|\W*image\W*=\W*(?P<image>.*)')
     # TODO This should match jpg as well as png files
-    _IMG_FILE_RE = re.compile(ur'\[\[File:(?P<image>.*\.png)\|.*\]\]')
-    _RARITY_RE = re.compile(ur'\|\W*rarity\W*=\W*(?P<rarity>.*)')
+    _IMG_FILE_RE = re.compile(r'\[\[File:(?P<image>.*\.png)\|.*\]\]')
+    _RARITY_RE = re.compile(r'\|\W*rarity\W*=\W*(?P<rarity>.*)')
 
     def __init__(self):
         """Instantiate the class."""

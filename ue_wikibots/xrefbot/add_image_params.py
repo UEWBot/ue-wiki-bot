@@ -22,6 +22,7 @@ Arguments:
 """
 
 from __future__ import absolute_import
+from __future__ import unicode_literals
 import sys
 import os
 import operator
@@ -41,7 +42,7 @@ docuReplacements = {
 # Summary message when using this module as a stand-alone script
 summary = u'Robot: Insert image parameters'
 
-imgRe = re.compile(ur'\|W*image\W*=\W*(?P<image>.*)')
+imgRe = re.compile(r'\|W*image\W*=\W*(?P<image>.*)')
 
 params = [u'gear_1', u'gear_2', u'gear_3', u'gear_4', u'item_1', u'item_2', u'item_3', u'item_4', u'item_5']
 
@@ -57,7 +58,7 @@ class ImgBot:
         Adds a new image parameter for the specified parameter.
         """
         # TODO Don't add it if the image parameter is already there
-        strRe = re.compile(ur'\|(?P<prefix>\W*%s\W*=\s*)(?P<value>[^\r]*)' % param)
+        strRe = re.compile(r'\|(?P<prefix>\W*%s\W*=\s*)(?P<value>[^\r]*)' % param)
 
         # If new_param not provided, use old_param plus "_img"
         if new_param is None:
@@ -69,7 +70,7 @@ class ImgBot:
         for m in strRe.finditer(old_text):
             # Full string we matched
             key = m.group('value')
-            old_param = ur'%s%s' % (m.group('prefix'), key)
+            old_param = r'%s%s' % (m.group('prefix'), key)
             pywikibot.output("Adding image for %s" % old_param)
             try:
                 # New string to insert

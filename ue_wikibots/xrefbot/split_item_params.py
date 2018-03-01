@@ -19,6 +19,7 @@ Script to split the item parameter on Lieutenants pages on Underworld Empire Wik
 """
 
 from __future__ import absolute_import
+from __future__ import unicode_literals
 import sys
 import os
 import operator
@@ -35,12 +36,12 @@ summary = u'Robot: Split item parameter into separate items and counts'
 
 # Set of REs to replace, from 3 items down to 1
 # TODO Can probably construct these in a similar way to replacement, below
-itemRe = [re.compile(ur'\|\W*items=.*$\n^\*\s*\[\[(?P<item_1>[^|\]\n]*).*?\]\]\W+(?P<effect_1>.*)$\n^\*\s*\[\[(?P<item_2>[^|\]\n]*).*?\]\]\W+(?P<effect_2>.*)$\n^\*\s*\[\[(?P<item_3>[^|\]\n]*).*?\]\]\W+(?P<effect_3>.*)', re.MULTILINE),
-          re.compile(ur'\|\W*items=.*$\n^\*\s*\[\[(?P<item_1>[^|\]\n]*).*?\]\]\W+(?P<effect_1>.*)$\n^\*\s*\[\[(?P<item_2>[^|\]\n]*).*?\]\]\W+(?P<effect_2>.*)', re.MULTILINE),
-          re.compile(ur'\|\W*items=\s*\[\[(?P<item_1>[^|\]\n]*).*?\]\]\W+(?P<effect_1>.*)')]
+itemRe = [re.compile(r'\|\W*items=.*$\n^\*\s*\[\[(?P<item_1>[^|\]\n]*).*?\]\]\W+(?P<effect_1>.*)$\n^\*\s*\[\[(?P<item_2>[^|\]\n]*).*?\]\]\W+(?P<effect_2>.*)$\n^\*\s*\[\[(?P<item_3>[^|\]\n]*).*?\]\]\W+(?P<effect_3>.*)', re.MULTILINE),
+          re.compile(r'\|\W*items=.*$\n^\*\s*\[\[(?P<item_1>[^|\]\n]*).*?\]\]\W+(?P<effect_1>.*)$\n^\*\s*\[\[(?P<item_2>[^|\]\n]*).*?\]\]\W+(?P<effect_2>.*)', re.MULTILINE),
+          re.compile(r'\|\W*items=\s*\[\[(?P<item_1>[^|\]\n]*).*?\]\]\W+(?P<effect_1>.*)')]
 
 # String to use to replace one item
-one_item = ur'|item_%d=\g<item_%d>\n|item_%d_pwr=\g<effect_%d>'
+one_item = r'|item_%d=\g<item_%d>\n|item_%d_pwr=\g<effect_%d>'
 
 class ItemBot:
     def __init__(self, generator, acceptall = False):
@@ -51,7 +52,7 @@ class ItemBot:
         for n in range(1,4):
             new_str = one_item % (n, n, n, n)
             try:
-                new_str = self.replacement[n-2] + ur'\n' + new_str
+                new_str = self.replacement[n-2] + r'\n' + new_str
             except IndexError:
                 pass
             self.replacement.append(new_str)

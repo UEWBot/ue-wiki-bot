@@ -19,6 +19,7 @@ Script to sort a subset of template parameters on Underworld Empire Wiki
 """
 
 from __future__ import absolute_import
+from __future__ import unicode_literals
 import sys
 import os
 import operator
@@ -32,7 +33,7 @@ import difflib
 summary = u'Robot: Sort Lab/Lt template parameters'
 
 # RE to match a parameter for the form "root_n[_leaf] = value"
-NUM_PARAM_RE = re.compile(ur'(?P<root>[a-zA-Z]+)_(?P<num>\d+)(?P<leaf>[^=\s]*)\s*=\s*(?P<value>.*)')
+NUM_PARAM_RE = re.compile(r'(?P<root>[a-zA-Z]+)_(?P<num>\d+)(?P<leaf>[^=\s]*)\s*=\s*(?P<value>.*)')
 
 LT_ROOT_ORDERING = [
     u'image',

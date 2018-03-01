@@ -701,10 +701,10 @@ def sort_lts(row, area):
     rarities = {}
     for i in range(1,5):
         m = re.search(r'\|lt_%d_rarity\s*=\s*(?P<rarity>[^|\s]*)' % i, row)
-	if m:
-		rarities[i] = m.group('rarity')
-	else:
-		pywikibot.output("Unable to find rarity for Lt %d" % i)
+        if m:
+            rarities[i] = m.group('rarity')
+        else:
+            pywikibot.output("Unable to find rarity for Lt %d" % i)
     if len(rarities) < 4:
         #m = re.search(r'\|district=(?P<area>[^|\s]*)', row)
         ## As we put this parameter in, it should always be present
@@ -1264,7 +1264,7 @@ class XrefBot:
         new_text = lt_faction_rarity_header(self.factions)
         for rarity in rarities():
             lieutenants = {}
-	    lt_cat = pywikibot.Category(pywikibot.Site(),
+            lt_cat = pywikibot.Category(pywikibot.Site(),
                                         u'%s Lieutenants' % rarity)
             for lt in list(lt_cat.articles()):
                 name = lt.title()

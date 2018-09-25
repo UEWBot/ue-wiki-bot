@@ -865,12 +865,13 @@ def page_to_row(page, row_template):
                 found_template = True
                 # Construct a rarity parameter from the template name
                 row += u'|rarity=%s' % match.group(1)
-                # Pass all the lieutenant/sidekick template parameters
-                for param in params:
-                    row += u'|%s' % param
                 if row_template == u'Sidekick Row':
                     # Copy atk and def params from the template
                     row += sidekick_stats[match.group(1)]
+                # Pass all the lieutenant/sidekick template parameters
+                # This may override default sidekick stats from above
+                for param in params:
+                    row += u'|%s' % param
     if not found_template:
         raise IrrelevantRowError
     row += u'}}'

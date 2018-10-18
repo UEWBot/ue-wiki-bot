@@ -305,6 +305,9 @@ class XrefToolkit:
         text = self._fix_tech_lab(titleWithoutNamespace,
                                   text,
                                   templatesWithParams)
+        text = self._fix_shop(titleWithoutNamespace,
+                              text,
+                              refs)
         text = self._fix_area(titleWithoutNamespace,
                               text,
                               categories,
@@ -552,6 +555,64 @@ class XrefToolkit:
         return text
 
     # The next few are each specific to one type of page
+
+    def _fix_shop(self, name, text, refs):
+        """
+        Fix the Shop page.
+
+        Return updated text.
+
+        Ensure that __NOWYSIWYG__ is present.
+        """
+        if u'Shop' != name:
+            return text
+
+        # __NOWYSIWYG__
+        text = self._prepend_NOWYSIWYG_if_needed(text)
+
+        # Check the availability of each item against the item page
+        # Basic Item template has a "level" and "district" parameter
+        # Battle Rank Item template has a "rank" parameter
+        area_items = {}
+        level_items = {}
+        rank_items = {}
+        for r in refs:
+            for temp,params in r.templatesWithParams():
+                template = temp.title(withNamespace=False)
+                if template == 'Battle Rank Item':
+                    p = utils.param_from_params(params, u'rank')
+                    if p:
+                        rank_items[r.title()] = p
+                elif template == 'Basic Item':
+                    p = utils.param_from_params(params, u'level')
+                    if p:
+                        level_items[r.title()] = p
+                    p = utils.param_from_params(params, u'district')
+                    if p:
+                        area_items[r.title()] = p
+        # TODO This code just reports issues. May be able to fix some of them
+        for k,v in area_items.items():
+            if '[[%s]]||[[%s]]' % (k,v) not in text:
+                print('Missing or mismatched area item "%s" - expected %s' % (k,v))
+        for k,v in level_items.items():
+            # TODO This wrongly reports items that use the [[X (Shop|X]] format
+            if '%s]]||%s' % (k,v) not in text:
+                print('Missing or mismatched level item "%s" - expected %s' % (k,v))
+        for k,v in rank_items.items():
+            if '%s]]||%s' % (k,v) not in text:
+                print('Missing or mismatched rank item "%s" - expected %s' % (k,v))
+        # Are any items listed that shouldn't be?
+        start, end = self._find_section(text, 'Basic Item Availability')
+        iterator = LINK_RE.finditer(text[start:end])
+        all_items = {**area_items, **level_items, **rank_items}
+        for m in iterator:
+            item = m.group('page')
+            # Check that the thing we're looking for is actually in a table
+            if '|[[%s' % item not in text:
+                continue
+            if item not in all_items:
+                print('Unexpected item %s' % item)
+        return text
 
     def _fix_tech_lab(self, name, text, templatesWithParams):
         """

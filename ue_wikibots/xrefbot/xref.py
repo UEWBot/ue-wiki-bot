@@ -421,6 +421,21 @@ class XrefToolkit:
         # Remove the category
         return Rcat.sub('', text)
 
+    def _fix_needs_description(self, text):
+        """
+        Return the text with categories Needs Description and No In-game Description
+        set appropriately. Page should not have both.
+
+        text -- current page text.
+        """
+        Rcat1 = re.compile(CATEGORY_RE_STR % 'Needs Description')
+        Rcat2 = re.compile(CATEGORY_RE_STR % 'No In-game Description')
+        m1 = Rcat1.search(text)
+        m2 = Rcat2.search(text)
+        if m1 and m2:
+            return Rcat1.sub('', text)
+        return text
+
     def _fix_needs_cats(self, text, missed_params, param_cat_map):
         """
         Return the text with need categories added or removed as appropriate.
@@ -437,6 +452,8 @@ class XrefToolkit:
                 cats_needed.add(c)
         for c in cats_needed:
             text = self._append_category(text, c)
+        # Ensure we don't end up with both No In-game Description and Needs Description
+        text = self._fix_needs_description(text)
         for c in set(param_cat_map.values()):
             if c not in cats_needed:
                 # Only remove specific needs categories, not more general ones

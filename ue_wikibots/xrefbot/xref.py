@@ -1569,6 +1569,7 @@ class XrefToolkit:
         # Check where the Lt can be obtained from
         # TODO Ones that can be bought are listed on [[Category:Lieutenants]]
         sources = []
+        REWARD_RE = re.compile(r'Top (10|25) - (?P<rewards>.*)')
         for r in refs:
             if self._cat_in_categories(u'Crates', r.categories()):
                 sources.append(u'[[%s]]' % r.title())
@@ -1577,13 +1578,15 @@ class XrefToolkit:
                 text = self._append_category(text, c)
             elif self._cat_in_categories(u'Giveaways', r.categories()):
                 sources.append(u'[[%s]]' % r.title())
-                # Ensure that it's in Event Lieutenants
-                c = u'Event Lieutenants'
-                text = self._append_category(text, c)
             elif self._cat_in_categories(u'Events', r.categories()):
                 # ensure that the Lt was a reward rather than an opponent
-                if self._lt_was_event_reward(name, r.title()):
-                    sources.append(u'[[%s]]' % r.title())
+                if not self._lt_was_event_reward(name, r.title()):
+                    continue
+                sources.append(u'[[%s]]' % r.title())
+                # Was it the main prize?
+                r_text = r.get()
+                m = REWARD_RE.search(r_text)
+                if m and name in m.group('rewards'):
                     # Ensure that it's in Event Lieutenants
                     c = u'Event Lieutenants'
                     text = self._append_category(text, c)

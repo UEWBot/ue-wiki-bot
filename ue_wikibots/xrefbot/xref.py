@@ -841,7 +841,7 @@ class XrefToolkit:
         assigned by the template.
         Check that the item is listed everywhere it says it can be obtained.
         """
-        # Does the page use the Class template ?
+        # Does the page use the Insignia template ?
         the_params = None
         for template,params in templatesWithParams:
             if template == u'Insignia':

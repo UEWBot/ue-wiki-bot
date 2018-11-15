@@ -240,7 +240,7 @@ class ImageMap:
     Cache class for the image filenames and rarities for items, properties, and ingredients.
     """
 
-    _IMG_RE = re.compile(r'\|\W*image\W*=\W*(?P<image>.*)')
+    _IMG_RE = re.compile(r'\|\W*image\W*=\W*(?P<image>[^|\n]*)')
     # TODO This should match jpg as well as png files
     _IMG_FILE_RE = re.compile(r'\[\[File:(?P<image>.*\.png)\|.*\]\]')
     _RARITY_RE = re.compile(r'\|\W*rarity\W*=\W*(?P<rarity>.*)')

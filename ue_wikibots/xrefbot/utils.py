@@ -302,10 +302,10 @@ class ImageMap:
         m = self._RARITY_RE.search(text)
         if m is None:
             self.rarity_mapping[name] = None
-            # Lt rarity is specified in the template used
+            # Lt and Sidekick rarity is specified in the template used
             for template, params in pg.templatesWithParams():
                 t = template.title(withNamespace=False)
-                if t.startswith(u'Lieutenant '):
+                if t.startswith(u'Lieutenant ') or t.startswith('Sidekick'):
                     self.rarity_mapping[name] = t.split()[1]
             # Lt skin pages specify the rarity as a template parameter
             if self.rarity_mapping[name] == None:

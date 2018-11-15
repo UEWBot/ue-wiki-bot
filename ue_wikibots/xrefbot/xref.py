@@ -659,6 +659,8 @@ class XrefToolkit:
             if is_old:
                 missed_params |= missing_params(params, list(old_recipe_map.keys()))
             # TODO Cross-reference against item page
+            if param_dict['image'] != image_map.image_for(name):
+                print("Mismatched image for %s - '%s' vs '%s'\n" % (name, param_dict['image'], image_map.image_for(name)))
             # Check images for ingredients
             n = 0
             while True:

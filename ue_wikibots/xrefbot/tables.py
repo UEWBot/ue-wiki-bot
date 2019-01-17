@@ -43,9 +43,6 @@ from __future__ import unicode_literals
 import sys
 import os
 import operator
-import six
-from six.moves import map
-from six.moves import range
 sys.path.append(os.environ['HOME'] + '/ue/ue_wikibots/core')
 
 import pywikibot
@@ -796,7 +793,7 @@ def boss_page_to_row(page, row_template):
         template_name = template.title(withNamespace=False)
         if template_name == u'BossEpicThresholds':
             d = utils.params_to_dict(params)
-            for k,v in d.iteritems():
+            for k,v in d.items():
                 thresholds[threshold_param_map[k]] = v
 
     text = u'{{%s|name=%s' % (row_template, name)
@@ -1316,7 +1313,7 @@ class XrefBot:
                                                    u'Bosses'])} # For War Hounds
 
         # Go through cat_to_templ, and create/update summary page for each one
-        for name, (template, cat_list) in six.iteritems(cat_to_templ):
+        for name, (template, cat_list) in cat_to_templ.items():
             # The current summary table page for this category
             page_name = u'%s Table' % name
             # Skip pages the user isn't interested in
@@ -1392,7 +1389,7 @@ if __name__ == "__main__":
                  '--lt_rarities': u'Lieutenants Faction Rarity Table'}
 
     parser = argparse.ArgumentParser(description='Create/update summary pages.', epilog='With no options, create/update all summary pages.')
-    for a in sorted(six.iterkeys(arguments)):
+    for a in sorted(arguments.keys()):
         s = arguments[a]
         parser.add_argument(a, help="Create/update the %s page" % s, dest='pages', action='append_const', const=s)
     args = parser.parse_args()

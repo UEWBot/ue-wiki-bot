@@ -2049,6 +2049,9 @@ class XrefToolkit:
         # __NOWYSIWYG__
         text = self._prepend_NOWYSIWYG_if_needed(text)
 
+        # Check for explicit categories that should be implicit
+        text = self._remove_implicit_categories(text)
+
         # Now nuke any empty stat or power parameters, and any items parameters
         to_nuke = []
         for param in the_params:

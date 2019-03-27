@@ -419,7 +419,10 @@ def property_row(name, d, count, high_cost_ratios):
     row += u'|unlock=%s' % unlock
     # We derive cost from the template cost, count, and whether it is "high_cost" or not.
     if u'cost' in d:
-        base_cost = float(d[u'cost'].replace(u',',u''))
+        try:
+            base_cost = float(d[u'cost'].replace(u',',u''))
+        except ValueError:
+            base_cost = 0.0
     else:
         base_cost = 0.0
     if u'high_cost' in d:

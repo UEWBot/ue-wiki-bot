@@ -111,6 +111,7 @@ def lt_faction_rarity_header(factions):
     text += u'!span="col" | \n'
     for faction in factions:
         text += u'!span="col" | [[%s]]\n' % faction
+    text += u'!span="col" | Total\n'
     return text
 
 def lt_faction_rarity_row(factions, rarity, lieutenants_by_faction):
@@ -123,6 +124,7 @@ def lt_faction_rarity_row(factions, rarity, lieutenants_by_faction):
     """
     text = u'|-\n'
     text += u'!scope=row | {{%s}}\n' % rarity
+    count = 0
     for faction in factions:
         text += u'|'
         if faction in lieutenants_by_faction:
@@ -130,7 +132,10 @@ def lt_faction_rarity_row(factions, rarity, lieutenants_by_faction):
                                       lieutenants_by_faction[faction]))
         else:
             text += u'None'
-        text += u'\n'
+        text += u'<br/>Total %d\n' % len(lieutenants_by_faction[faction])
+        count += len(lieutenants_by_faction[faction])
+    # Add a "Total" column
+    text += u'| %d\n' % count
     return text
  
 def chem_pack_header(factions):
@@ -1259,6 +1264,11 @@ class XrefBot:
         """
         old_page = pywikibot.Page(pywikibot.Site(),
                                   u'Lieutenants Faction Rarity Table')
+        counts = {'Dragon Syndicate': 0,
+                  'Street': 0,
+                  'The Cartel': 0,
+                  'The Mafia': 0,
+                  'Unaffiliated': 0}
         new_text = lt_faction_rarity_header(self.factions)
         for rarity in rarities():
             lieutenants = {}
@@ -1274,8 +1284,14 @@ class XrefBot:
                         faction = utils.param_from_params(params,
                                                           u'faction')
                         lieutenants.setdefault(faction, []).append(name)
+                        counts[faction] += 1
             if lieutenants:
                 new_text += lt_faction_rarity_row(self.factions, rarity, lieutenants)
+        # Add a "Totals" row
+        new_text += u'|-\n'
+        new_text += u'!scope=row | Total\n'
+        for f in self.factions:
+            new_text += u'|%d\n' % counts[f]
         new_text += summary_footer(None)
         # Upload it
         self._update_or_create_page(old_page, new_text);

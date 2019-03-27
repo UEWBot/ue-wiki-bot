@@ -45,6 +45,7 @@ import os
 import operator
 sys.path.append(os.environ['HOME'] + '/ue/ue_wikibots/core')
 
+from collections import defaultdict
 import pywikibot
 from pywikibot import pagegenerators
 import re
@@ -581,10 +582,8 @@ def secret_job_dates(areas):
                 if area in split_text[i]:
                     # Previous entry in the list is the date, unless we're at the start
                     if i > 0:
-                        if area not in retval:
-                            retval[area] = []
                         # Put earlier dates (found further down the page) earlier in the list
-                        retval[area].insert(0, split_text[i-1])
+                        retval.setdefault(area, []).insert(0, split_text[i-1])
                     break
     return retval
 
@@ -1145,9 +1144,7 @@ class XrefBot:
                 # Discard the initial u'<br/>'
                 sources = source_str.split(u'\n')[1:]
             faction = pack_to_faction[page_title.split(None, 1)[0]]
-            if faction not in packs_dict:
-                packs_dict[faction] = []
-            packs_dict[faction].append((page_title, sources))
+            packs_dict.setdefault(faction, []).append((page_title, sources))
 
         # Start the new page text
         new_text = chem_pack_header(self.factions)
@@ -1267,11 +1264,7 @@ class XrefBot:
         """
         old_page = pywikibot.Page(pywikibot.Site(),
                                   u'Lieutenants Faction Rarity Table')
-        counts = {'Dragon Syndicate': 0,
-                  'Street': 0,
-                  'The Cartel': 0,
-                  'The Mafia': 0,
-                  'Unaffiliated': 0}
+        counts = defaultdict(lambda: 0)
         new_text = lt_faction_rarity_header(self.factions)
         for rarity in rarities():
             lieutenants = {}

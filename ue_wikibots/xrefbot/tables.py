@@ -978,6 +978,9 @@ class XrefBot:
         self.factions = []
         cat = pywikibot.Category(pywikibot.Site(), u'Factions')
         for faction in list(cat.articles()):
+            # There's now a "The Shadow" faction page, but all Lts are still "Unaffiliated"
+            if faction.title() == 'The Shadow':
+                continue
             self.factions.append(faction.title())
 
     def _update_or_create_page(self, old_page, new_text):
